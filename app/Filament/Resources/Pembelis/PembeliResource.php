@@ -22,6 +22,9 @@ class PembeliResource extends Resource
     protected static ?string $model = Pembeli::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static ?string $navigationLabel = 'Data Pembeli';
+    protected static ?string $pluralModelLabel = 'Data Pembeli';
+    protected static ?string $modelLabel = 'Data Pembeli';
 
     protected static ?string $recordTitleAttribute = 'nama';
 
