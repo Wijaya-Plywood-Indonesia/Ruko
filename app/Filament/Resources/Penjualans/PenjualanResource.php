@@ -27,6 +27,8 @@ class PenjualanResource extends Resource
     {
         return PenjualanForm::configure($schema);
     }
+    protected string $view = 'filament.resources.penjualans.pages.pos-penjualan';
+
 
     public static function infolist(Schema $schema): Schema
     {
