@@ -33,12 +33,12 @@ class DetailPenjualan extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function penjualan(): BelongsTo
+    public function penjualan()
     {
         return $this->belongsTo(Penjualan::class);
     }
 
-    public function barang(): BelongsTo
+    public function barang()
     {
         return $this->belongsTo(Barang::class);
     }
