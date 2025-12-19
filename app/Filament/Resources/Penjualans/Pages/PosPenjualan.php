@@ -6,6 +6,8 @@ use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Models\Barang;
 use App\Models\Penjualan;
 use App\Models\DetailPenjualan;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +24,15 @@ class PosPenjualan extends Page
     // pelanggan & pembayaran
     public string $nama_customer = '';
     public string $alamat = '';
-    public string $metode_pembayaran = 'cash';
+    public string $metode_pembayaran = 'TUNAI';
     public int $bayar = 0;
+
+
+    public $bank;
+    public $no_rekening;
+
+    public $kendaraan;
+    public $nama_sopir;
 
     public function mount(): void
     {
@@ -33,7 +42,7 @@ class PosPenjualan extends Page
     /* ================= AUTOCOMPLETE ================= */
     public function updatedSearch(): void
     {
-        if (strlen($this->search) < 2) {
+        if (strlen($this->search) < 1) {
             $this->searchResults = collect();
             return;
         }
@@ -106,27 +115,55 @@ class PosPenjualan extends Page
 
     public function getKembalianProperty(): int
     {
-        return max($this->bayar - $this->total, 0);
+        return max(((int) $this->bayar) - $this->total, 0);
     }
+
 
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
-        if (empty($this->cart))
+        // dd([
+        //     'nama_customer' => $this->nama_customer,
+        //     'alamat' => $this->alamat,
+        //     'metode_pembayaran' => $this->metode_pembayaran,
+        //     'bank' => $this->bank,
+        //     'no_rekening' => $this->no_rekening,
+        //     'kendaraan' => $this->kendaraan,
+        //     'nama_sopir' => $this->nama_sopir,
+        //     'total' => $this->total,
+        //     'bayar' => $this->bayar,
+        //     'kembalian' => $this->kembalian,
+        //     'user_id' => auth()->id(),
+        //     'cart' => $this->cart,
+        // ]);
+
+
+        // $this->validate();
+
+        if (empty($this->cart)) {
             return;
-        if ($this->bayar < $this->total)
-            return;
+        }
 
         DB::transaction(function () {
+
             $penjualan = Penjualan::create([
                 'no_nota' => 'INV-' . now()->format('YmdHis'),
                 'tanggal' => now(),
+
                 'nama_customer' => $this->nama_customer,
                 'alamat' => $this->alamat,
+
                 'metode_pembayaran' => $this->metode_pembayaran,
+                'bank' => $this->metode_pembayaran === 'TRANSFER' ? $this->bank : null,
+                'no_rekening' => $this->metode_pembayaran === 'TRANSFER' ? $this->no_rekening : null,
+
+                'kendaraan' => $this->kendaraan,
+                'nama_sopir' => $this->nama_sopir,
+
                 'total' => $this->total,
                 'bayar' => $this->bayar,
                 'kembalian' => $this->kembalian,
+
                 'user_id' => auth()->id(),
             ]);
 
@@ -145,12 +182,33 @@ class PosPenjualan extends Page
         });
 
         $this->resetPos();
+        // ⬅️ SIMPAN NILAI SEBELUM RESET
+        $kembalian = $this->kembalian;
+        Notification::make()
+            ->title('Transaksi Berhasil')
+            ->body("Kembalian: Rp {$kembalian}")
+            ->success()
+            ->persistent() // tidak hilang sampai ditekan OK
+            ->actions([
+                Action::make('ok')
+                    ->label('OK')
+                    ->close(),
+            ])
+            ->send();
     }
 
     public function resetPos(): void
     {
         $this->cart = [];
         $this->bayar = 0;
+        $this->metode_pembayaran = 'cash';
+
+        $this->bank = null;
+        $this->no_rekening = null;
+
+        $this->kendaraan = null;
+        $this->nama_sopir = null;
+
         $this->nama_customer = '';
         $this->alamat = '';
     }
@@ -160,5 +218,24 @@ class PosPenjualan extends Page
     public function restoreCart(array $cart): void
     {
         $this->cart = $cart;
+    }
+    protected function rules(): array
+    {
+        return [
+            'nama_customer' => 'nullable|string|max:100',
+            'alamat' => 'nullable|string|max:255',
+
+            'metode_pembayaran' => 'required|in:cash,transfer',
+
+            'bank' => $this->metode_pembayaran === 'transfer'
+                ? 'required|string|max:50'
+                : 'nullable',
+
+            'no_rekening' => $this->metode_pembayaran === 'transfer'
+                ? 'required|string|max:50'
+                : 'nullable',
+
+            'bayar' => 'required|numeric|min:' . $this->total,
+        ];
     }
 }
