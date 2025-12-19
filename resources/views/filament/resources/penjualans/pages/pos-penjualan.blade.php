@@ -228,6 +228,7 @@
                     <th>Barang</th>
                     <th>Satuan</th>
                     <th>Harga</th>
+                    <th>Harga Jual</th>
                     <th>Qty</th>
                     <th>Subtotal</th>
                     <th>Aksi</th>
@@ -238,8 +239,15 @@
                 <tr>
                     <td>{{ $item["nama_barang"] }}</td>
                     <td align="center">{{ $item["satuan"] }}</td>
-                    <td align="right">
-                        {{ number_format($item["harga_jual"]) }}
+                    <td>Rp. {{ number_format($item["harga_awal"]) }}</td>
+
+                    <td>
+                        Rp.
+                        <input
+                            type="number"
+                            wire:model.lazy="cart.{{ $id }}.harga_jual"
+                            wire:change="updateHargaJual({{ $id }})"
+                        />
                     </td>
                     <td align="center">
                         <button
@@ -262,7 +270,7 @@
                     </td>
 
                     <td align="right">
-                        {{ number_format($item["subtotal"]) }}
+                        Rp. {{ number_format($item["subtotal"]) }}
                     </td>
                     <td align="center">
                         <button
@@ -360,7 +368,7 @@
         <div style="max-width: 300px; margin-top: 8px">
             <input
                 type="number"
-                wire:model.live="bayar"
+                wire:model.lazy="bayar"
                 class="pos-input"
                 placeholder="Bayar"
             />
