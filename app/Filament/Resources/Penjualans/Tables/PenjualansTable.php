@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Penjualans\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -32,17 +33,23 @@ class PenjualansTable
                 TextColumn::make('nama_sopir')
                     ->searchable(),
                 TextColumn::make('total')
-                    ->numeric()
+                    ->label('Total')
+                    ->money('IDR', locale: 'id_ID')
                     ->sortable(),
+
                 TextColumn::make('bayar')
-                    ->numeric()
+                    ->label('Bayar')
+                    ->money('IDR', locale: 'id_ID')
                     ->sortable(),
+
                 TextColumn::make('kembalian')
-                    ->numeric()
+                    ->label('Kembalian')
+                    ->money('IDR', locale: 'id_ID')
                     ->sortable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('user.name')
+                    ->label('Kasir')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -58,6 +65,17 @@ class PenjualansTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                Action::make('cetak')
+                    ->label('Cetak Nota')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn($record) => route('nota.cetak', $record))
+                    ->openUrlInNewTab(),
+                Action::make('suratJalan')
+                    ->label('Cetak Surat Jalan')
+                    ->icon('heroicon-o-truck')
+                    ->url(fn($record) => route('surat-jalan.cetak', $record))
+                    ->openUrlInNewTab(),
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
