@@ -70,7 +70,7 @@ class PosPenjualan extends Page
                 'nama_barang' => $barang->nama_barang,
                 'satuan' => $barang->satuan?->nama_satuan ?? '-',
                 'qty' => 1,
-                'harga_awal' => (int) $barang->harga_beli,
+                'harga_awal' => (int) $barang->harga_jual,
                 'harga_jual' => (int) $barang->harga_jual,
             ];
         }
@@ -85,14 +85,18 @@ class PosPenjualan extends Page
     public function incrementQty(int $id): void
     {
         $this->cart[$id]['qty']++;
-        $this->updateSubtotal($id);
+        $this->cart[$id]['subtotal'] =
+            $this->cart[$id]['qty'] * $this->cart[$id]['harga_jual'];
+
     }
+
 
     public function decrementQty(int $id): void
     {
         if ($this->cart[$id]['qty'] > 1) {
             $this->cart[$id]['qty']--;
-            $this->updateSubtotal($id);
+            $this->cart[$id]['subtotal'] =
+                $this->cart[$id]['qty'] * $this->cart[$id]['harga_jual'];
         }
     }
 
@@ -201,7 +205,7 @@ class PosPenjualan extends Page
     {
         $this->cart = [];
         $this->bayar = 0;
-        $this->metode_pembayaran = 'cash';
+        $this->metode_pembayaran = 'TUNAI';
 
         $this->bank = null;
         $this->no_rekening = null;
@@ -211,6 +215,16 @@ class PosPenjualan extends Page
 
         $this->nama_customer = '';
         $this->alamat = '';
+    }
+    public function updateHargaJual($id)
+    {
+        if (!isset($this->cart[$id]))
+            return;
+
+        $harga = (int) $this->cart[$id]['harga_jual'];
+        $qty = (int) $this->cart[$id]['qty'];
+
+        $this->cart[$id]['subtotal'] = $harga * $qty;
     }
 
     /* ===== RESTORE CART (OFFLINE) ===== */
@@ -225,13 +239,13 @@ class PosPenjualan extends Page
             'nama_customer' => 'nullable|string|max:100',
             'alamat' => 'nullable|string|max:255',
 
-            'metode_pembayaran' => 'required|in:cash,transfer',
+            'metode_pembayaran' => 'required|in:TUNAI,TRANSFER',
 
-            'bank' => $this->metode_pembayaran === 'transfer'
+            'bank' => $this->metode_pembayaran === 'TRANSFER'
                 ? 'required|string|max:50'
                 : 'nullable',
 
-            'no_rekening' => $this->metode_pembayaran === 'transfer'
+            'no_rekening' => $this->metode_pembayaran === 'TRANSFER'
                 ? 'required|string|max:50'
                 : 'nullable',
 
