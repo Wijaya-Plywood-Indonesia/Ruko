@@ -21,6 +21,9 @@ class Penjualan extends Model
         'bayar',
         'kembalian',
         'user_id',
+        'validated_by',
+        'plat_kendaraan',
+        'status_transaksi',
     ];
 
     protected $casts = [
@@ -44,5 +47,10 @@ class Penjualan extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function validator()
+    {
+        return $this->belongsTo(User::class, 'validated_by');
     }
 }

@@ -7,6 +7,7 @@ use App\Filament\Resources\Penjualans\Pages\EditPenjualan;
 use App\Filament\Resources\Penjualans\Pages\ListPenjualans;
 use App\Filament\Resources\Penjualans\Pages\PosPenjualan;
 use App\Filament\Resources\Penjualans\Pages\ViewPenjualan;
+use App\Filament\Resources\Penjualans\RelationManagers\DetailsRelationManager;
 use App\Filament\Resources\Penjualans\Schemas\PenjualanForm;
 use App\Filament\Resources\Penjualans\Schemas\PenjualanInfolist;
 use App\Filament\Resources\Penjualans\Tables\PenjualansTable;
@@ -42,7 +43,8 @@ class PenjualanResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+                //
+            DetailsRelationManager::class,
         ];
     }
 

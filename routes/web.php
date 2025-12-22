@@ -10,7 +10,10 @@ Route::get('/surat-jalan/{penjualan}', [SuratJalanController::class, 'print'])
 Route::get('/nota/{penjualan}/cetak', [NotaController::class, 'print'])
     ->name('nota.cetak');
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::get('/', function () {
+//     return view('welcome');
+// });
 
+Route::get('/', function () {
+    return redirect('/admin');
+});

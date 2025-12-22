@@ -37,6 +37,10 @@ class PenjualanInfolist
                             ->badge()
                             ->color(fn($state) => $state === 'TUNAI' ? 'success' : 'warning'),
 
+                        TextEntry::make('status_transaksi')
+                            ->label('STATUS'),
+
+
                         TextEntry::make('bank')
                             ->visible(fn($record) => $record->metode_pembayaran === 'TRANSFER'),
 
@@ -64,13 +68,24 @@ class PenjualanInfolist
 
                         TextEntry::make('nama_sopir')
                             ->label('Nama Sopir'),
+
+                        TextEntry::make('plat_kendaraan')
+                            ->placeholder('Belum Input NoPol')
+                            ->label('Nomor Polisi Kendaraan'),
+
                     ]),
 
                 Section::make('Metadata')
+
+                    ->columns(2)
                     ->collapsed()
                     ->schema([
                         TextEntry::make('user.name')
                             ->label('Kasir'),
+
+                        TextEntry::make('validator.name')
+                            ->placeholder('Belum Divalidasi')
+                            ->label('Validasi'),
 
                         TextEntry::make('created_at')
                             ->label('Dibuat')

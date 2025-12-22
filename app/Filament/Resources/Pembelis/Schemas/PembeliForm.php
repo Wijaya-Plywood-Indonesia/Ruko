@@ -24,6 +24,10 @@ class PembeliForm
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255),
+                        TextInput::make('nik')
+                            ->label('NIK')
+                            ->required()
+                            ->maxLength(255),
 
                         Textarea::make('alamat')
                             ->label('Alamat')
