@@ -103,7 +103,7 @@
                             <strong>Pengiriman:</strong><br />
                             Sopir : {{ $penjualan->nama_sopir }}<br />
                             Mobil : {{ $penjualan->kendaraan }}<br />
-                            No Plat :
+                            No Plat : {{ $penjualan->plat_kendaraan }}
                         </td>
                     </tr>
                 </table>
@@ -210,7 +210,7 @@
                             <strong>Pengiriman:</strong><br />
                             Sopir : {{ $penjualan->nama_sopir }}<br />
                             Mobil : {{ $penjualan->kendaraan }}<br />
-                            No Plat :
+                            No Plat : {{ $penjualan->plat_kendaraan }}
                         </td>
                     </tr>
                 </table>

@@ -353,6 +353,11 @@
                 class="pos-input"
                 placeholder="Kendaraan (opsional)"
             />
+            <input
+                wire:model.live="plat_kendaraan"
+                class="pos-input"
+                placeholder="Kendaraan (opsional)"
+            />
 
             <input
                 wire:model.live="nama_sopir"

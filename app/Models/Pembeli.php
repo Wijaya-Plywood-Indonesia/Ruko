@@ -9,6 +9,7 @@ class Pembeli extends Model
     //
     protected $fillable = [
         'nama',
+        'nik',
         'alamat',
         'telepon',
         'email',

@@ -33,6 +33,8 @@ class PosPenjualan extends Page
 
     public $kendaraan;
     public $nama_sopir;
+    public $plat_kendaraan;
+
 
     public function mount(): void
     {
@@ -126,20 +128,21 @@ class PosPenjualan extends Page
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
-        // dd([
-        //     'nama_customer' => $this->nama_customer,
-        //     'alamat' => $this->alamat,
-        //     'metode_pembayaran' => $this->metode_pembayaran,
-        //     'bank' => $this->bank,
-        //     'no_rekening' => $this->no_rekening,
-        //     'kendaraan' => $this->kendaraan,
-        //     'nama_sopir' => $this->nama_sopir,
-        //     'total' => $this->total,
-        //     'bayar' => $this->bayar,
-        //     'kembalian' => $this->kembalian,
-        //     'user_id' => auth()->id(),
-        //     'cart' => $this->cart,
-        // ]);
+        //     dd([
+        //         'nama_customer' => $this->nama_customer,
+        //         'alamat' => $this->alamat,
+        //         'metode_pembayaran' => $this->metode_pembayaran,
+        //         'bank' => $this->bank,
+        //         'no_rekening' => $this->no_rekening,
+        //         'kendaraan' => $this->kendaraan,
+        //         'nama_sopir' => $this->nama_sopir,
+        //         'plat_kendaraan' => $this->plat_kendaraan,
+        //         'total' => $this->total,
+        //         'bayar' => $this->bayar,
+        //         'kembalian' => $this->kembalian,
+        //         'user_id' => auth()->id(),
+        //         'cart' => $this->cart,
+        //     ]);
 
 
         // $this->validate();
@@ -162,6 +165,7 @@ class PosPenjualan extends Page
                 'no_rekening' => $this->metode_pembayaran === 'TRANSFER' ? $this->no_rekening : null,
 
                 'kendaraan' => $this->kendaraan,
+                'plat_kendaraan' => $this->plat_kendaraan,
                 'nama_sopir' => $this->nama_sopir,
 
                 'total' => $this->total,
@@ -212,6 +216,7 @@ class PosPenjualan extends Page
 
         $this->kendaraan = null;
         $this->nama_sopir = null;
+        $this->plat_kendaraan = null;
 
         $this->nama_customer = '';
         $this->alamat = '';

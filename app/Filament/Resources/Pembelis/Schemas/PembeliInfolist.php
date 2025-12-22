@@ -12,6 +12,8 @@ class PembeliInfolist
         return $schema
             ->components([
                 TextEntry::make('nama'),
+                TextEntry::make('nik')
+                    ->placeholder('Belum Input NIK'),
                 TextEntry::make('telepon'),
                 TextEntry::make('email')
                     ->label('Email address'),
