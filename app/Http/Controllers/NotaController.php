@@ -12,7 +12,13 @@ class NotaController extends Controller
     {
         $penjualan->load(['details.barang', 'user']);
 
-        return view('penjualans.cetakNota', compact('penjualan'));
+        $totalPotonganNota = $penjualan->details->sum(function ($detail) {
+            return ($detail->potongan ?? 0) * $detail->qty;
+        });
 
+        return view('penjualans.cetakNota', compact(
+            'penjualan',
+            'totalPotonganNota'
+        ));
     }
 }

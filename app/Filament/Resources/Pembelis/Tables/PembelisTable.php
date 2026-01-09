@@ -19,6 +19,7 @@ class PembelisTable
                     ->searchable(),
 
                 TextColumn::make('nik')
+                    ->placeholder('Belum Input NIK')
                     ->formatStateUsing(function ($state) {
                         if (strlen($state) <= 4) {
                             return $state;
@@ -29,6 +30,7 @@ class PembelisTable
                     ->searchable(),
 
                 TextColumn::make('telepon')
+                    ->placeholder('Tidak Ada')
                     // ->formatStateUsing(fn($state) => substr($state, -4))
                     ->formatStateUsing(function ($state) {
                         $length = strlen($state);
@@ -58,6 +60,7 @@ class PembelisTable
                     ->searchable(),
 
                 TextColumn::make('email')
+                    ->placeholder('Belum Terdaftar')
                     ->label('Email address')
                     ->searchable(),
                 TextColumn::make('created_at')

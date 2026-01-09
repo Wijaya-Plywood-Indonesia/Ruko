@@ -63,61 +63,81 @@ class PenjualanTerakhirWidget extends TableWidget
                 //
             ])
             ->recordActions([
-                Action::make('validasi_transaksi')
-                    ->label('Validasi Transaksi')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
+                // Action::make('validasi_transaksi')
+                //     ->label('Validasi Transaksi')
+                //     ->icon('heroicon-o-check-badge')
+                //     ->color('success')
 
-                    // Hanya tampil jika BELUM divalidasi
-                    ->visible(fn($record) => empty($record->validated_by))
+                //     // Hanya tampil jika BELUM divalidasi
+                //     ->visible(fn($record) => empty($record->validated_by))
 
-                    // Kasir TIDAK boleh validasi
-                    ->disabled(fn($record) => Auth::id() === $record->user_id)
+                //     // Kasir TIDAK boleh validasi
+                //     ->disabled(fn($record) => Auth::id() === $record->user_id)
 
-                    ->modalHeading('Validasi Transaksi')
-                    ->modalSubmitActionLabel('Simpan Validasi')
+                //     ->modalHeading('Validasi Transaksi')
+                //     ->modalSubmitActionLabel('Simpan Validasi')
 
-                    ->form([
-                        TextInput::make('validator_name')
-                            ->label('Validator')
-                            ->default(Auth::user()->name)
-                            ->disabled()
-                            ->dehydrated(false),
+                //     ->form([
+                //         TextInput::make('validator_name')
+                //             ->label('Validator')
+                //             ->default(Auth::user()->name)
+                //             ->disabled()
+                //             ->dehydrated(false),
 
-                        Select::make('status_transaksi')
-                            ->label('Status Transaksi')
-                            ->options([
-                                'LUNAS' => 'LUNAS',
-                                'COD' => 'COD',
-                                'PENDING' => 'PENDING',
-                                'DIBATALKAN' => 'DIBATALKAN',
-                            ])
-                            ->required(),
-                    ])
+                //         Select::make('status_transaksi')
+                //             ->label('Status Transaksi')
+                //             ->options([
+                //                 'LUNAS' => 'LUNAS',
+                //                 'COD' => 'COD',
+                //                 'PENDING' => 'PENDING',
+                //                 'DIBATALKAN' => 'DIBATALKAN',
+                //             ])
+                //             ->required(),
+                //     ])
 
-                    ->action(function ($record, array $data) {
-                        // Safety check backend
-                        if (Auth::id() === $record->user_id) {
-                            throw new \Exception('Kasir tidak boleh memvalidasi transaksinya sendiri.');
-                        }
+                //     ->action(function ($record, array $data) {
+                //         // Safety check backend
+                //         if (Auth::id() === $record->user_id) {
+                //             throw new \Exception('Kasir tidak boleh memvalidasi transaksinya sendiri.');
+                //         }
 
-                        $record->update([
-                            'validated_by' => Auth::id(),
-                            'status_transaksi' => $data['status_transaksi'],
-                        ]);
-                    }),
+                //         $record->update([
+                //             'validated_by' => Auth::id(),
+                //             'status_transaksi' => $data['status_transaksi'],
+                //         ]);
+                //     }),
 
                 //
                 Action::make('cetak')
-                    ->label('Nota')
+                    ->label('Cetak Nota')
                     ->icon('heroicon-o-printer')
+                    ->color('primary')
                     ->url(fn($record) => route('nota.cetak', $record))
-                    ->openUrlInNewTab(),
+                    ->openUrlInNewTab()
+                    ->visible(
+                        fn($record) =>
+                        !empty($record->validated_by)
+                        && !in_array($record->status_transaksi, [
+                            'DIBATALKAN',
+                            'BELUM DIBAYAR',
+                            'PENDING',
+                        ])
+                    ),
                 Action::make('suratJalan')
-                    ->label('Surat Jalan')
+                    ->label('Cetak Surat Jalan')
                     ->icon('heroicon-o-truck')
+                    ->color('warning')
                     ->url(fn($record) => route('surat-jalan.cetak', $record))
-                    ->openUrlInNewTab(),
+                    ->openUrlInNewTab()
+                    ->visible(
+                        fn($record) =>
+                        !empty($record->validated_by)
+                        && !in_array($record->status_transaksi, [
+                            'DIBATALKAN',
+                            'BELUM DIBAYAR',
+                            'PENDING',
+                        ])
+                    ),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
