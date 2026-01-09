@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Penjualans\Pages;
 
 use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Models\Barang;
+use App\Models\Pembeli;
 use App\Models\Penjualan;
 use App\Models\DetailPenjualan;
+use App\Models\RekeningPembeli;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
@@ -22,24 +24,70 @@ class PosPenjualan extends Page
     public array $cart = [];
 
     // pelanggan & pembayaran
-    public string $nama_customer = '';
-    public string $alamat = '';
+
     public string $metode_pembayaran = 'TUNAI';
     public int $bayar = 0;
 
-
     public $bank;
     public $no_rekening;
-
-    public $kendaraan;
-    public $nama_sopir;
-    public $plat_kendaraan;
-
+    public string $metode_pengiriman = 'DIBAWA_SENDIRI';
+    public ?string $kendaraan = null;
+    public ?string $plat_kendaraan = null;
+    public ?string $nama_sopir = null;
+    //buat pembeli
+    public string $searchCustomer = '';
+    public $customerResults = [];
+    public ?int $pembeli_id = null;
+    public string $nama_customer = '';
+    public string $alamat = '';
+    public string $telepon = '';
+    public ?int $rekening_id = null;
+    public $rekeningCustomer = [];
 
     public function mount(): void
     {
         $this->searchResults = collect();
     }
+
+    /* ================= Pembeli/Customer ================= */
+    public function updatedSearchCustomer()
+    {
+        if (strlen($this->searchCustomer) < 2) {
+            $this->customerResults = [];
+            return;
+        }
+
+        $this->customerResults = Pembeli::query()
+            ->where('nama', 'like', "%{$this->searchCustomer}%")
+            ->orWhere('telepon', 'like', "%{$this->searchCustomer}%")
+            ->orWhere('nik', 'like', "%{$this->searchCustomer}%")
+            ->limit(5)
+            ->get();
+    }
+    public function selectCustomer(int $id)
+    {
+        $pembeli = Pembeli::with('rekening')->findOrFail($id);
+
+        $this->pembeli_id = $pembeli->id;
+        $this->nama_customer = $pembeli->nama;
+        $this->alamat = $pembeli->alamat;
+        $this->telepon = $pembeli->telepon;
+
+        // 👇 load rekening
+        $this->rekeningCustomer = $pembeli->rekening;
+
+        // reset
+        $this->rekening_id = null;
+        $this->customerResults = [];
+        $this->searchCustomer = '';
+    }
+    public function updatedMetodePembayaran()
+    {
+        if ($this->metode_pembayaran !== 'TRANSFER') {
+            $this->rekening_id = null;
+        }
+    }
+
 
     /* ================= AUTOCOMPLETE ================= */
     public function updatedSearch(): void
@@ -74,6 +122,10 @@ class PosPenjualan extends Page
                 'qty' => 1,
                 'harga_awal' => (int) $barang->harga_jual,
                 'harga_jual' => (int) $barang->harga_jual,
+
+                // ===== POTONGAN =====
+                'potongan' => $this->is_member === 1 ? 5000 : 0,
+                'total_potongan' => $this->is_member === 1 ? 5000 : 0,
             ];
         }
 
@@ -84,21 +136,30 @@ class PosPenjualan extends Page
     }
 
     /* ================= CART ================= */
+    public function updateQty($id): void
+    {
+        if (!isset($this->cart[$id]))
+            return;
+
+        $qty = max(1, (int) $this->cart[$id]['qty']);
+        $this->cart[$id]['qty'] = $qty;
+
+        $this->cart[$id]['total_potongan'] =
+            $this->cart[$id]['potongan'] * $qty;
+
+        $this->updateSubtotal($id);
+    }
     public function incrementQty(int $id): void
     {
         $this->cart[$id]['qty']++;
-        $this->cart[$id]['subtotal'] =
-            $this->cart[$id]['qty'] * $this->cart[$id]['harga_jual'];
-
+        $this->updateQty($id);
     }
-
 
     public function decrementQty(int $id): void
     {
         if ($this->cart[$id]['qty'] > 1) {
             $this->cart[$id]['qty']--;
-            $this->cart[$id]['subtotal'] =
-                $this->cart[$id]['qty'] * $this->cart[$id]['harga_jual'];
+            $this->updateQty($id);
         }
     }
 
@@ -107,13 +168,32 @@ class PosPenjualan extends Page
         unset($this->cart[$id]);
     }
 
+    // public function updatePotongan($id)
+    // {
+    //     if (!isset($this->cart[$id]))
+    //         return;
+
+    //     $potongan = (int) ($this->cart[$id]['potongan'] ?? 0);
+    //     $qty = (int) ($this->cart[$id]['qty'] ?? 1);
+
+    //     $this->cart[$id]['potongan'] = max(0, $potongan);
+    //     $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $qty;
+
+    //     $this->hitungUlangTotal();
+    // }
+
     protected function updateSubtotal(int $id): void
     {
+        $item = $this->cart[$id];
+
         $this->cart[$id]['subtotal'] =
-            $this->cart[$id]['qty'] * $this->cart[$id]['harga_jual'];
+            ($item['harga_jual'] * $item['qty'])
+            - ($item['total_potongan'] ?? 0);
     }
 
+
     /* ================= COMPUTED ================= */
+    /* ================= TOTAL ================= */
     public function getTotalProperty(): int
     {
         return collect($this->cart)->sum('subtotal');
@@ -121,7 +201,33 @@ class PosPenjualan extends Page
 
     public function getKembalianProperty(): int
     {
-        return max(((int) $this->bayar) - $this->total, 0);
+        return max($this->bayar - $this->total, 0);
+    }
+
+    public int $is_member = 0;
+
+
+    public function updatedIsMember($value)
+    {
+        $this->is_member = (bool) $value;
+
+        if (!$this->is_member) {
+            $this->reset([
+                'searchCustomer',
+                'customerResults',
+                'rekeningCustomer',
+            ]);
+        }
+    }
+
+    /* ================= PENGIRIMAN ================= */
+    public function updatedMetodePengiriman()
+    {
+        if ($this->metode_pengiriman === 'DIBAWA_SENDIRI') {
+            $this->kendaraan = null;
+            $this->plat_kendaraan = null;
+            $this->nama_sopir = null;
+        }
     }
 
 
@@ -153,20 +259,72 @@ class PosPenjualan extends Page
 
         DB::transaction(function () {
 
+            // =========================
+            // 1. CUSTOMER
+            // =========================
+            $pembeli = $this->pembeli_id
+                ? Pembeli::find($this->pembeli_id)
+                : Pembeli::firstOrCreate(
+                    ['nama' => $this->nama_customer],
+                    [
+                        'alamat' => $this->alamat,
+                        'telepon' => $this->telepon,
+                    ]
+                );
+
+            // =========================
+            // 2. REKENING (JIKA TRANSFER)
+            // =========================
+            $rekening = null;
+
+            if ($this->metode_pembayaran === 'TRANSFER') {
+
+                // pilih rekening lama
+                if ($this->rekening_id) {
+                    $rekening = RekeningPembeli::find($this->rekening_id);
+
+                    // atau buat baru
+                } else {
+                    $rekening = RekeningPembeli::create([
+                        'pembeli_id' => $pembeli->id,
+                        'jenis' => 'BANK',
+                        'nama_bank' => $this->bank,
+                        'no_rekening' => $this->no_rekening,
+                        'atas_nama' => $pembeli->nama,
+                    ]);
+                }
+            }
+
+            // =========================
+            // 3. PENJUALAN
+            // =========================
             $penjualan = Penjualan::create([
                 'no_nota' => 'INV-' . now()->format('YmdHis'),
                 'tanggal' => now(),
 
+                'pembeli_id' => $pembeli->id,
+                'rekening_pembeli_id' => $rekening?->id,
+
+                // BACKWARD COMPATIBLE
                 'nama_customer' => $this->nama_customer,
+                'is_member' => (bool) $this->is_member,
                 'alamat' => $this->alamat,
 
                 'metode_pembayaran' => $this->metode_pembayaran,
-                'bank' => $this->metode_pembayaran === 'TRANSFER' ? $this->bank : null,
-                'no_rekening' => $this->metode_pembayaran === 'TRANSFER' ? $this->no_rekening : null,
+                'bank' => $rekening?->nama_bank,
+                'no_rekening' => $rekening?->no_rekening,
 
-                'kendaraan' => $this->kendaraan,
-                'plat_kendaraan' => $this->plat_kendaraan,
-                'nama_sopir' => $this->nama_sopir,
+                'kendaraan' => $this->metode_pengiriman === 'DIKIRIM'
+                    ? $this->kendaraan
+                    : null,
+
+                'plat_kendaraan' => $this->metode_pengiriman === 'DIKIRIM'
+                    ? $this->plat_kendaraan
+                    : null,
+
+                'nama_sopir' => $this->metode_pengiriman === 'DIKIRIM'
+                    ? $this->nama_sopir
+                    : null,
 
                 'total' => $this->total,
                 'bayar' => $this->bayar,
@@ -175,6 +333,9 @@ class PosPenjualan extends Page
                 'user_id' => auth()->id(),
             ]);
 
+            // =========================
+            // 4. DETAIL
+            // =========================
             foreach ($this->cart as $item) {
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
@@ -184,24 +345,24 @@ class PosPenjualan extends Page
                     'qty' => $item['qty'],
                     'harga_awal' => $item['harga_awal'],
                     'harga_jual' => $item['harga_jual'],
+
+                    // ===== POTONGAN =====
+                    'potongan' => $item['potongan'],
+                    //   'total_potongan' => $item['total_potongan'],
+
                     'subtotal' => $item['subtotal'],
                 ]);
             }
         });
 
-        $this->resetPos();
-        // ⬅️ SIMPAN NILAI SEBELUM RESET
         $kembalian = $this->kembalian;
+        $this->resetPos();
+
         Notification::make()
             ->title('Transaksi Berhasil')
             ->body("Kembalian: Rp {$kembalian}")
             ->success()
-            ->persistent() // tidak hilang sampai ditekan OK
-            ->actions([
-                Action::make('ok')
-                    ->label('OK')
-                    ->close(),
-            ])
+            ->persistent()
             ->send();
     }
 
@@ -218,18 +379,31 @@ class PosPenjualan extends Page
         $this->nama_sopir = null;
         $this->plat_kendaraan = null;
 
+
         $this->nama_customer = '';
         $this->alamat = '';
     }
-    public function updateHargaJual($id)
+    /* ================= CART : HARGA ================= */
+    public function updateHargaJual($id): void
     {
         if (!isset($this->cart[$id]))
             return;
 
-        $harga = (int) $this->cart[$id]['harga_jual'];
-        $qty = (int) $this->cart[$id]['qty'];
+        $this->updateSubtotal($id);
+    }
+    /* ================= CART : POTONGAN ================= */
+    public function updatePotongan($id): void
+    {
+        if (!isset($this->cart[$id]))
+            return;
 
-        $this->cart[$id]['subtotal'] = $harga * $qty;
+        $potongan = max(0, (int) $this->cart[$id]['potongan']);
+        $qty = $this->cart[$id]['qty'];
+
+        $this->cart[$id]['potongan'] = $potongan;
+        $this->cart[$id]['total_potongan'] = $potongan * $qty;
+
+        $this->updateSubtotal($id);
     }
 
     /* ===== RESTORE CART (OFFLINE) ===== */

@@ -9,6 +9,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
@@ -104,11 +105,14 @@ class PenjualansTable
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
 
-                    // Hanya tampil jika BELUM divalidasi
+                    // Muncul hanya jika BELUM divalidasi
                     ->visible(fn($record) => empty($record->validated_by))
 
-                    // Kasir TIDAK boleh validasi
-                    ->disabled(fn($record) => Auth::id() === $record->user_id)
+                    // Pembuat transaksi TIDAK boleh validasi
+                    ->disabled(
+                        fn($record) =>
+                        $record->user_id === filament()->auth()->id()
+                    )
 
                     ->modalHeading('Validasi Transaksi')
                     ->modalSubmitActionLabel('Simpan Validasi')
@@ -116,7 +120,7 @@ class PenjualansTable
                     ->form([
                         TextInput::make('validator_name')
                             ->label('Validator')
-                            ->default(Auth::user()->name)
+                            ->default(fn() => filament()->auth()->user()->name)
                             ->disabled()
                             ->dehydrated(false),
 
@@ -132,15 +136,58 @@ class PenjualansTable
                     ])
 
                     ->action(function ($record, array $data) {
-                        // Safety check backend
-                        if (Auth::id() === $record->user_id) {
-                            throw new \Exception('Kasir tidak boleh memvalidasi transaksinya sendiri.');
+                        // dd([
+                        //     'auth_default_id' => auth()->id(),
+                        //     'auth_filament_id' => filament()->auth()->id(),
+                        //     'record_user_id' => $record->user_id,
+                        //     'record_user_id_type' => gettype($record->user_id),
+                        //     'auth_default_type' => gettype(auth()->id()),
+                        //     'auth_filament_type' => gettype(filament()->auth()->id()),
+                        //     'strict_compare' => $record->user_id === filament()->auth()->id(),
+                        //     'loose_compare' => $record->user_id == filament()->auth()->id(),
+                        //     'full_record' => $record->toArray(),
+                        // ]);
+                        // HARD BACKEND PROTECTION
+                        if ($record->user_id === filament()->auth()->id()) {
+                            Notification::make()
+                                ->title('Anda tidak boleh memvalidasi transaksi sendiri')
+                                ->danger()
+                                ->send();
+
+                            return;
                         }
 
                         $record->update([
-                            'validated_by' => Auth::id(),
+                            'validated_by' => filament()->auth()->id(),
                             'status_transaksi' => $data['status_transaksi'],
                         ]);
+
+                        Notification::make()
+                            ->title('Transaksi berhasil divalidasi')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('batal_validasi')
+                    ->label('Batal Validasi')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+
+                    // Muncul hanya jika SUDAH divalidasi
+                    ->visible(fn($record) => !empty($record->validated_by))
+
+                    ->action(function ($record) {
+
+                        $record->update([
+                            'validated_by' => null,
+                            'status_transaksi' => 'BELUM DIBAYAR', // 🔥 reset nilai select
+                        ]);
+
+                        Notification::make()
+                            ->title('Validasi transaksi berhasil dibatalkan')
+                            ->danger()
+                            ->send();
                     }),
                 ViewAction::make(),
                 //  EditAction::make(),

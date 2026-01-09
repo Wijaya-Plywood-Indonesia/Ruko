@@ -17,6 +17,7 @@ class DetailPenjualan extends Model
         'qty',
         'harga_awal',
         'harga_jual',
+        'potongan',
         'subtotal',
         'keterangan',
     ];

@@ -11,6 +11,7 @@ class Penjualan extends Model
         'no_nota',
         'tanggal',
         'nama_customer',
+        'is_member',
         'alamat',
         'metode_pembayaran',
         'bank',
@@ -31,6 +32,9 @@ class Penjualan extends Model
         'total' => 'decimal:2',
         'bayar' => 'decimal:2',
         'kembalian' => 'decimal:2',
+        'is_member' => 'boolean',
+        'user_id' => 'integer',
+        'validated_by' => 'integer',
     ];
 
     /*

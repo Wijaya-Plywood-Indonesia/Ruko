@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('pembelis', function (Blueprint $table) {
             $table->id();
             $table->string('nama');
+            $table->string('nik')->nullable();
             $table->text('alamat')->nullable();
             $table->string('telepon')->nullable();
             $table->string('email')->nullable();

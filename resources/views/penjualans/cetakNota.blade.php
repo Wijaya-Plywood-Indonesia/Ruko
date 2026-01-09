@@ -121,6 +121,8 @@
                         <th>Satuan</th>
                         <th>Qty</th>
                         <th>Harga</th>
+                        <th>Potongan</th>
+                        <th>Total Potongan</th>
                         <th>Subtotal</th>
                     </tr>
                 </thead>
@@ -136,19 +138,49 @@
                         <td class="text-right">
                             {{ number_format($detail->harga_jual) }}
                         </td>
+                        {{-- POTONGAN PER PCS --}}
+                        <td class="text-right">
+                            {{ number_format($detail->potongan ?? 0) }}
+                        </td>
+
+                        @php $totalPotonganItem = ($detail->potongan ?? 0) *
+                        $detail->qty; @endphp
+
+                        <td class="text-right">
+                            {{ number_format($totalPotonganItem) }}
+                        </td>
+
                         <td class="text-right">
                             {{ number_format($detail->subtotal) }}
                         </td>
                     </tr>
                     @endforeach
                     <tr>
-                        <td colspan="5" class="text-right">
+                        <td colspan="7" class="text-right">
                             <strong>Total</strong>
                         </td>
                         <td class="text-right">
                             <strong
                                 >{{ number_format($penjualan->total) }}</strong
                             >
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            @if ($totalPotonganNota > 0)
+                            <p style="margin-top: 6px; font-size: 11px">
+                                <em>
+                                    🎉 Anda menghemat
+                                    <strong
+                                        >Rp
+                                        {{
+                                            number_format($totalPotonganNota)
+                                        }}</strong
+                                    >
+                                    Pada Pembelian Kali Ini !
+                                </em>
+                            </p>
+                            @endif
                         </td>
                     </tr>
                 </tbody>

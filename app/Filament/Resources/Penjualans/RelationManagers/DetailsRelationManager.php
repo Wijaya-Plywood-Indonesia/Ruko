@@ -10,8 +10,11 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DissociateAction;
 use Filament\Actions\DissociateBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -24,9 +27,84 @@ class DetailsRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                TextInput::make('no_nota')
-                    ->required()
-                    ->maxLength(255),
+                /* ======================================================
+             | DATA BARANG
+             ====================================================== */
+                Section::make('Data Barang')
+                    ->columns(1)
+                    ->components([
+
+                        Select::make('barang_id')
+                            ->label('Barang')
+                            ->relationship('barang', 'nama_barang')
+                            ->searchable()
+                            ->required(),
+
+                        TextInput::make('satuan')
+                            ->label('Satuan')
+                            ->disabled()
+                            ->dehydrated(),
+                    ]),
+
+                /* ======================================================
+                 | QTY & HARGA
+                 ====================================================== */
+                Section::make('Qty & Harga')
+                    ->columns(1)
+                    ->components([
+
+                        TextInput::make('qty')
+                            ->label('Qty')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+
+                        TextInput::make('harga_awal')
+                            ->label('Harga Awal')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->required(),
+
+                        TextInput::make('harga_jual')
+                            ->label('Harga Jual')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->required(),
+                    ]),
+
+                /* ======================================================
+                 | POTONGAN & SUBTOTAL
+                 ====================================================== */
+                Section::make('Potongan & Subtotal')
+                    ->columns(1)
+                    ->components([
+
+                        TextInput::make('potongan')
+                            ->label('Potongan')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0),
+
+                        TextInput::make('subtotal')
+                            ->label('Subtotal')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->disabled()
+                            ->dehydrated(),
+                    ]),
+
+                /* ======================================================
+                 | KETERANGAN
+                 ====================================================== */
+                Section::make('Keterangan')
+                    ->components([
+
+                        Textarea::make('keterangan')
+                            ->label('Keterangan')
+                            ->rows(4)
+                            ->placeholder('Tambahkan catatan jika ada...')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -60,6 +138,12 @@ class DetailsRelationManager extends RelationManager
                     ->money('IDR', locale: 'id')
                     ->alignRight(),
 
+                TextColumn::make('potongan')
+                    ->label('Potongan')
+                    ->money('IDR', locale: 'id')
+                    ->placeholder('0')
+                    ->alignRight(),
+
                 TextColumn::make('subtotal')
                     ->label('Subtotal')
                     ->money('IDR', locale: 'id')
@@ -68,7 +152,12 @@ class DetailsRelationManager extends RelationManager
 
                 TextColumn::make('keterangan')
                     ->label('Keterangan')
+                    ->limit(40)
+                    ->placeholder('Tidak Ada')
+                    ->tooltip(fn($state) => $state)
                     ->wrap(),
+
+
             ])
             ->filters([
                 //
