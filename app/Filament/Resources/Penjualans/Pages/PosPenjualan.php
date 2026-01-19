@@ -106,11 +106,33 @@ class PosPenjualan extends Page
             ->get();
     }
 
+    public bool $showDropdown = false;
+
+    public function openDropdown()
+    {
+        $this->showDropdown = true;
+    }
+
+    public function closeDropdown()
+    {
+        $this->showDropdown = false;
+    }
+
     public function selectBarang(int $id): void
     {
+
         $barang = Barang::with('satuan')->find($id);
         if (!$barang)
             return;
+
+        if($barang->stok_minimum < 1){
+            Notification::make()
+                ->title('Stok barang habis')
+                ->body("Barang tidak bisa ditambahkan ke keranjang.")
+                ->danger()
+                ->send();
+            return;
+        }
 
         if (isset($this->cart[$id])) {
             $this->cart[$id]['qty']++;
@@ -133,6 +155,7 @@ class PosPenjualan extends Page
 
         $this->search = '';
         $this->searchResults = collect();
+        $this->showDropdown = false;
     }
 
     /* ================= CART ================= */
@@ -141,26 +164,67 @@ class PosPenjualan extends Page
         if (!isset($this->cart[$id]))
             return;
 
-        $qty = max(1, (int) $this->cart[$id]['qty']);
-        $this->cart[$id]['qty'] = $qty;
+        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $qty = $this->cart[$id]['qty'] ?? 0;
+
+        if ($qty > $stock) {
+            Notification::make()
+                ->title('Stok Maksimum Tercapai')
+                ->body("Jumlah maksimal untuk barang ini adalah {$stock}.")
+                ->warning()
+                ->persistent() // opsional
+                ->send();
+            $qty_a = max(1, (int) $stock);
+            $this->cart[$id]['qty'] = $qty_a;
+            return;
+        }
+
+
+        $qty_a = max(1, (int) $qty);
+        $this->cart[$id]['qty'] = $qty_a;
 
         $this->cart[$id]['total_potongan'] =
-            $this->cart[$id]['potongan'] * $qty;
+            $this->cart[$id]['potongan'] * $qty_a;
 
         $this->updateSubtotal($id);
     }
+
     public function incrementQty(int $id): void
     {
+        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $qty = $this->cart[$id]['qty'] ?? 0;
+
+        if ($qty >= $stock) {
+            Notification::make()
+                ->title('Stok Maksimum Tercapai')
+                ->body("Jumlah maksimal untuk barang ini adalah {$stock}.")
+                ->warning()
+                ->persistent() // opsional
+                ->send();
+
+            return;
+        }
+
         $this->cart[$id]['qty']++;
         $this->updateQty($id);
     }
 
+
     public function decrementQty(int $id): void
     {
-        if ($this->cart[$id]['qty'] > 1) {
-            $this->cart[$id]['qty']--;
-            $this->updateQty($id);
+        if($this->cart[$id]['qty'] <= 1){
+            Notification::make()
+                ->title('Minimal Jumlah Barang')
+                ->body("Minimal jumlah barang adalah 1.")
+                ->danger()
+                ->persistent() // opsional
+                ->send();
+
+            return;
         }
+
+        $this->cart[$id]['qty']--;
+        $this->updateQty($id);
     }
 
     public function removeFromCart(int $id): void
@@ -234,6 +298,21 @@ class PosPenjualan extends Page
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
+        //! Validasi Pembayaran
+        $total_pembayaran = $this->total;
+        $nomimal_disetorkan = $this->bayar;
+        
+        if($nomimal_disetorkan < $total_pembayaran){
+            Notification::make()
+                ->title('Pembayaran Kurang')
+                ->body("Nominal pembayaran kurang.")
+                ->danger()
+                ->persistent() // opsional
+                ->send();
+            return;
+        }
+        
+
         //     dd([
         //         'nama_customer' => $this->nama_customer,
         //         'alamat' => $this->alamat,
@@ -337,6 +416,13 @@ class PosPenjualan extends Page
             // 4. DETAIL
             // =========================
             foreach ($this->cart as $item) {
+                $stock = Barang::find($item['barang_id'])?->stok_minimum ?? 0;
+
+                Barang::where('id', $item['barang_id'])
+                    ->update([
+                        'stok_minimum' => $stock - $item['qty'],
+                    ]);
+
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $item['barang_id'],

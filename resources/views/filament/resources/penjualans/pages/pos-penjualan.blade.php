@@ -3,12 +3,19 @@
         POS CASHIER STYLE (KHUSUS PAGE INI)
         ========================================================= --}}
     <style>
+        option {
+            background: #010101;
+            color: #fafafa;
+            
+        }
         /* ===============================
            GLOBAL POS LAYOUT
            =============================== */
         .pos-wrapper {
             font-family: ui-sans-serif, system-ui, -apple-system;
-            background: #f9fafb;
+            /* background: #f9fafb; */
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
             padding: 16px;
         }
 
@@ -27,7 +34,7 @@
             padding: 10px 12px;
             border-radius: 6px;
             border: 1px solid #d1d5db;
-            background: #fff;
+            /* background: #fff; */
             font-size: 14px;
         }
 
@@ -43,7 +50,7 @@
            =============================== */
         .pos-search-box {
             width: 300px;
-            background: #fff;
+            /* background: #fff; */
             border-radius: 6px;
             border: 1px solid #d1d5db;
             overflow: hidden;
@@ -53,12 +60,32 @@
         .pos-search-item {
             padding: 10px;
             cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid #d1d5db;
         }
 
-        .pos-search-item:hover {
-            background: #f3f4f6;
+
+        .pos-search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            margin-top: 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 50;
         }
+
+
+        .pos-search-item:hover {
+            border-radius: 8px;
+            outline: none;
+            border: 1px solid #2563eb;
+            /* border-color: #2563eb; */
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
 
         /* ===============================
            DIVIDER
@@ -74,7 +101,7 @@
         .pos-table {
             width: 100%;
             border-collapse: collapse;
-            background: #fff;
+            /* background: #fff; */
             border-radius: 8px;
             overflow: hidden;
         }
@@ -117,7 +144,7 @@
 
         /* ➖ MINUS */
         .qty-btn.minus {
-            background: #fee2e2; /* merah muda */
+            /* background: #fee2e2; merah muda/ */
             color: #b91c1c;
         }
 
@@ -127,7 +154,7 @@
 
         /* ➕ PLUS */
         .qty-btn.plus {
-            background: #dcfce7; /* hijau muda */
+            /* background: #dcfce7; hijau muda */
             color: #166534;
         }
 
@@ -144,7 +171,7 @@
            BUTTON
            =============================== */
         .btn-danger {
-            background: #ef4444;
+            background: #cf2323;
             color: white;
             border: none;
             padding: 6px 8px;
@@ -153,7 +180,7 @@
         }
 
         .btn-danger:hover {
-            background: #dc2626;
+            background: #ef4444;
         }
 
         .btn-primary {
@@ -176,13 +203,12 @@
         .pos-total {
             font-size: 20px;
             font-weight: 700;
-            color: #111827;
+            /* color: #111827; */
         }
 
         .pos-kembalian {
             font-size: 16px;
             font-weight: 600;
-            color: #059669;
         }
         /* ===============================
    INPUT HARGA JUAL (POS)
@@ -194,8 +220,8 @@
             border: 1px solid #d1d5db; /* abu lembut */
             border-radius: 6px;
 
-            background-color: #f9fafb; /* beda dari bg tabel */
-            color: #111827;
+            /* background-color: #f9fafb; beda dari bg tabel */
+            /* color: #111827; */
 
             font-weight: 600;
             text-align: right;
@@ -206,7 +232,7 @@
         /* Fokus / aktif */
         .pos-input-price:focus {
             border-color: #2563eb;
-            background-color: #ffffff;
+            /* background-color: #ffffff; */
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
         }
 
@@ -239,7 +265,7 @@
    MOBILE CARD STYLE
    =============================== */
         .pos-cart-card {
-            background: #ffffff;
+            /* background: #ffffff; */
             border: 1px solid #e5e7eb;
             border-radius: 10px;
             padding: 12px;
@@ -297,13 +323,21 @@
         WRAPPER
         ========================================================= --}}
     <div class="pos-wrapper">
-        <h2 class="pos-title">Point of Sale</h2>
+        <div style="display: flex; width: 100%; justify-content: space-between;">
+            <h2 class="pos-title">Point of Sale</h2>
+            <div style="margin-top: 12px; font-size: 14px">
+                <strong>Kasir:</strong> {{ auth()->user()->name }}
+            </div>
+        </div>
+
         <div class="pos-divider"></div>
 
         {{-- ===================== CUSTOMER ===================== --}}
 
         {{-- MEMBER / REGULAR --}}
-        Pelanggan :
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Jenis Pelanggan
+        </h6>
         <select wire:model.live="is_member" class="pos-select">
             <option value="0">Regular</option>
             <option value="1">Member</option>
@@ -312,31 +346,44 @@
         {{-- ===================== TITLE ===================== --}}
 
         {{-- ===================== SEARCH ===================== --}}
-        <input
-            type="text"
-            wire:model.live="search"
-            placeholder="Cari barang / barcode"
-            class="pos-input"
-            style="max-width: 300px"
-        />
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Masukkan Barang
+        </h6>
 
-        @if ($searchResults->isNotEmpty())
-        <div class="pos-search-box">
-            @foreach ($searchResults as $barang)
-            <div
-                wire:click="selectBarang({{ $barang->id }})"
-                class="pos-search-item"
-            >
-                <strong>{{ $barang->nama_barang }}</strong
-                ><br />
-                <small>Rp {{ number_format($barang->harga_jual) }}</small>
-            </div>
-            @endforeach
+        <div class="pos-search-wrapper" style="position: relative; max-width: 300px">
+            <input
+                type="text"
+                wire:model.live.debounce.300ms="search"
+                placeholder="Cari barang / barcode"
+                class="pos-input w-full"
+                wire:focus="openDropdown"
+                wire:keydown.escape="closeDropdown"
+            />
+
+            @if ($showDropdown && $searchResults->isNotEmpty())
+                <div class="pos-search-dropdown">
+                    @foreach ($searchResults as $barang)
+                            <div
+                                x-data
+                                :style="$store.theme !== 'dark' 
+                                ? 'background-color: #fafafa; color: #09090B;' 
+                                : 'background-color: #09090B; color: #fafafa;'"
+                                wire:click="selectBarang({{ $barang->id }})"
+                                class="pos-search-item"
+                            >
+                                <strong>{{ $barang->nama_barang }}</strong><br>
+                                <small>Rp {{ number_format($barang->harga_jual) }}</small><br>
+                                <small>
+                                    Stock:
+                                    {{ $barang->stok_minimum > 0 ? $barang->stok_minimum : 'Kosong' }}
+                                </small>
+                            </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
-        @endif
-        <div style="margin-top: 12px; font-size: 14px">
-            <strong>Kasir:</strong> {{ auth()->user()->name }}
-        </div>
+
+
         <div class="pos-divider"></div>
 
         <div class="pos-table-desktop">
@@ -434,6 +481,7 @@
                                 <button
                                     wire:click="removeFromCart({{ $id }})"
                                     class="btn-danger"
+                                    {{-- style="background: #b91c1c" --}}
                                 >
                                     ❌
                                 </button>
@@ -554,7 +602,9 @@
         @endif @endif
         <div class="pos-divider"></div>
         {{-- ===================== DATA PELANGGAN ===================== --}}
-        <h4>Data Pelanggan</h4>
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Jenis Pelanggan
+        </h6>
 
         <div
             style="
@@ -620,7 +670,9 @@
         {{-- ===================== Pengiriman ===================== --}}
 
         <div class="pos-divider"></div>
-        <h4 style="margin-top: 16px">Pengiriman</h4>
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Jenis Pelanggan
+        </h6>
 
         {{-- METODE PENGIRIMAN --}}
         <select
@@ -663,7 +715,12 @@
         @endif
 
         {{-- ===================== TOTAL ===================== --}}
-        <h3 class="pos-total">Total: Rp {{ number_format($this->total) }}</h3>
+        <div class="pos-divider"></div>
+        <h3 class="pos-total">Total Pembayaran: Rp {{ number_format($this->total) }}</h3>
+        
+        <h6 style="margin-bottom: 8px; font-weight: 400;">
+            Nominal yang disetorkan
+        </h6>
 
         <div style="max-width: 300px; margin-top: 8px">
             <input
@@ -672,12 +729,20 @@
                 class="pos-input"
                 placeholder="Bayar"
             />
-            <p class="pos-kembalian">
+
+            <p class="pos-kembalian" 
+            
+            x-data
+            :style="$this->bayar < $this->total ? 'color: red;' : $this->bayar == $this->total ? 'color: blue;' : 'color: green;'"
+            {{-- style="margin-top: 4px; margin-bottom: 4px;" --}}
+            >
+            {{ $this->bayar }}
+            {{ $this->total }}
                 Kembalian: Rp {{ number_format($this->kembalian) }}
             </p>
         </div>
 
-        <button wire:click="simpanPenjualan" class="btn-primary">
+        <button wire:click="simpanPenjualan" style="margin-top: 6px;" class="btn-primary">
             Simpan Penjualan
         </button>
     </div>
