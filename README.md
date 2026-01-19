@@ -1,59 +1,220 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RUKO — Operational Management System</title>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue",
+                         Arial, sans-serif;
+            line-height: 1.7;
+            color: #24292f;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        header img {
+            max-width: 360px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 2.6rem;
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            border-bottom: 1px solid #d0d7de;
+            padding-bottom: 6px;
+            margin-top: 56px;
+        }
+
+        h3 {
+            margin-top: 32px;
+        }
+
+        p {
+            margin: 14px 0;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        code, pre {
+            background: #f6f8fa;
+            border-radius: 6px;
+        }
+
+        pre {
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .badges img {
+            margin: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid #d0d7de;
+            text-align: left;
+        }
+
+        th {
+            background: #f6f8fa;
+        }
+
+        footer {
+            margin-top: 80px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #57606a;
+        }
+
+        .lang-divider {
+            margin: 64px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #57606a;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+    <!-- Ganti logo jika ada -->
+    <img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" alt="Project Logo">
+
+    <h1>RUKO</h1>
+    <p><strong>Operational & Data Management Web Application</strong></p>
+    <p>Developed by <strong>Wijaya Plywood Indonesia</strong></p>
+
+    <div class="badges">
+        <img src="https://img.shields.io/badge/PHP-8.x-777bb3">
+        <img src="https://img.shields.io/badge/Laravel-Framework-red">
+        <img src="https://img.shields.io/badge/Status-Active-success">
+        <img src="https://img.shields.io/badge/License-MIT-blue">
+    </div>
+</header>
+
+<h2>🇮🇩 Tentang Proyek</h2>
+
+<p>
+    <strong>RUKO</strong> adalah aplikasi web yang dikembangkan untuk mendukung
+    pengelolaan data dan proses operasional secara terstruktur, konsisten,
+    dan mudah dikembangkan.
 </p>
 
-## About Laravel
+<p>
+    Proyek ini dirancang sebagai fondasi sistem yang dapat digunakan
+    untuk kebutuhan <strong>internal organisasi</strong> maupun
+    dikembangkan lebih lanjut sebagai <strong>open-source project</strong>.
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<h3>🎯 Tujuan</h3>
+<ul>
+    <li>Menyediakan sistem operasional terpusat</li>
+    <li>Meningkatkan konsistensi dan validasi data</li>
+    <li>Mengurangi proses manual dan human error</li>
+    <li>Menyediakan arsitektur aplikasi yang scalable</li>
+</ul>
 
--   [Simple, fast routing engine](https://laravel.com/docs/routing).
--   [Powerful dependency injection container](https://laravel.com/docs/container).
--   Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
--   Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
--   Database agnostic [schema migrations](https://laravel.com/docs/migrations).
--   [Robust background job processing](https://laravel.com/docs/queues).
--   [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+<h3>👨‍💻 Informasi Pengembangan</h3>
+<table>
+    <tr><th>Nama Proyek</th><td>RUKO</td></tr>
+    <tr><th>Dikembangkan oleh</th><td>Wijaya Plywood Indonesia</td></tr>
+    <tr><th>Mulai Dikembangkan</th><td>2025</td></tr>
+    <tr><th>Status</th><td>Aktif dikembangkan</td></tr>
+    <tr><th>Jenis</th><td>Web Application</td></tr>
+</table>
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+<h3>🛠️ Teknologi</h3>
+<ul>
+    <li>PHP 8.x</li>
+    <li>Laravel Framework</li>
+    <li>Blade Template Engine</li>
+    <li>MySQL / MariaDB</li>
+    <li>Vite, Composer, NPM</li>
+</ul>
 
-## Learning Laravel
+<h3>🚀 Instalasi Singkat</h3>
+<pre><code>git clone https://github.com/Wijaya-Plywood-Indonesia/Ruko.git
+cd Ruko
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve</code></pre>
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+<div class="lang-divider">— English Version —</div>
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+<h2>🇬🇧 About the Project</h2>
 
-## Laravel Sponsors
+<p>
+    <strong>RUKO</strong> is a web application designed to support structured
+    operational and data management with a focus on scalability,
+    maintainability, and long-term use.
+</p>
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+<p>
+    It can be deployed as an internal system or adapted as an open-source
+    solution for broader use cases.
+</p>
 
-### Premium Partners
+<h3>🎯 Goals</h3>
+<ul>
+    <li>Centralized operational data management</li>
+    <li>Consistent validation and data integrity</li>
+    <li>Reduced manual processes</li>
+    <li>Scalable application architecture</li>
+</ul>
 
--   **[Vehikl](https://vehikl.com)**
--   **[Tighten Co.](https://tighten.co)**
--   **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
--   **[64 Robots](https://64robots.com)**
--   **[Curotec](https://www.curotec.com/services/technologies/laravel)**
--   **[DevSquad](https://devsquad.com/hire-laravel-developers)**
--   **[Redberry](https://redberry.international/laravel-development)**
--   **[Active Logic](https://activelogic.com)**
+<h3>🛠️ Tech Stack</h3>
+<ul>
+    <li>PHP 8.x</li>
+    <li>Laravel Framework</li>
+    <li>Blade Templates</li>
+    <li>MySQL / MariaDB</li>
+</ul>
 
-## Contributing
+<h3>🚀 Getting Started</h3>
+<pre><code>git clone https://github.com/Wijaya-Plywood-Indonesia/Ruko.git
+cd Ruko
+composer install
+npm install
+php artisan serve</code></pre>
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+<footer>
+    © 2025 Wijaya Plywood Indonesia — RUKO Project
+</footer>
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+</div>
+</body>
+</html>
