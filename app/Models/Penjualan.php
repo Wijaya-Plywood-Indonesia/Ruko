@@ -57,4 +57,12 @@ class Penjualan extends Model
     {
         return $this->belongsTo(User::class, 'validated_by');
     }
+    public function rekeningPerusahaan()
+    {
+        return $this->belongsTo(
+            RekeningPerusahaan::class,
+            'no_rekening',   // kolom di penjualans
+            'no_rekening'    // kolom di rekening_perusahaan
+        );
+    }
 }

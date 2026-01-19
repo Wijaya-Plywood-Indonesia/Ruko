@@ -194,7 +194,7 @@ class PenjualansTable
                 Action::make('cetak')
                     ->label('Cetak Nota')
                     ->icon('heroicon-o-printer')
-                    ->color('primary')
+                    ->color('primary') // 🔵 Biru
                     ->url(fn($record) => route('nota.cetak', $record))
                     ->openUrlInNewTab()
                     ->visible(
@@ -206,10 +206,27 @@ class PenjualansTable
                             'PENDING',
                         ])
                     ),
+
+                Action::make('cetakThermal')
+                    ->label('Cetak Thermal')
+                    ->icon('heroicon-o-printer')
+                    ->color('success') // 🟢 Hijau
+                    ->url(fn($record) => route('nota.cetakThermal', $record))
+                    ->openUrlInNewTab()
+                    ->visible(
+                        fn($record) =>
+                        !empty($record->validated_by)
+                        && !in_array($record->status_transaksi, [
+                            'DIBATALKAN',
+                            'BELUM DIBAYAR',
+                            'PENDING',
+                        ])
+                    ),
+
                 Action::make('suratJalan')
                     ->label('Cetak Surat Jalan')
                     ->icon('heroicon-o-truck')
-                    ->color('warning')
+                    ->color('warning') // 🟠 Kuning / Orange
                     ->url(fn($record) => route('surat-jalan.cetak', $record))
                     ->openUrlInNewTab()
                     ->visible(
