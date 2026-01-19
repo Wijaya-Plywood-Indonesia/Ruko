@@ -584,35 +584,20 @@
             {{-- TRANSFER ONLY --}}
             @if ($metode_pembayaran === 'TRANSFER')
             <div class="grid-span-full">
-                @if (!empty($rekeningCustomer))
-                <select wire:model.live="rekening_id" class="pos-select">
-                    <option value="">Pilih Rekening</option>
-                    @foreach ($rekeningCustomer as $rek)
+                <select
+                    wire:model.live="rekening_perusahaan_id"
+                    class="pos-select"
+                >
+                    <option value="">Pilih Rekening Perusahaan</option>
+
+                    @foreach ($rekeningPerusahaan as $rek)
                     <option value="{{ $rek->id }}">
-                        {{ $rek->jenis === 'BANK'
-                                ? $rek->nama_bank
-                                : $rek->nama_ewallet }}
+                        {{ $rek->nama_bank }}
                         • {{ substr($rek->no_rekening, -4) }} •
                         {{ $rek->atas_nama }}
                     </option>
                     @endforeach
                 </select>
-                @else
-                <div class="bank-row">
-                    <input
-                        type="text"
-                        wire:model.live="bank"
-                        placeholder="Nama Bank / E-Wallet"
-                        class="pos-input"
-                    />
-                    <input
-                        type="text"
-                        wire:model.live="no_rekening"
-                        placeholder="No Rekening / E-Wallet"
-                        class="pos-input"
-                    />
-                </div>
-                @endif
             </div>
             @endif
         </div>

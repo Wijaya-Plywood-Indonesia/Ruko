@@ -192,7 +192,9 @@
             <div style="width: 45%; background: #eee; padding: 8px">
                 <strong>Pembayaran:</strong> Transfer<br />
                 Bank: {{ $penjualan->bank }}<br />
-                No Rek: {{ $penjualan->no_rekening }}
+                No Rek: {{ $penjualan->no_rekening }}<br />
+                Atas Nama:
+                {{ $penjualan->rekeningPerusahaan?->atas_nama ?? '-' }}
             </div>
             @endif
 

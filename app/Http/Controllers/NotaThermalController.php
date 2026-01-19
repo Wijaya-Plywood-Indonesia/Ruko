@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Penjualan;
 use Illuminate\Http\Request;
-use App\Models\RekeningPerusahaan;
 
-class NotaController extends Controller
+class NotaThermalController extends Controller
 {
     //
     public function print(Penjualan $penjualan)
@@ -21,7 +20,7 @@ class NotaController extends Controller
             return ($detail->potongan ?? 0) * $detail->qty;
         });
 
-        return view('penjualans.cetakNota', compact(
+        return view('penjualans.cetakNotaThermal', compact(
             'penjualan',
             'totalPotonganNota'
         ));
