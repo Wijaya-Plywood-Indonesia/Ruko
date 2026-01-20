@@ -726,19 +726,29 @@
             <input
                 type="number"
                 wire:model.lazy="bayar"
+                wire:change=""
                 class="pos-input"
+                inputmode="numeric"
                 placeholder="Bayar"
+                min="0"
             />
 
+            @php
+                if(!isset($this->bayar)) {
+                    return;
+                }
+                $color_text = $this->bayar ?? 0 > $this->total || $this->bayar ?? 0 - $this->total < 0
+                    ? 'color: red;'
+                    : '';
+
+                
+                $kurang = $this->bayar ?? 0 - $this->total;
+            @endphp
+
             <p class="pos-kembalian" 
-            
-            x-data
-            :style="$this->bayar < $this->total ? 'color: red;' : $this->bayar == $this->total ? 'color: blue;' : 'color: green;'"
-            {{-- style="margin-top: 4px; margin-bottom: 4px;" --}}
+            style="{{ $color_text }} margin-top: 4px; margin-bottom: 4px;"
             >
-            {{ $this->bayar }}
-            {{ $this->total }}
-                Kembalian: Rp {{ number_format($this->kembalian) }}
+                {{ $kurang < 0 ? "Kurang" : "Kembalian"}}: Rp {{ $kurang < 0 ? number_format(abs($kurang)) :  number_format($this->kembalian) }}
             </p>
         </div>
 

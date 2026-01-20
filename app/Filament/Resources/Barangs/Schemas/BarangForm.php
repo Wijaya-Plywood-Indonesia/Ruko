@@ -29,12 +29,15 @@ class BarangForm
                 Select::make('id_kategori')
                     ->label('Kategori')
                     ->relationship('kategori', 'nama_kategori')
+                    ->preload()
                     ->searchable()
                     ->required(),
 
                 Select::make('id_satuan')
                     ->label('Satuan')
                     ->relationship('satuan', 'nama_satuan')
+                    ->preload()
+                    ->searchable()
                     ->required(),
 
                 TextInput::make('harga_beli')

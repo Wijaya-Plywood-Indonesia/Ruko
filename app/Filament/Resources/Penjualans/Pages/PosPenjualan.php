@@ -265,7 +265,7 @@ class PosPenjualan extends Page
 
     public function getKembalianProperty(): int
     {
-        return max($this->bayar - $this->total, 0);
+        return max($this->bayar ?? 0 - $this->total, 0);
     }
 
     public int $is_member = 0;
@@ -294,6 +294,7 @@ class PosPenjualan extends Page
         }
     }
 
+    public int $kembalian = 0;
 
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
@@ -302,7 +303,7 @@ class PosPenjualan extends Page
         $total_pembayaran = $this->total;
         $nomimal_disetorkan = $this->bayar;
         
-        if($nomimal_disetorkan < $total_pembayaran){
+        if($nomimal_disetorkan < $total_pembayaran || $total_pembayaran <= 0){
             Notification::make()
                 ->title('Pembayaran Kurang')
                 ->body("Nominal pembayaran kurang.")
