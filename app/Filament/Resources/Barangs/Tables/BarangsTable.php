@@ -74,7 +74,7 @@ class BarangsTable
                 // nanti bisa tambah filter kategori / status
             ])
             ->recordActions([
-                ViewAction::make(),
+                // ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
