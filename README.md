@@ -1,59 +1,269 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+🏢 RUKO
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Operational & Data Management Web Application
 
-## About Laravel
+Developed by Wijaya Plywood Indonesia
+Built with Laravel
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+🇮🇩 Bahasa Indonesia
+📖 Gambaran Umum
 
--   [Simple, fast routing engine](https://laravel.com/docs/routing).
--   [Powerful dependency injection container](https://laravel.com/docs/container).
--   Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
--   Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
--   Database agnostic [schema migrations](https://laravel.com/docs/migrations).
--   [Robust background job processing](https://laravel.com/docs/queues).
--   [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+RUKO adalah aplikasi web yang dikembangkan untuk membantu pengelolaan data dan proses operasional secara terstruktur, konsisten, dan dapat ditelusuri.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Proyek ini lahir dari kebutuhan sistem yang:
 
-## Learning Laravel
+Mudah dikembangkan seiring pertumbuhan proses bisnis
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Mengurangi pencatatan manual dan kesalahan input
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Memiliki struktur kode yang jelas dan jangka panjang
 
-## Laravel Sponsors
+Dapat digunakan internal maupun dikembangkan lebih lanjut sebagai open-source
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+🎯 Tujuan Pengembangan
 
-### Premium Partners
+Menyediakan sistem terpusat untuk pengelolaan data operasional
 
--   **[Vehikl](https://vehikl.com)**
--   **[Tighten Co.](https://tighten.co)**
--   **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
--   **[64 Robots](https://64robots.com)**
--   **[Curotec](https://www.curotec.com/services/technologies/laravel)**
--   **[DevSquad](https://devsquad.com/hire-laravel-developers)**
--   **[Redberry](https://redberry.international/laravel-development)**
--   **[Active Logic](https://activelogic.com)**
+Meningkatkan keterlacakan data (audit trail & konsistensi)
 
-## Contributing
+Menyederhanakan proses input dan validasi data
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Menjadi fondasi aplikasi yang scalable & maintainable
 
-## Code of Conduct
+👨‍💻 Informasi Pengembang
+Atribut	Keterangan
+Nama Proyek	RUKO
+Pengembang	Wijaya Plywood Indonesia
+Mulai Dikembangkan	2025
+Status	Aktif dikembangkan
+Target Pengguna	Internal / Publik
+Tipe Aplikasi	Web Application
+🧱 Arsitektur & Konsep
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+MVC Pattern menggunakan Laravel
 
-## Security Vulnerabilities
+Separation of Concern antara logic, tampilan, dan data
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Validasi data di sisi backend
 
-## License
+Struktur database terkontrol melalui migration
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Siap dikembangkan ke modul tambahan
+
+🛠️ Teknologi yang Digunakan
+
+Backend
+
+PHP 8.x
+
+Laravel Framework
+
+Eloquent ORM
+
+Frontend
+
+Blade Template Engine
+
+HTML5, CSS3
+
+JavaScript
+
+Vite
+
+Database
+
+MySQL / MariaDB
+
+Development Tools
+
+Composer
+
+NPM
+
+Git & GitHub
+
+⚙️ Fitur & Kapabilitas
+
+Autentikasi dan otorisasi pengguna
+
+Manajemen data berbasis CRUD
+
+Validasi input terstandarisasi
+
+Dashboard data operasional
+
+Struktur kode siap dikembangkan ke modul lanjutan
+
+Fitur aktual bergantung pada implementasi dan kebutuhan penggunaan.
+
+🚀 Instalasi & Menjalankan Aplikasi
+Prasyarat
+
+PHP 8.x
+
+Composer
+
+Node.js & NPM
+
+Database MySQL / MariaDB
+
+Langkah Instalasi
+git clone https://github.com/Wijaya-Plywood-Indonesia/Ruko.git
+cd Ruko
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+
+
+Akses aplikasi:
+
+http://localhost:8000
+
+🔐 Mode Penggunaan
+
+Internal Use
+Digunakan sebagai sistem internal dengan konfigurasi dan kontrol akses sesuai kebijakan perusahaan.
+
+Open-Source Use
+Dapat digunakan, dimodifikasi, dan dikembangkan untuk kebutuhan lain.
+
+🇬🇧 English Version
+📖 Overview
+
+RUKO is a web application designed to support structured operational and data management.
+
+The project was created to address the need for a system that is:
+
+Easy to maintain and extend
+
+Capable of reducing manual processes
+
+Consistent in data handling and validation
+
+Flexible enough for internal use or open-source adaptation
+
+🎯 Project Goals
+
+Provide a centralized operational data system
+
+Improve data traceability and consistency
+
+Reduce human error through validation
+
+Serve as a scalable and maintainable application foundation
+
+👨‍💻 Development Details
+Attribute	Detail
+Project Name	RUKO
+Developed by	Wijaya Plywood Indonesia
+Initial Development	2025
+Status	Actively maintained
+Application Type	Web Application
+🧱 Architecture & Principles
+
+MVC architecture via Laravel
+
+Clear separation between business logic and presentation
+
+Backend-driven validation
+
+Database versioning using migrations
+
+Designed for long-term scalability
+
+🛠️ Technology Stack
+
+Backend
+
+PHP 8.x
+
+Laravel Framework
+
+Eloquent ORM
+
+Frontend
+
+Blade Template Engine
+
+HTML5 / CSS3
+
+JavaScript
+
+Vite
+
+Database
+
+MySQL / MariaDB
+
+Tooling
+
+Composer
+
+NPM
+
+Git
+
+⚙️ Features & Capabilities
+
+User authentication & authorization
+
+CRUD-based data management
+
+Standardized validation
+
+Operational dashboards
+
+Modular and extensible codebase
+
+🚀 Installation & Setup
+Requirements
+
+PHP 8.x
+
+Composer
+
+Node.js & NPM
+
+MySQL / MariaDB
+
+Setup Steps
+git clone https://github.com/Wijaya-Plywood-Indonesia/Ruko.git
+cd Ruko
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+
+
+Open in browser:
+
+http://localhost:8000
+
+🔐 Usage Modes
+
+Internal deployment
+Used as an internal system with organization-specific configurations.
+
+Open-source usage
+Open for adaptation, extension, and customization.
+
+📜 License
+
+Licensed under the MIT License.
+
+🧭 Closing Notes
+
+This README is intentionally detailed to:
+
+Replace the default Laravel README
+
+Clearly describe ownership and intent
+
+Support long-term development
+
+Serve both internal and public audiences
