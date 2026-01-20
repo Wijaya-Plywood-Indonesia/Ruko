@@ -67,11 +67,33 @@ class PosPenjualan extends Page
             ->get();
     }
 
+    public bool $showDropdown = false;
+
+    public function openDropdown()
+    {
+        $this->showDropdown = true;
+    }
+
+    public function closeDropdown()
+    {
+        $this->showDropdown = false;
+    }
+
     public function selectBarang(int $id): void
     {
+
         $barang = Barang::with('satuan')->find($id);
         if (!$barang)
             return;
+
+        if($barang->stok_minimum < 1){
+            Notification::make()
+                ->title('Stok barang habis')
+                ->body("Barang tidak bisa ditambahkan ke keranjang.")
+                ->danger()
+                ->send();
+            return;
+        }
 
         if (isset($this->cart[$id])) {
             $this->cart[$id]['qty']++;
@@ -91,6 +113,7 @@ class PosPenjualan extends Page
         $this->updateSubtotal($id);
         $this->search = '';
         $this->searchResults = collect();
+        $this->showDropdown = false;
     }
 
     /* ================= CART ================= */
@@ -99,21 +122,70 @@ class PosPenjualan extends Page
         $qty = max(1, (int) $this->cart[$id]['qty']);
         $this->cart[$id]['qty'] = $qty;
         $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $qty;
+        if (!isset($this->cart[$id]))
+            return;
+
+        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $qty = $this->cart[$id]['qty'] ?? 0;
+
+        if ($qty > $stock) {
+            Notification::make()
+                ->title('Stok Maksimum Tercapai')
+                ->body("Jumlah maksimal untuk barang ini adalah {$stock}.")
+                ->warning()
+                ->persistent() // opsional
+                ->send();
+            $qty_a = max(1, (int) $stock);
+            $this->cart[$id]['qty'] = $qty_a;
+            return;
+        }
+
+
+        $qty_a = max(1, (int) $qty);
+        $this->cart[$id]['qty'] = $qty_a;
+
+        $this->cart[$id]['total_potongan'] =
+            $this->cart[$id]['potongan'] * $qty_a;
+
         $this->updateSubtotal($id);
     }
 
     public function incrementQty(int $id): void
     {
+        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $qty = $this->cart[$id]['qty'] ?? 0;
+
+        if ($qty >= $stock) {
+            Notification::make()
+                ->title('Stok Maksimum Tercapai')
+                ->body("Jumlah maksimal untuk barang ini adalah {$stock}.")
+                ->warning()
+                ->persistent() // opsional
+                ->send();
+
+            return;
+        }
+
         $this->cart[$id]['qty']++;
         $this->updateQty($id);
     }
 
+
     public function decrementQty(int $id): void
     {
-        if ($this->cart[$id]['qty'] > 1) {
-            $this->cart[$id]['qty']--;
-            $this->updateQty($id);
+        if($this->cart[$id]['qty'] <= 1){
+            Notification::make()
+                ->title('Minimal Jumlah Barang')
+                ->body("Minimal jumlah barang adalah 1.")
+                ->danger()
+                ->persistent() // opsional
+                ->send();
+
+            return;
         }
+
+        $this->cart[$id]['qty']--;
+        $this->updateQty($id);
     }
 
     public function removeFromCart(int $id): void
@@ -129,10 +201,10 @@ class PosPenjualan extends Page
     }
 
     /* ================= MEMBER ================= */
-    public function updatedIsMember($value): void
-    {
-        $this->is_member = (bool) $value;
-    }
+    // public function updatedIsMember($value): void
+    // {
+    //     $this->is_member = (bool) $value;
+    // }
 
     /* ================= CUSTOMER SEARCH ================= */
     public function updatedSearchCustomer(): void
@@ -182,14 +254,82 @@ class PosPenjualan extends Page
 
     public function getKembalianProperty(): int
     {
-        return max($this->bayar - $this->total, 0);
+        return max($this->bayar ?? 0 - $this->total, 0);
     }
+
+
+
+    public function updatedIsMember($value)
+    {
+        $this->is_member = (bool) $value;
+
+        if (!$this->is_member) {
+            $this->reset([
+                'searchCustomer',
+                'customerResults',
+                'rekeningCustomer',
+            ]);
+        }
+    }
+
+    /* ================= PENGIRIMAN ================= */
+    public function updatedMetodePengiriman()
+    {
+        if ($this->metode_pengiriman === 'DIBAWA_SENDIRI') {
+            $this->kendaraan = null;
+            $this->plat_kendaraan = null;
+            $this->nama_sopir = null;
+        }
+    }
+
+    public int $kembalian = 0;
 
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
-        if (empty($this->cart))
+        //! Validasi Keranjang
+        if (empty($this->cart)) {
+                Notification::make()
+                ->title("Keranjang Kosong")
+                ->body("Silahkan isi keranjang terlebih dahulu")
+                ->danger()
+                ->send();
             return;
+        }
+        //! Validasi Pembayaran
+        $total_pembayaran = $this->total;
+        $nomimal_disetorkan = $this->bayar;
+        
+        if($nomimal_disetorkan < $total_pembayaran || $total_pembayaran <= 0){
+            Notification::make()
+                ->title($total_pembayaran <= 0 ? "Pembelian Tidak Valid" : 'Pembayaran Kurang')
+                ->body( $total_pembayaran <= 0 ? "Total pembayaran tidak boleh kurang atau kosong" :"Nominal pembayaran kurang.")
+                ->danger()
+                ->send();
+            return;
+        }
+        
+
+        //     dd([
+        //         'nama_customer' => $this->nama_customer,
+        //         'alamat' => $this->alamat,
+        //         'metode_pembayaran' => $this->metode_pembayaran,
+        //         'bank' => $this->bank,
+        //         'no_rekening' => $this->no_rekening,
+        //         'kendaraan' => $this->kendaraan,
+        //         'nama_sopir' => $this->nama_sopir,
+        //         'plat_kendaraan' => $this->plat_kendaraan,
+        //         'total' => $this->total,
+        //         'bayar' => $this->bayar,
+        //         'kembalian' => $this->kembalian,
+        //         'user_id' => auth()->id(),
+        //         'cart' => $this->cart,
+        //     ]);
+
+
+        // $this->validate();
+
+        
 
         DB::transaction(function () {
 
@@ -238,6 +378,13 @@ class PosPenjualan extends Page
             ]);
 
             foreach ($this->cart as $item) {
+                $stock = Barang::find($item['barang_id'])?->stok_minimum ?? 0;
+
+                Barang::where('id', $item['barang_id'])
+                    ->update([
+                        'stok_minimum' => $stock - $item['qty'],
+                    ]);
+
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $item['barang_id'],

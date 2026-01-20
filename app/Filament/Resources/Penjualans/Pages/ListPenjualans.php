@@ -14,7 +14,7 @@ class ListPenjualans extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            // CreateAction::make(),
 
             Action::make('pos')
                 ->label('POS')
