@@ -299,16 +299,24 @@ class PosPenjualan extends Page
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
+        //! Validasi Keranjang
+        if (empty($this->cart)) {
+                Notification::make()
+                ->title("Keranjang Kosong")
+                ->body("Silahkan isi keranjang terlebih dahulu")
+                ->danger()
+                ->send();
+            return;
+        }
         //! Validasi Pembayaran
         $total_pembayaran = $this->total;
         $nomimal_disetorkan = $this->bayar;
         
         if($nomimal_disetorkan < $total_pembayaran || $total_pembayaran <= 0){
             Notification::make()
-                ->title('Pembayaran Kurang')
-                ->body("Nominal pembayaran kurang.")
+                ->title($total_pembayaran <= 0 ? "Pembelian Tidak Valid" : 'Pembayaran Kurang')
+                ->body( $total_pembayaran <= 0 ? "Total pembayaran tidak boleh kurang atau kosong" :"Nominal pembayaran kurang.")
                 ->danger()
-                ->persistent() // opsional
                 ->send();
             return;
         }
@@ -333,9 +341,7 @@ class PosPenjualan extends Page
 
         // $this->validate();
 
-        if (empty($this->cart)) {
-            return;
-        }
+        
 
         DB::transaction(function () {
 
