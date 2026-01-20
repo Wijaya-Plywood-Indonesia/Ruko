@@ -578,11 +578,17 @@
         <div class="pos-divider"></div>
         {{-- SEARCH CUSTOMER (MEMBER ONLY) --}}
         @if ($is_member === 1)
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Temukan Member
+        </h6>
+
         <input
             wire:model.live="searchCustomer"
             class="pos-input"
             placeholder="Cari pelanggan (nama / NIK / telepon)"
         />
+
+        <div class="pos-divider"></div>
 
         @if (!empty($customerResults))
         <div class="pos-search-box">
@@ -600,10 +606,9 @@
             @endforeach
         </div>
         @endif @endif
-        <div class="pos-divider"></div>
         {{-- ===================== DATA PELANGGAN ===================== --}}
         <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Jenis Pelanggan
+            Data Pelanggan
         </h6>
 
         <div
@@ -671,7 +676,7 @@
 
         <div class="pos-divider"></div>
         <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Jenis Pelanggan
+            Metode Pengiriman
         </h6>
 
         {{-- METODE PENGIRIMAN --}}
