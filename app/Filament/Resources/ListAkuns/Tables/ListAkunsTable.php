@@ -45,7 +45,7 @@ class ListAkunsTable
                     ]),
 
                 TextColumn::make('toko.nama_toko')
-                    ->label('Penempatan'),
+                    ->label('Penempatan Toko'),
             ])
             ->filters([
                 //

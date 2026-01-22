@@ -7,6 +7,7 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use App\Models\User;
+use App\Models\ListAkun;
 
 
 class ListAkunForm
@@ -28,36 +29,65 @@ return $schema->components([
             // Jabatan
             // ===============================
 
-Select::make('roles')
+
+Select::make('role')
     ->label('Jabatan')
-    ->options(
-        Role::query()->pluck('name', 'id')
-    )
+    ->options(function (Get $get) {
+        $idPegawai = $get('id_pegawai');
+
+        if (! $idPegawai) {
+            return Role::pluck('name', 'id');
+        }
+
+        /**
+         * Ambil semua akun milik pegawai
+         */
+        $akunIds = ListAkun::where('id_pegawai', $idPegawai)
+            ->pluck('id_akun');
+
+        /**
+         * Ambil role yang sudah dipakai oleh akun-akun tersebut
+         */
+        $usedRoleIds = User::whereIn('id', $akunIds)
+            ->with('roles')
+            ->get()
+            ->pluck('roles.*.id')
+            ->flatten()
+            ->unique()
+            ->toArray();
+
+        /**
+         * Tampilkan hanya role yang BELUM dipakai
+         */
+        return Role::whereNotIn('id', $usedRoleIds)
+            ->pluck('name', 'id');
+    })
     ->searchable()
     ->preload()
     ->live()
     ->required(),
 
-            // ===============================
-            // Akun (Filtered by Role)
-            // ===============================
+                        // ===============================
+                        // Akun (Filtered by Role)
+                        // ===============================
 
-Select::make('id_akun')
+            Select::make('id_akun')
     ->label('Akun')
-    ->options(fn (Get $get) =>
-        User::query()
-            ->when(
-                $get('roles'),
-                fn ($q, $roleId) =>
-                    $q->whereHas(
-                        'roles',
-                        fn ($qr) => $qr->where('roles.id', $roleId)
-                    )
-            )
-            ->pluck('email', 'id')
-    )
+    ->disabled(fn (Get $get) => blank($get('role')))
+    ->options(function (Get $get) {
+        $roleId = $get('role');
+
+        if (! $roleId) {
+            return [];
+        }
+
+        return User::query()
+            ->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId))
+            ->pluck('email', 'id');
+    })
     ->searchable()
-    ->required(),
+    ->required()
+    ->live(),
 
             // ===============================
             // Toko
