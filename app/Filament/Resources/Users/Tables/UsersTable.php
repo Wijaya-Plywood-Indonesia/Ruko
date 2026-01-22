@@ -27,7 +27,7 @@ class UsersTable
                 TagsColumn::make('roles.name')
                     ->label('Roles')
                     ->separator(', ')
-                    ->limit(2),   // boleh dibuang kalau tidak mau limit
+                    ->limit(1),   // boleh dibuang kalau tidak mau limit
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

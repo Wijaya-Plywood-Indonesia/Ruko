@@ -119,6 +119,6 @@ class PegawaiForm
                     ])
                     ->columns(2),
 
-            ]);
+                    ]);
     }
 }
