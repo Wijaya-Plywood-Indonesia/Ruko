@@ -31,4 +31,10 @@ class Pegawai extends Model
         'tanggal_lahir' => 'date',
         'tanggal_masuk' => 'date',
     ];
+
+    public function listAkun()
+{
+    return $this->hasMany(ListAkun::class, 'id_pegawai');
+}
+
 }

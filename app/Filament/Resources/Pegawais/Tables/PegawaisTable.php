@@ -19,21 +19,15 @@ class PegawaisTable
     {
         return $table
             ->columns([
-                BadgeColumn::make('status')
-                    ->colors([
-                        'success' => 'AKTIF',
-                        'danger' => 'NONAKTIF',
-                    ])
-                    ->label('Status'),
+               TextColumn::make('nama_lengkap')
+                    ->label('Nama')
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('nik')
                     ->label('NIK')
                     ->sortable()
                     ->searchable(),
-
-                TextColumn::make('nama_lengkap')
-                    ->label('Nama')
-                    ->searchable()
-                    ->sortable(),
 
                 TextColumn::make('nama_panggilan')
                     ->label('Panggilan')
@@ -49,6 +43,20 @@ class PegawaisTable
                         fn($state) =>
                         $state === 'L' ? 'Laki-laki' : 'Perempuan'
                     ),
+
+                TextColumn::make('list_akun_count')
+                    ->label('Akun')
+                    ->counts('listAkun')
+                    ->sortable()
+                    ->alignCenter(),
+
+                BadgeColumn::make('status')
+                    ->colors([
+                        'success' => 'AKTIF',
+                        'danger' => 'NONAKTIF',
+                    ])
+                    ->label('Status'),
+
 
                 TextColumn::make('foto_ktp')
                     ->label('KTP')
