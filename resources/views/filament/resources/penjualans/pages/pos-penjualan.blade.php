@@ -712,35 +712,32 @@
             Nominal yang disetorkan
         </h6>
 
-        <div style="max-width: 300px; margin-top: 8px">
-            <input
-                type="number"
-                wire:model.lazy="bayar"
-                wire:change=""
-                class="pos-input"
-                inputmode="numeric"
-                placeholder="Bayar"
-                min="0"
-            />
+<div style="max-width: 300px; margin-top: 8px">
+    <input
+        type="number"
+        wire:model.lazy="bayar"
+        class="pos-input"
+        inputmode="numeric"
+        placeholder="Bayar"
+        min="0"
+    />
 
-            @php
-                if(!isset($this->bayar)) {
-                    return;
-                }
-                $color_text = $this->bayar ?? 0 > $this->total || $this->bayar ?? 0 - $this->total < 0
-                    ? 'color: red;'
-                    : '';
+    @php
+        $bayar = (int) ($this->bayar ?? 0);
+        $total = (int) ($this->total ?? 0);
+        $selisih = $bayar - $total;
 
-                
-                $kurang = $this->bayar ?? 0 - $this->total;
-            @endphp
+        $color = $selisih < 0 ? 'color:red;' : '';
+    @endphp
 
-            <p class="pos-kembalian" 
-            style="{{ $color_text }} margin-top: 4px; margin-bottom: 4px;"
-            >
-                {{ $kurang < 0 ? "Kurang" : "Kembalian"}}: Rp {{ $kurang < 0 ? number_format(abs($kurang)) :  number_format($this->kembalian) }}
-            </p>
-        </div>
+    <p
+        class="pos-kembalian"
+        style="{{ $color }} margin-top:4px; margin-bottom:4px;"
+    >
+        {{ $selisih < 0 ? 'Kurang' : 'Kembalian' }}:
+        Rp {{ number_format(abs($selisih)) }}
+    </p>
+</div>
 
         <button wire:click="simpanPenjualan" style="margin-top: 6px;" class="btn-primary">
             Simpan Penjualan
