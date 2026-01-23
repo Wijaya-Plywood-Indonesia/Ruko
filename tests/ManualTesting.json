@@ -104,19 +104,6 @@
                 "solution": "add container for details data pembeli",
                 "level": "easy",
                 "is_important": true 
-            }
-        ],
-        "note": "must fixing, because it is very important"
-    },
-    {
-        "resource": "Data Pembeli",
-        "bugs": [
-            {
-                "name": "Missing Container at View",
-                "location": "View Data Pembeli",
-                "solution": "add container for details data pembeli",
-                "level": "easy",
-                "is_important": true 
             },
             {
                 "name": "Nullable Input Nama Bank/E-Wallet",
