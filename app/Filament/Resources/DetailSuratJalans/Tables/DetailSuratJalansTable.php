@@ -38,7 +38,6 @@ class DetailSuratJalansTable
                 CreateAction::make()->label("Tambah Barang !"),
             ])
             ->filters([
-                //
             ])
             ->recordActions([
                 EditAction::make(),
