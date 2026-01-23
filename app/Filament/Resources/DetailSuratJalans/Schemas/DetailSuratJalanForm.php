@@ -6,6 +6,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class DetailSuratJalanForm
 {
@@ -13,14 +14,21 @@ class DetailSuratJalanForm
     {
         return $schema
             ->components([
-
                 Select::make('barang_id')
                     ->label('Barang')
                     ->relationship('barang', 'nama_barang')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                    ->disabled(fn() => $this->getOwnerRecord()->status !== 'draft'),
+                    ->disabled(function ($livewire) {
+                        if (method_exists($livewire, 'getOwnerRecord')) {
+                            return $livewire->getOwnerRecord()->status !== 'draft';
+                        }
+
+                        return false;
+                    }),
+
 
                 TextInput::make('qty_kirim')
                     ->label("Jumlah Barang")

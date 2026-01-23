@@ -15,10 +15,8 @@ class DetailSuratJalansTable
     {
         return $table
             ->columns([
-                TextColumn::make('surat_jalan_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('barang_id')
+
+                TextColumn::make('barang.nama_barang')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('qty_kirim')
