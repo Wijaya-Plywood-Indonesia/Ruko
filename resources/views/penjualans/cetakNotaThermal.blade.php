@@ -162,9 +162,22 @@
             <!-- ===== TOTAL ===== -->
             <table>
                 <tr>
-                    <td class="total">TOTAL</td>
-                    <td class="text-right total">
+                    <td class="total bold">TOTAL</td>
+                    <td class="text-right bold total">
                         Rp. {{ number_format($penjualan->total) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="" style="padding: 0; font-weight: 600; font-size: 10px;">Bayar ({{ strtolower($penjualan->metode_pembayaran) }})</td>
+                    <td class="text-right " style="padding: 0; font-weight: 600; font-size: 10px;">
+                        Rp. {{ number_format($penjualan->bayar) }}
+                    </td>
+                </tr>
+                <br>    
+                <tr >
+                    <td class="" style="padding: 0; font-weight: 600; font-size: 10px;">Kembali</td>
+                    <td class="text-right " style="padding: 0; font-weight: 600; font-size: 10px;">
+                        Rp. {{ number_format($penjualan->kembali) }}
                     </td>
                 </tr>
             </table>
