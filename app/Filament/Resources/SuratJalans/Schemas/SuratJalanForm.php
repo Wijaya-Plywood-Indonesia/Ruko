@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SuratJalans\Schemas;
 
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -16,6 +17,9 @@ class SuratJalanForm
     {
         return $schema
             ->components([
+                Hidden::make('created_by')
+                    ->default(fn() => auth()->id()),
+
                 TextInput::make('no_surat_jalan')
                     ->label('No Surat Jalan')
                     ->disabled()
@@ -57,14 +61,14 @@ class SuratJalanForm
                         'required' => 'Toko tujuan wajib dipilih.',
                     ]),
                 Select::make('status')
-                    ->options(['draft' => 'Draft', 'dikirim' => 'Dikirim', 'diterima' => 'Diterima', 'ditolak' => 'Ditolak'])
+                    ->options(['draft' => 'Draft', 'dikirim' => 'Dikirim'])
                     ->default('draft')
                     ->required(),
 
-                TextInput::make('nama_supir'),
+                TextInput::make('nama_supir')->label("Nama Supir"),
                 TextInput::make('jeniskendaraan')
                     ->label("Jenis Kendaraan"),
-                TextInput::make('plat'),
+                TextInput::make('plat')->label("No Polisi"),
 
                 Textarea::make('keterangan')
                     ->columnSpanFull(),
