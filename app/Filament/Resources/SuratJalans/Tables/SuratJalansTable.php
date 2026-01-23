@@ -8,9 +8,13 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SuratJalansTable
 {
@@ -20,6 +24,7 @@ class SuratJalansTable
             ->columns([
                 TextColumn::make('no_surat_jalan')
                     ->searchable(),
+
                 TextColumn::make('tanggal_kirim')
                     ->date()
                     ->sortable(),
@@ -36,13 +41,11 @@ class SuratJalansTable
                         'success' => 'diterima',
                         'danger' => 'ditolak',
                     ]),
-                TextColumn::make('created_by')
+                TextColumn::make('createdBy.name')
                     ->label("Pembuat")
-                    ->numeric()
                     ->sortable(),
-                TextColumn::make('Validated_by')
+                TextColumn::make('validatedBy.name')
                     ->label("Validator")
-                    ->numeric()
                     ->sortable(),
 
                 TextColumn::make('nama_supir')
@@ -55,9 +58,6 @@ class SuratJalansTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable(),
 
-                TextColumn::make('validated_by')
-                    ->numeric()
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -69,7 +69,32 @@ class SuratJalansTable
             ])
             ->filters([
                 //
+                Filter::make('tanggal_kirim')
+                    ->label('Tanggal Kirim')
+                    ->form([
+                        DatePicker::make('from')
+                            ->label('Dari Tanggal')
+                            ->default(now()->subWeek()),
+                        DatePicker::make('until')
+                            ->default(now())
+                            ->label('Sampai Tanggal'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('tanggal_kirim', '>=', $date)
+                            )
+                            ->when(
+                                $data['until'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('tanggal_kirim', '<=', $date)
+                            );
+                    }),
             ])
+            //     ->filtersLayout(FiltersLayout::AboveContent)
+            ->defaultSort('created_at', 'desc')
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()
