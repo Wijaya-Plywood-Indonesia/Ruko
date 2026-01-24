@@ -4,6 +4,10 @@ use App\Http\Controllers\NotaController;
 use App\Http\Controllers\NotaThermalController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuratJalanController;
+use App\Http\Controllers\SuratJalanPrintController;
+
+Route::get('/surat-jalan/{id}/cetak', [SuratJalanPrintController::class, 'cetak'])
+    ->name('surat-jalan.cetak');
 
 Route::get('/surat-jalan/{penjualan}', [SuratJalanController::class, 'print'])
     ->name('surat-jalan.cetak');

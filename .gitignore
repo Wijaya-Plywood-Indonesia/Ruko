@@ -5,6 +5,10 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
+* text=auto
+*.php text eol=lf
+*.blade.php text eol=lf
+
 /.fleet
 /.idea
 /.nova
