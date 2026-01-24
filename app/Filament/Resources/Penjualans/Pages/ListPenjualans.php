@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\Penjualans\Pages;
 
+use App\Exports\LaporanPenjualanDetailExport;
 use App\Exports\LaporanPenjualanExport;
 use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Models\DetailPenjualan;
 use App\Models\Penjualan;
 use Filament\Actions\Action;
-use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Maatwebsite\Excel\Facades\Excel;
@@ -20,29 +20,35 @@ public function mount(): void
 {
     $this->loadLaporan();
 }
+public bool $with_detail = false;
 
 public function data_detail($penjualan_id)
 {
-    return DetailPenjualan::where('penjualan_id', '=', $penjualan_id, true)
+    return DetailPenjualan::where('penjualan_id', $penjualan_id)
+    ->get()
     ->map(function ($detail) {
+
         return [
             'nama_barang'       => $detail->nama_barang,
             'harga_awal'        => $detail->harga_awal,
             'harga_jual'        => $detail->harga_jual,
-            'diskon'            => $detail->diskon,
+            'diskon'            => (string)$detail->potongan ?? 0,
             'jumlah'            => (string)$detail->qty . " " . $detail->satuan,
+            'total_diskon'      => (string)($detail->potongan * $detail->qty),
             'subtotal'          => $detail->subtotal,
         ];
     })
     ->toArray();
 }
-public function loadLaporan(): void
+public function loadLaporan()
 {   
     $this->laporanGabungan = Penjualan::query()
         ->whereNotNull('validated_by')
         ->with(['user', 'validator'])
         ->get()
         ->map(function ($p) {
+            $data_detail = $this->with_detail ? $this->data_detail($p->id) : null;
+
             return [
                 'no_nota'                   => $p->no_nota,
                 'tanggal'                   => $p->tanggal,
@@ -55,35 +61,49 @@ public function loadLaporan(): void
                 'kembalian'                 => $p->kembalian,
                 'kasir'                     => $p->user?->name,
                 'validator'                 => $p->validator?->name,
-                'bank'                      => $p->bank,
-                'no_rekening'               => $p->no_rekening,
-                'kendaraan'                 => $p->kendaraan,
-                'plat_kendaraan'            => $p->plat_kendaraan,
+                'bank'                      => $p->bank ?? '-',
+                'no_rekening'               => $p->no_rekening ?? '-',
+                'kendaraan'                 => $p->kendaraan ?? 'ANTAR SENDIRI',
+                'plat_kendaraan'            => $p->plat_kendaraan ?? '-',
                 'nama_sopir'                => $p->nama_sopir,
                 'status_transaksi'          => $p->status_transaksi,
-                // 'data_penjualan_detail'     => $this->data_detail($p->id),
+                'data_penjualan_detail'     => $data_detail,
             ];
         })
         ->toArray();
 }
 
 
-public function exportExcel()
+public function exportExcel($method = 'main')
 {
     if (empty($this->laporanGabungan)) {
-            $this->loadLaporan();
+        if($method === 'full') {
+            $this->with_detail = true;
+        } else {
+            $this->with_detail = false;
         }
+        dd($this->with_detail);
+        $this->loadLaporan();
+    }
     $is_success = true;
+
     try {
-        return Excel::download(
-            new LaporanPenjualanExport($this->laporanGabungan),
-            'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
-        );
+        if($method === 'full') {
+            return Excel::download(
+                new LaporanPenjualanDetailExport($this->laporanGabungan),
+                'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+            );
+        }else{
+            return Excel::download(
+                new LaporanPenjualanExport($this->laporanGabungan),
+                'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+            );
+        }
     } catch (\Exception $e) {
         // Handle exception if needed
         $is_success = false;
         Notification::make()
-            ->title('Gagal untuk mengunduh data: ')
+            ->title('Gagal untuk mengunduh data ')
             ->body('Silakan hubungi developer.')
             ->danger()
             ->send();
@@ -96,7 +116,6 @@ public function exportExcel()
                 ->send();
         }
     }
-    
 }
     protected static string $resource = PenjualanResource::class;
 
@@ -118,7 +137,13 @@ public function exportExcel()
             // ->visible(fn () =>
             //     Penjualan::whereNotNull('validated_by')->exists()
             // )
-            ->action(fn ($livewire) => $livewire->exportExcel()),
+            ->action(fn ($livewire) => $livewire->exportExcel('main')),
+            
+            Action::make('full-export')
+            ->label('Download Data Full Excel')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->color('success')
+            ->action(fn ($livewire) => $livewire->exportExcel('full')),
             
 
 
