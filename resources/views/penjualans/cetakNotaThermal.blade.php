@@ -107,9 +107,9 @@
     <body onload="window.print()">
         <div class="thermal">
             <!-- ===== HEADER ===== -->
-            <div class="text-center bold">NOTA PENJUALAN</div>
-            <div class="text-center bold">RUKO INA</div>
-            <div class="text-center small">------------------------------</div>
+            <div style="letter-spacing: 2.5px" class="text-center bold">NOTA PENJUALAN</div>
+            <div style="letter-spacing: 2.5px" class="text-center bold">RUKO INA</div>
+            <div  class="text-center small">------------------------------</div>
 
             <br />
 
@@ -204,7 +204,7 @@
             @endif
 
             <!-- ===== FOOTER ===== -->
-            <div class="text-center small">
+            <div  class="text-center small">
                 TERIMA KASIH<br />
                 Kasir : {{ $penjualan->user->name }}
             </div>
