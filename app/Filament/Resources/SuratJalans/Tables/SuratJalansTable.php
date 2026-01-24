@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SuratJalans\Tables;
 
 use App\Models\SuratJalan;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -102,6 +103,18 @@ class SuratJalansTable
                 DeleteAction::make()
                     ->visible(fn(SuratJalan $record) => $record->status === 'draft'),
 
+                Action::make('cetak')
+                    ->label('Cetak Surat Jalan')
+                    ->icon('heroicon-o-printer')
+                    ->color('primary')
+                    ->url(fn($record) => route('surat-jalan.cetak', $record->id))
+                    ->openUrlInNewTab()
+                // ->visible(
+                //     fn($record) =>
+                //     !empty($record->validated_by)
+                //     && ($record->isDikirim() || $record->isDiterima())
+                //  )
+                ,
             ])
             ->toolbarActions([
             ]);
