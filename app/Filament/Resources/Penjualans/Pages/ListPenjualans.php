@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Penjualans\Pages;
 
 use App\Exports\LaporanPenjualanDetailExport;
 use App\Exports\LaporanPenjualanExport;
+use App\Exports\LaporanKeranjangPenjualanExport;
 use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Models\DetailPenjualan;
 use App\Models\Penjualan;
@@ -73,6 +74,24 @@ public function loadLaporan()
         })
         ->toArray();
 }
+public function loadLaporanDetail()
+{   
+    $this->laporanGabungan = Penjualan::query()
+        ->whereNotNull('validated_by')
+        ->with(['user', 'validator'])
+        ->get()
+        ->map(function ($p) {
+            return [
+                'no_nota'                   => $p->no_nota,
+                'tanggal'                   => $p->tanggal,
+                'nama_customer'             => $p->nama_customer,
+                'kasir'                     => $p->user?->name,
+                'status_transaksi'          => $p->status_transaksi,
+                'data_penjualan_detail'     => $this->data_detail($p->id),
+            ];
+        })
+        ->toArray();
+}
 
 
 public function exportExcel($method = 'main')
@@ -80,21 +99,27 @@ public function exportExcel($method = 'main')
     if (empty($this->laporanGabungan)) {
         $this->loadLaporan();
     }
-    if($method === 'full') {
-        $this->with_detail = true;
-    } else {
-        $this->with_detail = false;
-    }
     $is_success = true;
 
     try {
         if($method === 'full') {
+            $this->with_detail = true;
             $this->loadLaporan();
             return Excel::download(
                 new LaporanPenjualanDetailExport($this->laporanGabungan),
                 'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
             );
-        }else{
+        }
+        else if($method === 'detail'){
+            $this->with_detail = true;
+            $this->loadLaporanDetail();
+            return Excel::download(
+                new LaporanKeranjangPenjualanExport($this->laporanGabungan),
+                'Laporan-Detail-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+            );
+        }
+        else{
+            $this->with_detail = false;
             $this->loadLaporan();
             return Excel::download(
                 new LaporanPenjualanExport($this->laporanGabungan),
@@ -148,7 +173,7 @@ public function exportExcel($method = 'main')
             // ->visible(fn () =>
             //     Penjualan::whereNotNull('validated_by')->exists()
             // )
-            ->action(fn ($livewire) => $livewire->exportExcel('main')),
+            ->action(fn ($livewire) => $livewire->exportExcel('detail')),
             
             Action::make('full-export')
             ->label('Download Data Full Excel')
