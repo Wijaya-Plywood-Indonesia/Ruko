@@ -18,6 +18,7 @@ class ListPenjualans extends ListRecords
 
 public function mount(): void
 {
+    $this->with_detail;
     $this->loadLaporan();
 }
 public bool $with_detail = false;
@@ -47,8 +48,8 @@ public function loadLaporan()
         ->with(['user', 'validator'])
         ->get()
         ->map(function ($p) {
-            $data_detail = $this->with_detail ? $this->data_detail($p->id) : null;
-
+            $data_detail = $this->with_detail === true ? $this->data_detail($p->id) : [];
+            // dd($data_detail);
             return [
                 'no_nota'                   => $p->no_nota,
                 'tanggal'                   => $p->tanggal,
@@ -77,23 +78,24 @@ public function loadLaporan()
 public function exportExcel($method = 'main')
 {
     if (empty($this->laporanGabungan)) {
-        if($method === 'full') {
-            $this->with_detail = true;
-        } else {
-            $this->with_detail = false;
-        }
-        dd($this->with_detail);
         $this->loadLaporan();
+    }
+    if($method === 'full') {
+        $this->with_detail = true;
+    } else {
+        $this->with_detail = false;
     }
     $is_success = true;
 
     try {
         if($method === 'full') {
+            $this->loadLaporan();
             return Excel::download(
                 new LaporanPenjualanDetailExport($this->laporanGabungan),
                 'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
             );
         }else{
+            $this->loadLaporan();
             return Excel::download(
                 new LaporanPenjualanExport($this->laporanGabungan),
                 'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
@@ -131,7 +133,16 @@ public function exportExcel($method = 'main')
             ,
 
             Action::make('export')
-            ->label('Download Excel')
+            ->label('Download Penjualan Excel')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->color('success')
+            // ->visible(fn () =>
+            //     Penjualan::whereNotNull('validated_by')->exists()
+            // )
+            ->action(fn ($livewire) => $livewire->exportExcel('main')),
+            
+            Action::make('export-detail')
+            ->label('Download Detail Penjualan Excel')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('success')
             // ->visible(fn () =>
