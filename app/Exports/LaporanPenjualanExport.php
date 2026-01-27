@@ -65,8 +65,8 @@ class LaporanPenjualanExport implements
             'Bayar',
             'Kembalian',
             'Status',
-            'Dibuat Oleh',
-            'Divalidasi Oleh',
+            'Kasir',
+            'Validator',
             'Bank',
             'No Rekening',
             'Kendaraan',
@@ -123,6 +123,7 @@ class LaporanPenjualanExport implements
         $sheet->getStyle("G2:I{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle("J2:J{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
         $sheet->getStyle("O2:O{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
+        $sheet->getStyle("P2:P{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
 
         // Format uang
         $sheet->getStyle("L2:N{$lastRow}")

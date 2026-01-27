@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Penjualans;
 
-use App\Exports\LaporanPenjualanExport;
 use App\Filament\Resources\Penjualans\Pages\CreatePenjualan;
+use App\Filament\Resources\Penjualans\Pages\DownloadExcel;
 use App\Filament\Resources\Penjualans\Pages\EditPenjualan;
 use App\Filament\Resources\Penjualans\Pages\ListPenjualans;
 use App\Filament\Resources\Penjualans\Pages\PosPenjualan;
+use App\Filament\Resources\Penjualans\Pages\PreviewExport;
+use App\Filament\Resources\Penjualans\Pages\Settings;
 use App\Filament\Resources\Penjualans\Pages\ViewPenjualan;
 use App\Filament\Resources\Penjualans\RelationManagers\DetailsRelationManager;
 use App\Filament\Resources\Penjualans\Schemas\PenjualanForm;
@@ -18,8 +20,6 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Filament\Actions\Action;
-use Maatwebsite\Excel\Facades\Excel;
 
 class PenjualanResource extends Resource
 {
@@ -54,12 +54,16 @@ class PenjualanResource extends Resource
         ];
     }
 
+    
     public static function getPages(): array
     {
         return [
             'index' => ListPenjualans::route('/'),
+            'settings' => Settings::route('/settings'),
+            'preview' => PreviewExport::route('/preview'),
             'pos' => PosPenjualan::route('/pos'),
             'create' => CreatePenjualan::route('/create'),
+            'download' => DownloadExcel::route('/download'),
             'view' => ViewPenjualan::route('/{record}'),
             'edit' => EditPenjualan::route('/{record}/edit'),
 
