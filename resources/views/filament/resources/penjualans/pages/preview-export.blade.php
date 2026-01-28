@@ -208,7 +208,7 @@
                         </tr>
                     @endif
 
-                    {{-- JIKA MODE DETAIL: TAMPILKAN BARIS ANAK --}}
+                    {{-- JIKA MODE FULL: TAMPILKAN BARIS ANAK --}}
                     @if($viewType == 'full' && !empty($item['data_penjualan_detail']))
                         <tr class="detail-row">
                             <td colspan="100%" style="padding: 10px 40px;">
@@ -216,8 +216,11 @@
                                     <thead>
                                         <tr>
                                             <th>Nama Barang</th>
-                                            <th class="text-right">Harga</th>
-                                            <th class="text-center">Qty</th>
+                                            <th class="text-right">Harga Awal</th>
+                                            <th class="text-right">Harga Jual</th>
+                                            <th class="text-right">Diskon</th>
+                                            <th class="text-center">Jumlah</th>
+                                            <th class="text-right">Total Diskon</th>
                                             <th class="text-right">Subtotal</th>
                                         </tr>
                                     </thead>
@@ -225,8 +228,11 @@
                                         @foreach($item['data_penjualan_detail'] as $det)
                                             <tr>
                                                 <td>{{ $det['nama_barang'] }}</td>
+                                                <td class="text-right">Rp {{ number_format($det['harga_awal'], 0, ',', '.') }}</td>
                                                 <td class="text-right">Rp {{ number_format($det['harga_jual'], 0, ',', '.') }}</td>
+                                                <td class="text-right">Rp {{ number_format($det['diskon'], 0, ',', '.') }}</td>
                                                 <td class="text-center">{{ $det['jumlah'] }}</td>
+                                                <td class="text-right">Rp {{ number_format($det['total_diskon'], 0, ',', '.') }}</td>
                                                 <td class="text-right">Rp {{ number_format($det['subtotal'], 0, ',', '.') }}</td>
                                             </tr>
                                         @endforeach
