@@ -61,9 +61,9 @@ class LaporanPenjualanDetailExport implements WithEvents,
                     $penjualan['member'],
                     $penjualan['alamat'],
                     $penjualan['metode_pembayaran'],
-                    $penjualan['total'],
-                    $penjualan['bayar'],
-                    $penjualan['kembalian'],
+                    (float)$penjualan['total'],
+                    (float)$penjualan['bayar'],
+                    (float)$penjualan['kembalian'],
                     $penjualan['status_transaksi'],
                     $penjualan['kasir'],
                     $penjualan['validator'],
@@ -75,7 +75,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 ]
             ], null, "A{$row}");
 
-            $sheet->getStyle("G{$row}:I{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("G{$row}:I{$row}")->getNumberFormat()->setFormatCode('_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)');
             
             $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No Nota
             $sheet->getStyle("B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Tanggal
@@ -117,16 +117,16 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 $sheet->getDelegate()->fromArray([
                     [
                         $detail['nama_barang'],
-                        $detail['harga_awal'],
-                        $detail['harga_jual'],
-                        $detail['diskon'] ?? 0,
+                        (float)$detail['harga_awal'],
+                        (float)$detail['harga_jual'],
+                        (float)$detail['diskon'] ?? 0,
                         $detail['jumlah'],
-                        $detail['total_diskon'] ?? 0,
-                        $detail['subtotal'],
+                        (float)$detail['total_diskon'] ?? 0,
+                        (float)$detail['subtotal'],
                     ]
                 ], null, "A{$row}");
 
-                $sheet->getStyle("B{$row}:D{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle("B{$row}:D{$row}")->getNumberFormat()->setFormatCode('_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)');
                 $sheet->getStyle("E{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("F{$row}")->applyFromArray($this->styleDiskon());
                 $sheet->getStyle("G{$row}")->applyFromArray($this->styleSubtotal());
@@ -246,7 +246,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 'startColor' => ['rgb' => '16A34A'],
             ],
             'numberFormat' => [
-                'formatCode' => '#,##0.00',
+                'formatCode' => '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)',
             ],
         ];
     }
@@ -260,7 +260,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 'startColor' => ['rgb' => '991B1B'],
             ],
             'numberFormat' => [
-                'formatCode' => '#,##0.00',
+                'formatCode' => '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)',
             ],
         ];
     }
