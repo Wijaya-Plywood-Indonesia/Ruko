@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Penjualans\Tables;
 
+use App\Filament\Resources\Penjualans\PenjualanResource;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -12,12 +13,13 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 class PenjualansTable
 {
     public static function configure(Table $table): Table
     {
+        // dd(PenjualanResource::getUrl('preview'));
+        // admin penjualans preview
         return $table
             ->columns([
                 TextColumn::make('no_nota')
@@ -239,6 +241,9 @@ class PenjualansTable
                         ])
                     ),
 
+            ])
+            ->headerActions([
+                //
             ])
             ->toolbarActions([
                 // BulkActionGroup::make([
