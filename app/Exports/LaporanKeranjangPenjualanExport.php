@@ -69,18 +69,18 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                         $penjualan['tanggal'],
                         $penjualan['nama_customer'],
                         $detail['nama_barang'],
-                        $detail['harga_awal'],
-                        $detail['harga_jual'],
-                        $detail['diskon'] ?? 0,
+                        (float)$detail['harga_awal'],
+                        (float)$detail['harga_jual'],
+                        (float)$detail['diskon'] ?? 0,
                         $detail['jumlah'],
-                        $detail['total_diskon'] ?? 0,
-                        $detail['subtotal'],
+                        (float)$detail['total_diskon'] ?? 0,
+                        (float)$detail['subtotal'],
                         $penjualan['kasir'],
                         $penjualan['status_transaksi'],
                     ]
                 ], null, "A{$row}");
 
-                $sheet->getStyle("E{$row}:J{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle("E{$row}:J{$row}")->getNumberFormat()->setFormatCode('_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)');
                 $sheet->getStyle("A{$row}:B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No Nota
                 $sheet->getStyle("C{$row}:D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
                 $sheet->getStyle("E{$row}:G{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
@@ -181,7 +181,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                 'startColor' => ['rgb' => '16A34A'],
             ],
             'numberFormat' => [
-                'formatCode' => '#,##0.00',
+                'formatCode' => '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)',
             ],
         ];
     }
@@ -195,7 +195,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                 'startColor' => ['rgb' => '991B1B'],
             ],
             'numberFormat' => [
-                'formatCode' => '#,##0.00',
+                'formatCode' => '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)',
             ],
         ];
     }

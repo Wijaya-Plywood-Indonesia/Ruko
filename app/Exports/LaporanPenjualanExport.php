@@ -37,9 +37,9 @@ class LaporanPenjualanExport implements
                 $row['member'] ? 'MEMBER' : 'REGULAR',
                 $row['alamat'],
                 $row['metode_pembayaran'],
-                $row['total'],
-                $row['bayar'],
-                $row['kembalian'],
+                (float)$row['total'],
+                (float)$row['bayar'],
+                (float)$row['kembalian'],
                 $row['status_transaksi'],
                 $row['kasir'],
                 $row['validator'],
@@ -128,7 +128,7 @@ class LaporanPenjualanExport implements
         // Format uang
         $sheet->getStyle("L2:N{$lastRow}")
             ->getNumberFormat()
-            ->setFormatCode('#,##0.00');
+            ->setFormatCode('_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)');
 
         // Freeze header
         $sheet->freezePane('A2');
