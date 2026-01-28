@@ -1,7 +1,6 @@
 {{-- resources/views/filament/resources/penjualans/pages/preview-export.blade.php --}}
 
 @php
-    // Menangkap tipe preview dari URL, default ke 'main'
     $viewType = request()->query('view_type', 'main');
 @endphp
 
@@ -22,11 +21,13 @@
     .badge-regular { background: #f3f4f6; color: #374151; }
 
     /* FILTER & ACTION SECTION */
+
     .filter-section {
         background: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 15px;
     }
-    .container-inputs { display: flex; gap: 15px; align-items: flex-end; }
+    .container-inputs { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
     .input-group { display: flex; flex-direction: column; gap: 5px; }
     .input-group label { font-size: 12px; font-weight: bold; color: #374151; }
     .input-field { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; }
@@ -61,6 +62,7 @@
     </div>
     
     <div class="filter-section">
+        {{-- POJOK KIRI: FILTER TANGGAL + SELECT TIPE PREVIEW --}}
         <form id="filterForm" action="" method="GET" class="container-inputs">
             {{-- FILTER TANGGAL --}}
             <div class="input-group">
@@ -147,6 +149,7 @@
             </thead>
             <tbody>
                 @forelse($laporanGabungan as $item)
+                    {{-- JIKA MODE DETAIL: TAMPILKAN BARIS INDUK --}}
                     @if ($viewType == 'detail')
                         @forelse ($item['data_penjualan_detail'] as $detail)
                             <tr>
