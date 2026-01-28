@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Penjualans\Pages;
 
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Exports\LaporanKeranjangPenjualanExport;
 use App\Exports\LaporanPenjualanDetailExport;
 use App\Exports\LaporanPenjualanExport;
@@ -13,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
+use Livewire\Attributes\Renderless;
 
 class PreviewExport extends Page
 {
@@ -131,5 +133,32 @@ class PreviewExport extends Page
         $view = view($this->view);
 
         return $view->layout('components.layouts.blank');
+    }
+
+    #[Renderless]
+    public function exportExcel($type)
+    {
+        dd($type, $this->startDate, $this->endDate, "Export triggered");
+        // 1. Pastikan data ter-load sesuai filter saat ini
+        if ($type === 'detail') {
+            $this->loadLaporanDetail();
+        } else {
+            $this->loadLaporan();
+        }
+
+        $fileName = "Laporan-{$type}-{$this->startDate}-to-{$this->endDate}.xlsx";
+
+        // 2. Gunakan Livewire Stream Download
+        return response()->streamDownload(function () use ($type) {
+            $export = match($type) {
+                'main'   => new LaporanPenjualanExport($this->laporanGabungan),
+                'detail' => new LaporanKeranjangPenjualanExport($this->laporanGabungan),
+                'full'   => new LaporanPenjualanDetailExport($this->laporanGabungan),
+                default  => new LaporanPenjualanExport($this->laporanGabungan),
+            };
+
+            // Langsung output ke stream
+            return Excel::store($export, 'php://output', \Maatwebsite\Excel\Excel::XLSX);
+        }, $fileName);
     }
 }

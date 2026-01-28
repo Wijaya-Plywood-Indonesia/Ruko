@@ -61,6 +61,7 @@ class PenjualanResource extends Resource
             'index' => ListPenjualans::route('/'),
             'settings' => Settings::route('/settings'),
             'preview' => PreviewExport::route('/preview'),
+            // 'product' => PreviewExport::route('/preview'),
             'pos' => PosPenjualan::route('/pos'),
             'create' => CreatePenjualan::route('/create'),
             'download' => DownloadExcel::route('/download'),
