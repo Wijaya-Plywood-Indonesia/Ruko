@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Penjualans;
 
+use App\Exports\LaporanPenjualanExport;
 use App\Filament\Resources\Penjualans\Pages\CreatePenjualan;
 use App\Filament\Resources\Penjualans\Pages\EditPenjualan;
 use App\Filament\Resources\Penjualans\Pages\ListPenjualans;
@@ -17,6 +18,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PenjualanResource extends Resource
 {
@@ -28,6 +31,9 @@ class PenjualanResource extends Resource
     {
         return PenjualanForm::configure($schema);
     }
+
+
+
 
 
     public static function infolist(Schema $schema): Schema
