@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\Penjualans;
 
 use App\Filament\Resources\Penjualans\Pages\CreatePenjualan;
+use App\Filament\Resources\Penjualans\Pages\DownloadExcel;
 use App\Filament\Resources\Penjualans\Pages\EditPenjualan;
 use App\Filament\Resources\Penjualans\Pages\ListPenjualans;
 use App\Filament\Resources\Penjualans\Pages\PosPenjualan;
+use App\Filament\Resources\Penjualans\Pages\PreviewExport;
+use App\Filament\Resources\Penjualans\Pages\Settings;
 use App\Filament\Resources\Penjualans\Pages\ViewPenjualan;
 use App\Filament\Resources\Penjualans\RelationManagers\DetailsRelationManager;
 use App\Filament\Resources\Penjualans\Schemas\PenjualanForm;
@@ -30,6 +33,9 @@ class PenjualanResource extends Resource
     }
 
 
+
+
+
     public static function infolist(Schema $schema): Schema
     {
         return PenjualanInfolist::configure($schema);
@@ -48,12 +54,17 @@ class PenjualanResource extends Resource
         ];
     }
 
+    
     public static function getPages(): array
     {
         return [
             'index' => ListPenjualans::route('/'),
+            'settings' => Settings::route('/settings'),
+            'preview' => PreviewExport::route('/preview'),
+            // 'product' => PreviewExport::route('/preview'),
             'pos' => PosPenjualan::route('/pos'),
             'create' => CreatePenjualan::route('/create'),
+            'download' => DownloadExcel::route('/download'),
             'view' => ViewPenjualan::route('/{record}'),
             'edit' => EditPenjualan::route('/{record}/edit'),
 

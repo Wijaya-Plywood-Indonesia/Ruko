@@ -1,0 +1,134 @@
+[   {
+        "label": "Label / Logo for website still Laravel",
+        "solution": "Changes the label to the name of project (Ruko)"
+    },
+    {
+        "resource": "Barang",
+        "bugs": [
+            {
+                "name": "missing option",
+                "location": "Create barangs",
+                "description": "at the first time input, user can't make a barang because kategori and satuan select have'nt options(data)",
+                "solutions": "Create a direct button go to page Create kategori & Create Satuan ->visible( !kategori && !satuan ), ADD: Notification",
+                "level": "easy",
+                "is_important": false
+            }
+        ],
+        "note": [
+            "UI: Form Barangs responsive is OK",
+            "Bacode input is'nt has required ->required()",
+            ""
+        ]
+    },
+    {
+        "resource": "Detail Surat Jalans",
+        "bugs": [
+            {
+                "name": "double option button for create detail surat jalan",
+                "location": "View Detail Surat Jalan",
+                "description": "double button option with same functions",
+                "solutions": "Choose one button",
+                "level": "easy",
+                "is_important": true
+            },
+            {
+                "name": "missing option",
+                "location": "Create Detail Surat Jalan",
+                "description": "at the first time input, user can't make a Detail Surat Jalan because barang select have'nt options(data)",
+                "solutions": "Create a direct button go to page Create barang ->visible( !barangs ), ADD: Notification",
+                "level": "easy",
+                "is_important": false
+            }
+        ]
+    },
+    {
+        "resource": "Identitas Tokos",
+        "bugs": [],
+        "note": "200! OK"
+    },
+    {
+        "resource": "Kategori Barang",
+        "bugs": [
+            {
+                "name": "ambiguitas Parent Kategori",
+                "location": "Create Kategori, Select Kategori",
+                "description": "users confused when see a different languange 'Parent Kategori' with option 'Kategori Utama', users will ask 'what is parent?', is it sub-category?, main category?",
+                "solution": "maybe make a toogle for this Select, 'Jenis Kategori' ? 'Kategori Utama' : 'Sub Kategori' and then undisable the select Parent Kateogri and make the label like 'Pilih kategori utama' | 'Hubungkan Kategori'",
+                "level": "medium",
+                "note": "for advanced user and young people is OK, but for old people is making confusion",
+                "is_important": true
+            }
+        ],
+        "note": "UI OK, UX B+, system OK "
+    },
+    {
+        "resource": "List Akuns",
+        "bugs": [
+            {
+                "name": "cannot sarch by indexing, like abjad (sortable)",
+                "location": "table ListAkuns",
+                "solution": "add -> searchable() and sortable()",
+                "level": "easy",
+                "is_important": true 
+            },
+            {
+                "name": "Validation select jabatan, akun, penempatan toko",
+                "location": "Form ListAkuns",
+                "description": "mirrasble logic & permissions",
+                "solution": "filteres akun, and penempatan toko",
+                "level": "intermediate",
+                "is_important": true 
+            }
+        ],
+        "note": "must fixing, because it is very important"
+    },
+    {
+        "resource": "Data Pegawai",
+        "bugs": [
+            {
+                "name": "404 Image Lihat KTP, Lihat Foto Pegawai",
+                "location": "Table Data Pegawai",
+                "solution": "right url go to picture",
+                "level": "intermediate",
+                "is_important": true 
+            }
+        ],
+        "note": "must fixing, because it is very important"
+    },
+    {
+        "resource": "Data Pembeli",
+        "bugs": [
+            {
+                "name": "Missing Container at View",
+                "location": "View Data Pembeli",
+                "solution": "add container for details data pembeli",
+                "level": "easy",
+                "is_important": true 
+            },
+            {
+                "name": "Nullable Input Nama Bank/E-Wallet",
+                "location": "Edit Data Pegawai",
+                "solution": "ADD Required() at input nama bank/e-wallet",
+                "level": "easy",
+                "is_important": true 
+            }
+        ],
+        "add": [
+            {
+                "name": "form data rekening pembeli",
+                "location": "Create/form Data Pembeli",
+                "description": "ADD Form data rekening pembeli at Create Data Pembeli and ADD toggle",
+                "is_important": true
+            },
+            {
+                "name": "Column Nama Bank / E-Wallet",
+                "location": "Table Data Pembeli",
+                "description": "ADD Column",
+                "is_important": true
+            }
+            
+        ],
+        "note": "must fixing, because it is very important"
+    }
+    
+]
