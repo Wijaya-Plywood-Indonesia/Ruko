@@ -60,8 +60,8 @@
         <a href="{{ static::$resource::getUrl('index') }}" style="text-decoration: none; color: #6b7280; font-size: 14px; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px;"> Kembali ke List</a>
     </div>
     
-    <form id="filterForm" action="" method="GET" class="filter-section">
-        <div class="container-inputs">
+    <div class="filter-section">
+        <form id="filterForm" action="" method="GET" class="container-inputs">
             {{-- FILTER TANGGAL --}}
             <div class="input-group">
                 <label>Dari Tanggal</label>
@@ -83,21 +83,23 @@
             </div>
             
             <a href="{{ request()->url() }}" style="color: #ef4444; font-size: 12px; text-decoration: none; border: 1px solid #ef4444; padding: 8px 16px; border-radius: 6px;">Reset Filter</a>
-        </div>
+        </form>
 
         {{-- POJOK KANAN: SELECT EXPORT + BUTTON --}}
+        
         <div style="display: flex; align-items: center;">
-            {{-- <select id="exportTypeSelect" class="select-export-type">
-                <option value="main">Main Excel</option>
-                <option value="detail">Detail Excel</option>
-                <option value="full">Full Excel</option>
-            </select> --}}
-            <button type="button" onclick="handleExport()" class="btn-export">
-                <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <button 
+                type="button"
+                class="btn-export"
+                onclick="eksekusiDownload()"
+            >
+                <svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
                 Export Excel
             </button>
         </div>
-    </form>
+    </div>
 
     <div class="table-container">
         <table class="custom-table" style="min-width: {{ $viewType == 'full' ? '2000px' : '1200px' }}">
@@ -238,6 +240,7 @@
             </tbody>
         </table>
     </div>
+
 </div>
 
 <script>
@@ -258,4 +261,25 @@
             document.body.style.opacity = '0.5';
         });
     });
+
+
+    function eksekusiDownload() {
+    // Ambil data dari input filter tanggal yang ada di blade kamu
+    const tipe = '{{ $viewType }}';
+    const dari = document.querySelector('[name="dari_tanggal"]').value;
+    const sampai = document.querySelector('[name="sampai_tanggal"]').value;
+
+    if(!dari || !sampai) {
+        alert('Silahkan pilih tanggal terlebih dahulu');
+        return;
+    }
+
+    // Bangun URL secara manual ke Route Controller
+    const url = "{{ route('force.download') }}?type=" + tipe + "&dari=" + dari + "&sampai=" + sampai;
+
+    // contoh : "http://localhost:8080/force-download-excel?type=main&dari=2024-01-01&sampai=2026-01-31"
+    // Paksa browser buka URL ini (Akan memicu download otomatis)
+    window.location.href = url;
+    }
+
 </script>
