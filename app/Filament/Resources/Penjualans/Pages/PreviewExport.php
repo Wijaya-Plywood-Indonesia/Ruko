@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Penjualans\Pages;
 
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Exports\LaporanKeranjangPenjualanExport;
 use App\Exports\LaporanPenjualanDetailExport;
 use App\Exports\LaporanPenjualanExport;
@@ -26,6 +25,8 @@ class PreviewExport extends Page
 
     public Collection $allPenjualan;
 
+    public string $viewType = 'main';
+
     public ?string $startDate = null;
 
     public ?string $endDate = null;
@@ -35,6 +36,7 @@ class PreviewExport extends Page
     public function mount(Request $request)
     {
         // 1. Setup Filter Tanggal (Ambil dari URL atau default bulan ini)
+        $this->viewType = $request->query('view_type', 'main');
         $this->startDate = $request->query('dari_tanggal', now()->startOfMonth()->format('Y-m-d'));
         $this->endDate = $request->query('sampai_tanggal', now()->format('Y-m-d'));
 
@@ -42,7 +44,6 @@ class PreviewExport extends Page
 
         // 2. Tentukan apakah butuh detail atau tidak (berdasarkan klik tombol)
         $exportType = $request->query('export');
-        $this->with_detail = ($request->query('view_type') === 'detail');
 
         // 3. Jalankan Load Data dengan Filter
         $this->loadLaporan();
@@ -82,7 +83,7 @@ class PreviewExport extends Page
                     'nama_sopir' => $p->nama_sopir,
                     'status_transaksi' => $p->status_transaksi,
                     // Load detail hanya jika dibutuhkan
-                    'data_penjualan_detail' => $this->with_detail ? $this->data_detail($p->id) : [],
+                    'data_penjualan_detail' => $this->viewType === 'full' ? $this->data_detail($p->id) : [],
                 ];
             })
             ->toArray();
