@@ -14,7 +14,7 @@ class StokBarangTokoForm
             ->components([
                 Select::make('barang_id')
                     ->label('Barang')
-                    ->relationship('barang', 'nama')
+                    ->relationship('barang', 'nama_barang')
                     ->searchable()
                     ->required(),
 
