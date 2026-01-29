@@ -53,49 +53,29 @@ class PenjualansTable
                     ->dateTime()
                     ->sortable(),
 
+                TextColumn::make('keterangan')
+                    ->placeholder('kosong')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->dateTime()
+                    ->sortable(),
+
                 TextColumn::make('nama_customer')
                     ->searchable()
                     ->placeholder('Tidak Dicatat'),
 
                 TextColumn::make('metode_pembayaran')
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('bank')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('no_rekening')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('kendaraan')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('nama_sopir')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+
+
                 TextColumn::make('total')
                     ->label('Total Pembelian')
                     ->money('IDR', locale: 'id_ID')
                     ->sortable(),
 
-                TextColumn::make('bayar')
-                    ->label('Bayar')
-                    ->money('IDR', locale: 'id_ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('kembalian')
-                    ->label('Kembalian')
-                    ->money('IDR', locale: 'id_ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+
+
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -176,14 +156,16 @@ class PenjualansTable
                     ->color('danger')
                     ->requiresConfirmation()
 
-                    // Muncul hanya jika SUDAH divalidasi
-                    ->visible(fn($record) => !empty($record->validated_by))
+                    ->visible(
+                        fn($record) =>
+                        !empty($record->validated_by)
+                        && $record->status_transaksi !== 'LUNAS'
+                    )
 
                     ->action(function ($record) {
-
                         $record->update([
                             'validated_by' => null,
-                            'status_transaksi' => 'BELUM DIBAYAR', // 🔥 reset nilai select
+                            'status_transaksi' => 'BELUM DIBAYAR',
                         ]);
 
                         Notification::make()
@@ -240,6 +222,29 @@ class PenjualansTable
                             'PENDING',
                         ])
                     ),
+                Action::make('edit_keterangan')
+                    ->label('Edit Keterangan')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('warning')
+                    ->modalHeading('Edit Keterangan')
+                    ->modalSubmitActionLabel('Simpan')
+                    ->form([
+                        TextInput::make('keterangan')
+                            ->label('Keterangan')
+                            ->default(fn($record) => $record->keterangan)
+                            ->placeholder('Masukkan keterangan...')
+                            ->maxLength(255),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $record->update([
+                            'keterangan' => $data['keterangan'],
+                        ]);
+
+                        Notification::make()
+                            ->title('Keterangan berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    }),
 
             ])
             ->headerActions([

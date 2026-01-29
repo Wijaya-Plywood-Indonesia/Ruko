@@ -14,7 +14,7 @@ class PenjualanInfolist
         return $schema
             ->components([
                 Section::make('Informasi Nota')
-                    ->columns(3)
+                    ->columns(2)
                     ->schema([
                         TextEntry::make('no_nota')
                             ->label('No Nota')
@@ -62,10 +62,12 @@ class PenjualanInfolist
                         TextEntry::make('kembalian')
                             ->money('IDR', locale: 'id_ID')
                             ->color(fn($state) => $state < 0 ? 'danger' : 'success'),
+                        TextEntry::make('keterangan')->placeholder('Tidak Ada Catatan')
+                        ,
                     ]),
 
                 Section::make('Pengiriman')
-                    ->columns(2)
+                    ->columns(3)
                     ->schema([
                         TextEntry::make('kendaraan')
                             ->label('Kendaraan'),
