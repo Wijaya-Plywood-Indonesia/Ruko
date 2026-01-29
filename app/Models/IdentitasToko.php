@@ -23,4 +23,8 @@ class IdentitasToko extends Model
     protected $casts = [
         'status' => 'string',
     ];
+    public function stokBarang()
+    {
+        return $this->hasMany(StokBarangToko::class, 'toko_id');
+    }
 }
