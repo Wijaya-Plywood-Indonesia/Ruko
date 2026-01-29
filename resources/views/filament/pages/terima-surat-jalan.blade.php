@@ -2,58 +2,207 @@
     {{ $this->form }}
 
     @if ($suratJalan)
-        <x-filament::section heading="Informasi Surat Jalan">
-            <div class="grid grid-cols-2 gap-4">
-                <div><b>No Surat:</b> {{ $suratJalan->no_surat_jalan }}</div>
-                <div><b>Tanggal:</b> {{ $suratJalan->tanggal_kirim->format('d-m-Y') }}</div>
-                <div><b>Toko Asal:</b> {{ $suratJalan->tokoAsal->nama_toko }}</div>
-                <div><b>Toko Tujuan:</b> {{ $suratJalan->tokoTujuan->nama_toko }}</div>
-                <div><b>Supir:</b> {{ $suratJalan->nama_supir }}</div>
-                <div><b>Plat:</b> {{ $suratJalan->plat }}</div>
+
+        {{-- =========================
+           INFORMASI SURAT JALAN (A -> B)
+           ========================= --}}
+        <x-filament::section>
+            <div class="sj-flow">
+
+                <div class="sj-flow-line">
+                    <div class="sj-point">
+                        <span class="sj-point-title">Toko Asal</span>
+                        <span class="sj-point-name">
+                            {{ $suratJalan->tokoAsal->nama_toko }}
+                        </span>
+                    </div>
+
+                    <div class="sj-arrow">
+                        ➜
+                    </div>
+
+                    <div class="sj-point">
+                        <span class="sj-point-title">Toko Tujuan</span>
+                        <span class="sj-point-name">
+                            {{ $suratJalan->tokoTujuan->nama_toko }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="sj-meta">
+                    <div class="sj-badge">
+                        <span>No Surat Jalan</span>
+                        <strong>{{ $suratJalan->no_surat_jalan }}</strong>
+                    </div>
+                    <div class="sj-badge">
+                        <span>Tanggal</span>
+                        <strong>{{ $suratJalan->tanggal_kirim->format('d-m-Y') }}</strong>
+                    </div>
+                    <div class="sj-badge">
+                        <span>Supir</span>
+                        <strong>{{ $suratJalan->nama_supir }}</strong>
+                    </div>
+                    <div class="sj-badge">
+                        <span>Plat</span>
+                        <strong>{{ $suratJalan->plat }}</strong>
+                    </div>
+                </div>
+
             </div>
         </x-filament::section>
 
+        {{-- =========================
+           DETAIL BARANG
+           ========================= --}}
         <x-filament::section heading="Detail Barang">
-            <table class="w-full border">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="p-2 border">Barang</th>
-                        <th class="p-2 border">Qty Kirim</th>
-                        <th class="p-2 border">Qty Diterima</th>
-                        <th class="p-2 border">Catatan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($suratJalan->details as $index => $detail)
+            <div class="overflow-x-auto">
+                <table class="sj-table">
+                    <thead>
                         <tr>
-                            <td class="p-2 border">
-                                {{ $detail->barang->nama_barang }}
-                            </td>
-                            <td class="p-2 border text-center">
-                                {{ $detail->qty_kirim }}
-                            </td>
-                            <td class="p-2 border">
-                                <input type="number"
-                                       min="0"
-                                       class="w-full border rounded p-1"
-                                       wire:model.defer="suratJalan.details.{{ $index }}.qty_diterima">
-                            </td>
-                            <td class="p-2 border">
-                                <input type="text"
-                                       class="w-full border rounded p-1"
-                                       wire:model.defer="suratJalan.details.{{ $index }}.catatan">
-                            </td>
+                            <th>Barang</th>
+                            <th class="text-center w-28">Qty Kirim</th>
+                            <th class="text-center w-32">Qty Diterima</th>
+                             <th class="text-center w-20">✔</th>
+                            <th>Catatan</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                   <tbody>
+@foreach ($details as $index => $detail)
+    <tr class="{{ $detail['locked'] ? 'opacity-60 bg-gray-50' : '' }}">
+        {{-- BARANG --}}
+        <td class="text-center align-middle">
+            {{ $detail['barang'] }}
+        </td>
+
+        {{-- QTY KIRIM --}}
+        <td class="text-center align-middle font-semibold">
+            {{ $detail['qty_kirim'] }}
+        </td>
+
+        {{-- QTY DITERIMA --}}
+        <td class="text-center align-middle">
+            <input
+                type="number"
+                min="0"
+                class="sj-input sj-input-number text-center"
+                wire:key="qty-{{ $detail['id'] }}"
+                wire:model.defer="details.{{ $index }}.qty_diterima"
+                @disabled($detail['locked'])
+                onclick="this.select()"
+            >
+        </td>
+
+        {{-- CHECKBOX LOCK --}}
+        <td class="text-center align-middle">
+            <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-gray-300"
+                wire:model="details.{{ $index }}.locked"
+            >
+        </td>
+
+        {{-- CATATAN --}}
+        <td class="text-center align-middle">
+            <input
+                type="text"
+                class="sj-input text-center"
+                wire:model.defer="details.{{ $index }}.catatan"
+                @disabled($detail['locked'])
+            >
+        </td>
+    </tr>
+@endforeach
+</tbody>
+                </table>
+            </div>
         </x-filament::section>
 
-        <x-filament::button
-            color="success"
-            class="mt-4"
-            wire:click="submit">
-            Selesaikan Penerimaan
-        </x-filament::button>
+        {{-- =========================
+           ACTION
+           ========================= --}}
+        <div class="mt-4 flex justify-end">
+            <x-filament::button
+                color="success"
+                wire:click="submit">
+                Selesaikan Penerimaan
+            </x-filament::button>
+        </div>
+
     @endif
+
+    {{-- =========================
+       CSS
+       ========================= --}}
+    <style>
+        .sj-flow { display: flex; flex-direction: column; gap: 16px; }
+        .sj-flow-line { display: flex; align-items: center; gap: 16px; }
+        .sj-point {
+            flex: 1;
+            border: 2px solid #d1d5db;
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            transition: .25s;
+        }
+        .sj-point:hover {
+            border-color: rgb(59 130 246);
+            box-shadow: 0 6px 16px rgba(59,130,246,.15);
+            transform: translateY(-2px);
+        }
+        .sj-point-title { font-size: .75rem; color: #6b7280; }
+        .sj-point-name { font-weight: 600; }
+
+        .sj-arrow {
+            font-size: 1.5rem;
+            color: rgb(59 130 246);
+            animation: arrowMove 1.5s infinite;
+        }
+        @keyframes arrowMove {
+            0% { transform: translateX(0); opacity: .6; }
+            50% { transform: translateX(6px); opacity: 1; }
+            100% { transform: translateX(0); opacity: .6; }
+        }
+
+        .sj-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+            gap: 12px;
+        }
+        .sj-badge {
+            background: #f9fafb;
+            border: 1px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: .8rem;
+        }
+
+        .sj-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #9ca3af;
+        }
+        .sj-table th,
+        .sj-table td {
+            border: 2px solid #9ca3af;
+            padding: 8px;
+            font-size: .875rem;
+        }
+        .sj-table thead { background: #e5e7eb; }
+        .sj-table tbody tr:hover { background: #f9fafb; }
+
+        .sj-input {
+            width: 100%;
+            height: 34px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+        .sj-input:focus {
+            outline: none;
+            border-color: rgb(59 130 246);
+            box-shadow: 0 0 0 1px rgb(59 130 246 / 40%);
+        }
+        .sj-input-number { text-align: center; }
+    </style>
+
 </x-filament::page>
