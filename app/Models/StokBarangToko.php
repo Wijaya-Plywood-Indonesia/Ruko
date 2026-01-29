@@ -7,4 +7,49 @@ use Illuminate\Database\Eloquent\Model;
 class StokBarangToko extends Model
 {
     //
+    protected $table = 'stok_barang_toko';
+
+    /**
+     * Mass assignable
+     */
+    protected $fillable = [
+        'barang_id',
+        'toko_id',
+        'stok',
+    ];
+
+    /**
+     * Casts
+     */
+    protected $casts = [
+        'stok' => 'integer',
+    ];
+
+    /* =========================
+     |  RELATIONSHIPS
+     ========================= */
+
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class, 'barang_id');
+    }
+
+    public function toko()
+    {
+        return $this->belongsTo(IdentitasToko::class, 'toko_id');
+    }
+
+    /* =========================
+     |  HELPERS
+     ========================= */
+
+    public function tambah(int $qty): void
+    {
+        $this->increment('stok', $qty);
+    }
+
+    public function kurang(int $qty): void
+    {
+        $this->decrement('stok', $qty);
+    }
 }

@@ -7,7 +7,7 @@ use App\Models\StokBarangToko;
 use App\Models\StokLog;
 use Illuminate\Support\Facades\DB;
 use Exception;
-use App\Models\DetailSuratJalan
+use App\Models\DetailSuratJalan;
 class SuratJalanPenerimaanService
 {
     /**
