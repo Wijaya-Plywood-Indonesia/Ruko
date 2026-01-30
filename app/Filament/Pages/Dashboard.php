@@ -18,3 +18,4 @@ class Dashboard extends Page
         ];
     }
 }
+
