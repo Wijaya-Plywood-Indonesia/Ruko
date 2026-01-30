@@ -16,15 +16,17 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class PembeliResource extends Resource
 {
     protected static ?string $model = Pembeli::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    //  protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static ?string $navigationLabel = 'Data Pembeli';
     protected static ?string $pluralModelLabel = 'Data Pembeli';
     protected static ?string $modelLabel = 'Data Pembeli';
+    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
 
     protected static ?string $recordTitleAttribute = 'nama';
 

@@ -25,6 +25,7 @@ class Penjualan extends Model
         'validated_by',
         'plat_kendaraan',
         'status_transaksi',
+        'keterangan',
     ];
 
     protected $casts = [

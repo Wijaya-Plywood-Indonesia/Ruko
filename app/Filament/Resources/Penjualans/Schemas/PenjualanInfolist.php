@@ -31,6 +31,10 @@ class PenjualanInfolist
                         TextEntry::make('is_member')
                             ->label('Status Pelanggan')
                             ->formatStateUsing(fn(bool $state) => $state ? 'Dia Member' : 'Reguler'),
+                        TextEntry::make('keterangan')
+                            ->placeholder('kosong')
+                            ->label('Keterangan'),
+
                     ]),
 
                 Section::make('Pembayaran')
