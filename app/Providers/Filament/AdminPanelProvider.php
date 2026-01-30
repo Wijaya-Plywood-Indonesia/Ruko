@@ -7,6 +7,7 @@ use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -58,6 +59,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
                 FilamentShieldPlugin::make(),
+            ])
+            ->navigationGroups([
+                NavigationGroup::make(label: 'Master Data')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->collapsed(),
             ])
             ->authMiddleware([
                 Authenticate::class,

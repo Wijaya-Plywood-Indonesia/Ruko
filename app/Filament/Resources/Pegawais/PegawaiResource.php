@@ -15,12 +15,14 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class PegawaiResource extends Resource
 {
     protected static ?string $model = Pegawai::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
     protected static ?string $navigationLabel = 'Data Pegawai';
     protected static ?string $pluralModelLabel = 'Data Pegawai';
     protected static ?string $modelLabel = 'Data Pegawai';
