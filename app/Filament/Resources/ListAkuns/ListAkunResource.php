@@ -13,14 +13,18 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ListAkunResource extends Resource
 {
     protected static ?string $model = ListAkun::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $recordTitleAttribute = 'ListAkun';
+    protected static ?string $navigationLabel = 'List Akun';
+    protected static ?string $pluralModelLabel = 'List Akun';
+    protected static ?string $modelLabel = 'List Aku';
+    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
 
     public static function form(Schema $schema): Schema
     {

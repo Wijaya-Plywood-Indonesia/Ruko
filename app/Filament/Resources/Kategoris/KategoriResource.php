@@ -13,12 +13,14 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class KategoriResource extends Resource
 {
     protected static ?string $model = Kategori::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    //protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
     protected static ?string $navigationLabel = 'Kategori Barang';
     protected static ?string $pluralModelLabel = 'Kategori Barang';
     protected static ?string $modelLabel = 'Kategrori Barang';
