@@ -2,10 +2,13 @@
 
 namespace App\Filament\Resources\DetailSuratJalans\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -35,7 +38,45 @@ class DetailSuratJalansTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->headerActions([
-                CreateAction::make()->label("Tambah Barang !"),
+                CreateAction::make()
+                    ->label('Tambah Barang')
+                    ->disabled(function (RelationManager $livewire) {
+                        $nota = $livewire->getOwnerRecord();
+
+                        // Disable jika SUDAH divalidasi
+                        return $nota?->validated_by !== null;
+                    })
+                    ->tooltip('Nota sudah divalidasi, tidak bisa menambah barang'),
+                Action::make('validasi_nota')
+                    ->label('Validasi Nota')
+                    ->icon('heroicon-o-check')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(function (RelationManager $livewire) {
+                        // Tombol hanya muncul jika BELUM divalidasi
+                        return empty($livewire->ownerRecord->validated_by);
+                    })
+                    ->disabled(function (RelationManager $livewire) {
+                        // Pembuat TIDAK boleh validasi
+                        return $livewire->ownerRecord->created_by == auth()->id();
+                    })
+                    ->action(function (RelationManager $livewire) {
+
+                        $nota = $livewire->ownerRecord;
+
+                        $nota->update([
+                            'validated_by' => auth()->id(),
+                        ]);
+
+                        Notification::make()
+                            ->title('Nota berhasil divalidasi!')
+                            ->success()
+                            ->send();
+                    })
+                    ->after(function ($livewire) {
+                        // Refresh komponen supaya status berubah
+                        $livewire->dispatch('$refresh');
+                    }),
             ])
             ->filters([
             ])
