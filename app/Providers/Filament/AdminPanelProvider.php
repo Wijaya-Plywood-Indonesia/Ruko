@@ -43,8 +43,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                // AccountWidget::class,
+                // FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -63,6 +63,9 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make(label: 'Master Data')
                     ->icon('heroicon-o-adjustments-horizontal')
+                    ->collapsed(),
+                NavigationGroup::make(label: 'Stock Barang')
+                    ->icon('heroicon-o-archive-box-arrow-down')
                     ->collapsed(),
             ])
             ->authMiddleware([
