@@ -20,7 +20,7 @@ class StokLogsTable
                  |  RELASI
                  ========================= */
 
-                TextColumn::make('barang.nama')
+                TextColumn::make('barang.nama_barang')
                     ->label('Barang')
                     ->searchable()
                     ->sortable(),

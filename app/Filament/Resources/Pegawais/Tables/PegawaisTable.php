@@ -19,15 +19,11 @@ class PegawaisTable
     {
         return $table
             ->columns([
-               TextColumn::make('nama_lengkap')
+                TextColumn::make('nama_lengkap')
                     ->label('Nama')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('nik')
-                    ->label('NIK')
-                    ->sortable()
-                    ->searchable(),
 
                 TextColumn::make('nama_panggilan')
                     ->label('Panggilan')
@@ -44,11 +40,6 @@ class PegawaisTable
                         $state === 'L' ? 'Laki-laki' : 'Perempuan'
                     ),
 
-                TextColumn::make('list_akun_count')
-                    ->label('Akun')
-                    ->counts('listAkun')
-                    ->sortable()
-                    ->alignCenter(),
 
                 BadgeColumn::make('status')
                     ->colors([
@@ -58,31 +49,6 @@ class PegawaisTable
                     ->label('Status'),
 
 
-                TextColumn::make('foto_ktp')
-                    ->label('KTP')
-                    ->formatStateUsing(fn($state) => $state ? 'Lihat KTP' : '-')
-                    ->url(fn($record) => $record->foto_ktp ? asset('storage/' . $record->foto_ktp) : null)
-                    ->openUrlInNewTab()
-                    ->icon('heroicon-m-eye')
-                    ->color('primary')->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('foto_pegawai')
-                    ->label('Foto Pegawai')
-                    ->badge()
-                    ->formatStateUsing(fn() => 'Lihat Foto')
-                    ->url(fn($record) => asset('storage/' . $record->foto_pegawai))
-                    ->openUrlInNewTab(),
-
-                TextColumn::make('telepon')
-                    ->label('Telepon')->toggleable(isToggledHiddenByDefault: true),
-
-
-
-                TextColumn::make('tanggal_masuk')
-                    ->label('TGL Masuk')
-                    ->date('d M Y')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

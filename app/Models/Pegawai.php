@@ -33,8 +33,8 @@ class Pegawai extends Model
     ];
 
     public function listAkun()
-{
-    return $this->hasMany(ListAkun::class, 'id_pegawai');
-}
+    {
+        return $this->hasMany(ListAkun::class, 'id_pegawai');
+    }
 
 }

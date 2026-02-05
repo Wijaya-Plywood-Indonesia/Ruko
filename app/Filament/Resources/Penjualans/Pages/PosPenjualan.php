@@ -45,13 +45,37 @@ class PosPenjualan extends Page
     public ?string $kendaraan = null;
     public ?string $plat_kendaraan = null;
     public ?string $nama_sopir = null;
+    public $no_nota;
 
     /* ================= MOUNT ================= */
     public function mount(): void
     {
         $this->searchResults = collect();
+        $this->no_nota = $this->generateNoNota();
     }
 
+    //generate nota 
+    public function generateNoNota()
+    {
+        $prefix = 'WJY-';
+        $last = Penjualan::where('no_nota', 'LIKE', $prefix . '%')
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if (!$last) {
+            // Tidak ada record → mulai dari 1
+            return $prefix . '000001';
+        }
+
+        // Ambil nomor urut dari record terakhir
+        $lastNumber = (int) str_replace($prefix, '', $last->no_nota);
+
+        // Tingkatkan 1
+        $newNumber = $lastNumber + 1;
+
+        // Format jadi 6 digit
+        return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
+    }
     /* ================= SEARCH BARANG ================= */
     public bool $showDropdown = false;
 
@@ -311,7 +335,7 @@ class PosPenjualan extends Page
                 : null;
 
             $penjualan = Penjualan::create([
-                'no_nota' => 'INV-' . now()->format('YmdHis'),
+                'no_nota' => $this->no_nota,
                 'tanggal' => now(),
                 'pembeli_id' => $pembeli->id,
                 'rekening_perusahaan_id' => $rekening?->id,
@@ -371,5 +395,7 @@ class PosPenjualan extends Page
         $this->alamat = '';
         $this->telepon = '';
         $this->pembeli_id = null;
+
+        $this->no_nota = $this->generateNoNota();
     }
 }

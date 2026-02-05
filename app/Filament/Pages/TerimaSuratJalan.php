@@ -4,16 +4,16 @@ namespace App\Filament\Pages;
 
 use App\Models\SuratJalan;
 use App\Services\SuratJalanPenerimaanService;
-use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use Filament\Forms;
-
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Validation\ValidationException;
+use UnitEnum;
 
 class TerimaSuratJalan extends Page implements HasForms
 {
@@ -21,8 +21,7 @@ class TerimaSuratJalan extends Page implements HasForms
 
     public static ?string $navigationLabel = 'Terima Barang';
 
-    public static BackedEnum|string|null $navigationIcon =
-        'heroicon-o-clipboard-document-check';
+    protected static string|UnitEnum|null $navigationGroup = 'Stock Barang';
 
     public function getView(): string
     {
@@ -36,12 +35,8 @@ class TerimaSuratJalan extends Page implements HasForms
     public function mount(): void
     {
         $this->form->fill();
-
     }
 
-    /**
-     * ✅ SATU-SATUNYA CARA BENAR DI PAGE
-     */
     public function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -49,12 +44,13 @@ class TerimaSuratJalan extends Page implements HasForms
                 ->label('No Surat Jalan')
                 ->required()
                 ->datalist(function (?string $state) {
+
                     if (!$state || strlen($state) < 3) {
                         return [];
                     }
 
                     return SuratJalan::query()
-                        ->where('status', 'dikirim')
+                        ->whereIn('status', ['dikirim', 'perjalanan'])
                         ->where('no_surat_jalan', 'like', "%{$state}%")
                         ->orderByDesc('tanggal_kirim')
                         ->limit(10)
@@ -79,37 +75,6 @@ class TerimaSuratJalan extends Page implements HasForms
         ]);
     }
 
-
-    // protected function loadSuratJalan(?string $no): void
-    // {
-    //     if (!$no) {
-    //         $this->suratJalan = null;
-    //         return;
-    //     }
-
-    //     $this->suratJalan = SuratJalan::with([
-    //         'details.barang',
-    //         'tokoAsal',
-    //         'tokoTujuan',
-    //     ])
-    //         ->where('no_surat_jalan', $no)
-    //         ->where('status', 'dikirim')
-    //         ->first();
-
-    //     if (!$this->suratJalan) {
-    //         Notification::make()
-    //             ->title('Surat jalan tidak ditemukan / belum dikirim')
-    //             ->danger()
-    //             ->send();
-    //         return;
-    //     }
-
-    //     // ✅ DEFAULT qty_diterima = qty_kirim
-    //     foreach ($this->suratJalan->details as $detail) {
-    //         $detail->qty_diterima ??= $detail->qty_kirim;
-    //         $detail->catatan ??= null;
-    //     }
-    // }
     public function loadSuratJalan(?string $noSurat): void
     {
         if (!$noSurat) {
@@ -121,7 +86,7 @@ class TerimaSuratJalan extends Page implements HasForms
             'tokoAsal',
             'tokoTujuan',
         ])
-            ->where('status', 'dikirim')
+            ->whereIn('status', ['dikirim', 'perjalanan'])
             ->where('no_surat_jalan', $noSurat)
             ->first();
 
@@ -134,23 +99,23 @@ class TerimaSuratJalan extends Page implements HasForms
             return;
         }
 
-        // 🔑 INI YANG PALING PENTING
-        $this->details = $this->suratJalan->details->map(function ($detail) {
-            return [
-                'id' => $detail->id,
-                'barang' => $detail->barang->nama_barang ?? '-',
-                'qty_kirim' => $detail->qty_kirim,
-                // 🔑 DEFAULT CEPAT
-                'qty_diterima' => $detail->qty_diterima ?? $detail->qty_kirim,
+        $this->details = $this->suratJalan->details
+            ->map(function ($detail) {
 
-                //'qty_diterima' => $detail->qty_diterima,
-                'catatan' => $detail->catatan,
-                // 🔒 state kunci
-                'locked' => false,
-            ];
-        })->toArray();
+                $qtyDefault = $detail->qty_diterima ?? $detail->qty_kirim;
+
+                return [
+                    'id' => $detail->id,
+                    'barang' => $detail->barang->nama_barang ?? '-',
+                    'qty_kirim' => (int) $detail->qty_kirim,
+                    'qty_diterima' => (int) $qtyDefault,
+                    'catatan' => $detail->catatan,
+                    'locked' => false,
+                ];
+            })
+            ->values()
+            ->toArray();
     }
-
 
     public function submit(): void
     {
@@ -162,19 +127,33 @@ class TerimaSuratJalan extends Page implements HasForms
             return;
         }
 
-        // 🔒 VALIDASI PER ITEM
         foreach ($this->details as $item) {
-            if ($item['qty_diterima'] > $item['qty_kirim']) {
+
+            if ((int) $item['qty_diterima'] > (int) $item['qty_kirim']) {
                 throw ValidationException::withMessages([
                     'details' => 'Qty diterima tidak boleh melebihi qty kirim',
                 ]);
             }
+
+            if ((int) $item['qty_diterima'] < 0) {
+                throw ValidationException::withMessages([
+                    'details' => 'Qty diterima tidak boleh minus',
+                ]);
+            }
+        }
+
+        if (collect($this->details)->sum('qty_diterima') <= 0) {
+            Notification::make()
+                ->title('Tidak ada barang yang diterima')
+                ->danger()
+                ->send();
+            return;
         }
 
         app(SuratJalanPenerimaanService::class)->terima(
-            suratJalan: $this->suratJalan,
-            userId: auth()->id(),
-            details: $this->details
+            $this->suratJalan,
+            $this->details,
+            auth()->id()
         );
 
         Notification::make()
@@ -185,6 +164,7 @@ class TerimaSuratJalan extends Page implements HasForms
         $this->reset(['no_surat_jalan', 'suratJalan', 'details']);
         $this->form->fill();
     }
+
     protected function getFormStatePath(): string
     {
         return 'data';

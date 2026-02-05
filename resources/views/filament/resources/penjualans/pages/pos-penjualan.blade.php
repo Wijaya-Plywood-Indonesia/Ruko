@@ -330,8 +330,20 @@
             </div>
         </div>
 
-        <div class="pos-divider"></div>
+<div class="pos-divider"></div>
 
+{{-- ===================== NOMOR NOTA ===================== --}}
+<h6 style="margin-bottom: 8px; font-weight: 700;">
+    Nomor Nota
+</h6>
+
+<input 
+    type="text" 
+    wire:model.live="no_nota" 
+    class="pos-input" 
+    style="max-width: 300px;" 
+/>
+        <div class="pos-divider"></div>
         {{-- ===================== CUSTOMER ===================== --}}
 
         {{-- MEMBER / REGULAR --}}

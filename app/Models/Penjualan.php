@@ -26,6 +26,7 @@ class Penjualan extends Model
         'plat_kendaraan',
         'status_transaksi',
         'keterangan',
+        'toko_id', // ⬅️ tambahkan ini
     ];
 
     protected $casts = [
@@ -65,5 +66,9 @@ class Penjualan extends Model
             'no_rekening',   // kolom di penjualans
             'no_rekening'    // kolom di rekening_perusahaan
         );
+    }
+    public function toko()
+    {
+        return $this->belongsTo(IdentitasToko::class, 'toko_id');
     }
 }
