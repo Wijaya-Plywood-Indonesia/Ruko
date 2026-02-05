@@ -15,71 +15,65 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ListPenjualans extends ListRecords
 {
-
-
-
-
-public function exportExcel($method = 'main')
-{
-    if (empty($this->laporanGabungan)) {
-        $this->loadLaporan();
-    }
-    $is_success = true;
-
-    try {
-        if($method === 'full') {
-            $this->with_detail = true;
+    public function exportExcel($method = 'main')
+    {
+        if (empty($this->laporanGabungan)) {
             $this->loadLaporan();
-            return Excel::download(
-                new LaporanPenjualanDetailExport($this->laporanGabungan),
-                'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
-            );
         }
-        else if($method === 'detail'){
-            $this->with_detail = true;
-            $this->loadLaporanDetail();
-            return Excel::download(
-                new LaporanKeranjangPenjualanExport($this->laporanGabungan),
-                'Laporan-Detail-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
-            );
-        }
-        else{
-            $this->with_detail = false;
-            $this->loadLaporan();
-            return Excel::download(
-                new LaporanPenjualanExport($this->laporanGabungan),
-                'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
-            );
-        }
-    } catch (\Exception $e) {
-        // Handle exception if needed
-        $is_success = false;
-        Notification::make()
-            ->title('Gagal untuk mengunduh data ')
-            ->body('Silakan hubungi developer.')
-            ->danger()
-            ->send();
-    }finally {
-        if ($is_success) {
+        $is_success = true;
+
+        try {
+            if ($method === 'full') {
+                $this->with_detail = true;
+                $this->loadLaporan();
+                return Excel::download(
+                    new LaporanPenjualanDetailExport($this->laporanGabungan),
+                    'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+                );
+            } else if ($method === 'detail') {
+                $this->with_detail = true;
+                $this->loadLaporanDetail();
+                return Excel::download(
+                    new LaporanKeranjangPenjualanExport($this->laporanGabungan),
+                    'Laporan-Detail-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+                );
+            } else {
+                $this->with_detail = false;
+                $this->loadLaporan();
+                return Excel::download(
+                    new LaporanPenjualanExport($this->laporanGabungan),
+                    'Laporan-Penjualan-' . now()->format('Y-m-d') . '.xlsx'
+                );
+            }
+        } catch (\Exception $e) {
+            // Handle exception if needed
+            $is_success = false;
             Notification::make()
-                ->title('Download data berhasil.')
-                ->body('File excel sudah tersedia di perangkat anda.')
-                ->success()
+                ->title('Gagal untuk mengunduh data ')
+                ->body('Silakan hubungi developer.')
+                ->danger()
                 ->send();
+        } finally {
+            if ($is_success) {
+                Notification::make()
+                    ->title('Download data berhasil.')
+                    ->body('File excel sudah tersedia di perangkat anda.')
+                    ->success()
+                    ->send();
+            }
         }
     }
-}
     protected static string $resource = PenjualanResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
             Action::make('preview')
-            ->label('Preview Penjualan')
-            ->icon('heroicon-o-eye')
-            ->color('info')
-            ->url(PenjualanResource::getUrl('preview'))
-            ->openUrlInNewTab(true),
+                ->label('Preview Penjualan')
+                ->icon('heroicon-o-eye')
+                ->color('info')
+                ->url(PenjualanResource::getUrl('preview'))
+                ->openUrlInNewTab(true),
 
             Action::make('pos')
                 ->label('POS')
@@ -88,28 +82,6 @@ public function exportExcel($method = 'main')
                 ->url(PenjualanResource::getUrl('pos'))
                 ->openUrlInNewTab(false)
             ,
-
-
-            // Action::make('export')
-            // ->label('Download Penjualan Excel')
-            // ->icon('heroicon-o-arrow-down-tray')
-            // ->color('success')
-            // ->action(fn ($livewire) => $livewire->exportExcel('main')),
-            
-            // Action::make('export-detail')
-            // ->label('Download Detail Penjualan Excel')
-            // ->icon('heroicon-o-arrow-down-tray')
-            // ->color('success')
-            // ->action(fn ($livewire) => $livewire->exportExcel('detail')),
-            
-            // Action::make('full-export')
-            // ->label('Download Data Full Excel')
-            // ->icon('heroicon-o-arrow-down-tray')
-            // ->color('success')
-            // ->action(fn ($livewire) => $livewire->exportExcel('full')),
-            
-
-
         ];
     }
 }

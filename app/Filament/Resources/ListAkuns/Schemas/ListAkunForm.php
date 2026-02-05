@@ -65,7 +65,8 @@ class ListAkunForm
                 ->searchable()
                 ->preload()
                 ->live()
-                ->required(),
+            //->required()
+            ,
 
             // ===============================
             // Akun (Filtered by Role)

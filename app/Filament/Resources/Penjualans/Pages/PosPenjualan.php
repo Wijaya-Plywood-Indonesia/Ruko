@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Penjualans\Pages;
 
 use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Models\Barang;
+use App\Models\IdentitasToko;
 use App\Models\Pembeli;
 use App\Models\Penjualan;
 use App\Models\DetailPenjualan;
@@ -12,13 +13,20 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use App\Models\StokBarangToko;
+
 
 class PosPenjualan extends Page
 {
     protected static string $resource = PenjualanResource::class;
     protected string $view = 'filament.resources.penjualans.pages.pos-penjualan';
 
+    /* ================= identitas Toko ================= */
+    public ?int $toko_id = null;
+    public $daftarToko = [];
+
     /* ================= STATE ================= */
+
     public string $search = '';
     public Collection $searchResults;
     public array $cart = [];
@@ -51,30 +59,50 @@ class PosPenjualan extends Page
     public function mount(): void
     {
         $this->searchResults = collect();
-        $this->no_nota = $this->generateNoNota();
+        $user = auth()->user();
+
+        // Ambil toko dari tabel list_akun
+        $tokoUser = $user->tokoUtama()->first();
+
+        if ($tokoUser) {
+            $this->toko_id = $tokoUser->id_toko;
+            $this->kodeToko = $tokoUser->toko->kode_toko;
+            $this->no_nota = $this->generateNoNota();
+        }
+
     }
 
-    //generate nota 
+
     public function generateNoNota()
     {
-        $prefix = 'WJY-';
+        // Jika belum pilih toko → aman fallback
+        if (!$this->toko_id) {
+            return 'XXX-000001';
+        }
+
+        // Ambil data toko
+        $toko = IdentitasToko::find($this->toko_id);
+
+        // Jika tidak ada kode_toko → fallback
+        $prefix = ($toko?->kode_toko ?? 'XXX') . '-';
+
+        // Ambil nota terakhir untuk toko ini saja
         $last = Penjualan::where('no_nota', 'LIKE', $prefix . '%')
             ->orderBy('id', 'DESC')
             ->first();
 
         if (!$last) {
-            // Tidak ada record → mulai dari 1
             return $prefix . '000001';
         }
 
-        // Ambil nomor urut dari record terakhir
         $lastNumber = (int) str_replace($prefix, '', $last->no_nota);
-
-        // Tingkatkan 1
         $newNumber = $lastNumber + 1;
 
-        // Format jadi 6 digit
         return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
+    }
+    public function updatedTokoId()
+    {
+        $this->no_nota = $this->generateNoNota();
     }
     /* ================= SEARCH BARANG ================= */
     public bool $showDropdown = false;
@@ -86,9 +114,23 @@ class PosPenjualan extends Page
             return;
         }
 
+        $toko = $this->toko_id;
+
+        $t = (new StokBarangToko)->getTable(); // otomatis ambil 'stok_barang_toko'
+
         $this->searchResults = Barang::query()
-            ->where('nama_barang', 'like', "%{$this->search}%")
-            ->orWhere('barcode', 'like', "%{$this->search}%")
+            ->leftJoin($t, function ($q) use ($t, $toko) {
+                $q->on("$t.barang_id", '=', 'barangs.id')
+                    ->where("$t.toko_id", $toko);
+            })
+            ->select(
+                'barangs.*',
+                DB::raw("COALESCE($t.stok, 0) as stok_aktual")
+            )
+            ->where(function ($query) {
+                $query->where('barangs.nama_barang', 'like', "%{$this->search}%")
+                    ->orWhere('barangs.barcode', 'like', "%{$this->search}%");
+            })
             ->limit(8)
             ->get();
     }
@@ -109,16 +151,23 @@ class PosPenjualan extends Page
         if (!$barang) {
             return;
         }
+        $stokToko = StokBarangToko::where('barang_id', $id)
+            ->where('toko_id', $this->toko_id)
+            ->value('stok') ?? 0;
 
-        if ($barang->stok_minimum < 1) {
+        if ($stokToko < 1) {
+
+            $namaToko = IdentitasToko::find($this->toko_id)?->nama_toko ?? 'Toko Tidak Diketahui';
+            $namaBarang = $barang->nama_barang ?? 'Barang';
+
             Notification::make()
                 ->title('Stok barang habis')
-                ->body('Barang tidak bisa ditambahkan ke keranjang.')
+                ->body("Barang **{$namaBarang}** habis di **{$namaToko}**.")
                 ->danger()
                 ->send();
+
             return;
         }
-
         if (isset($this->cart[$id])) {
             $this->cart[$id]['qty']++;
         } else {
@@ -149,7 +198,9 @@ class PosPenjualan extends Page
             return;
         }
 
-        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $stock = StokBarangToko::where('barang_id', $id)
+            ->where('toko_id', $this->toko_id)
+            ->value('stok') ?? 0;
         $qty = max(1, (int) $this->cart[$id]['qty']);
 
         if ($qty > $stock) {
@@ -352,14 +403,31 @@ class PosPenjualan extends Page
                 'bayar' => $this->bayar,
                 'kembalian' => $this->kembalian,
                 'user_id' => auth()->id(),
+                'toko_id' => $this->toko_id,   // <—— TAMBAHKAN INI
             ]);
 
             foreach ($this->cart as $item) {
-                $stock = Barang::find($item['barang_id'])?->stok_minimum ?? 0;
 
-                Barang::where('id', $item['barang_id'])
-                    ->update(['stok_minimum' => $stock - $item['qty']]);
+                // Ambil stok per toko
+                $stokToko = StokBarangToko::firstOrCreate(
+                    [
+                        'barang_id' => $item['barang_id'],
+                        'toko_id' => $this->toko_id,
+                    ],
+                    [
+                        'stok' => 0, // jika belum ada record
+                    ]
+                );
 
+                // Cek stok cukup atau tidak
+                if ($stokToko->stok < $item['qty']) {
+                    throw new \Exception("Stok barang '{$item['nama_barang']}' tidak mencukupi.");
+                }
+
+                // Kurangi stok menggunakan helper model
+                $stokToko->kurang($item['qty']);
+
+                // Simpan detail penjualan
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $item['barang_id'],
