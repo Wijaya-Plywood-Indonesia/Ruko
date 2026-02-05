@@ -21,12 +21,6 @@ class ListAkunsTable
     public static function configure(Table $table): Table
     {
         return $table
-                ->recordUrl(fn ($record) =>
-                    PegawaiResource::getUrl('view', [
-                        'record' => $record->id_pegawai,
-                    ])
-                )
-
             ->columns([
                 TextColumn::make('pegawai.nama_lengkap')
                     ->label('Nama Pegawai')
@@ -52,16 +46,17 @@ class ListAkunsTable
             ])
             ->recordActions([
 
-            Action::make('detailPegawai')
-                ->color('info')
-                ->label('Detail Pegawai')
-                ->icon('heroicon-o-user')
-                ->action(fn ($record) =>
-                    redirect(
-                        PegawaiResource::getUrl('view', [
-                            'record' => $record->id_pegawai,
-                        ])
-                    )
+                Action::make('detailPegawai')
+                    ->color('info')
+                    ->label('Detail Pegawai')
+                    ->icon('heroicon-o-user')
+                    ->action(
+                        fn($record) =>
+                        redirect(
+                            PegawaiResource::getUrl('view', [
+                                'record' => $record->id_pegawai,
+                            ])
+                        )
                     )
                 ,
 

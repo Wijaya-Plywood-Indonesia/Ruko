@@ -331,7 +331,6 @@
         </div>
 
 <div class="pos-divider"></div>
-
 {{-- ===================== NOMOR NOTA ===================== --}}
 <h6 style="margin-bottom: 8px; font-weight: 700;">
     Nomor Nota
@@ -343,7 +342,11 @@
     class="pos-input" 
     style="max-width: 300px;" 
 />
+
         <div class="pos-divider"></div>
+
+
+
         {{-- ===================== CUSTOMER ===================== --}}
 
         {{-- MEMBER / REGULAR --}}
@@ -385,10 +388,10 @@
                             >
                                 <strong>{{ $barang->nama_barang }}</strong><br>
                                 <small>Rp {{ number_format($barang->harga_jual) }}</small><br>
-                                <small>
-                                    Stock:
-                                    {{ $barang->stok_minimum > 0 ? $barang->stok_minimum : 'Kosong' }}
-                                </small>
+                               <small>
+    Stock:
+    {{ ($barang->stok_aktual ?? 0) > 0 ? $barang->stok_aktual : 'Kosong' }}
+</small>
                             </div>
                     @endforeach
                 </div>
