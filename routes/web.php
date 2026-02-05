@@ -7,11 +7,28 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuratJalanController;
 use App\Http\Controllers\SuratJalanPrintController;
 
-Route::get('/surat-jalan/{id}/cetak', [SuratJalanPrintController::class, 'cetak'])
-    ->name('surat-jalan.cetak');
 
-Route::get('/surat-jalan/{penjualan}', [SuratJalanController::class, 'print'])
-    ->name('surat-jalan.cetak');
+//
+// SURAT JALAN PENGIRIMAN GUDANG (Mutasi Stok)
+// -----------------------------------------------
+Route::prefix('surat-jalan')->group(function () {
+
+    // Cetak Surat Jalan Gudang
+    Route::get('gudang/{id}/cetak', [SuratJalanPrintController::class, 'cetak'])
+        ->name('surat-jalan.gudang.cetak');
+
+});
+
+//
+// SURAT JALAN PENJUALAN
+// -----------------------------------------------
+Route::prefix('surat-jalan')->group(function () {
+
+    // Cetak Surat Jalan Penjualan
+    Route::get('penjualan/{penjualan}/cetak', [SuratJalanController::class, 'print'])
+        ->name('surat-jalan.penjualan.cetak');
+
+});
 
 Route::get('/nota/{penjualan}/cetak', [NotaController::class, 'print'])
     ->name('nota.cetak');
@@ -30,5 +47,4 @@ Route::get('/', function () {
 
 Route::get('/force-download-excel', [PenjualanExportController::class, 'download'])
     ->name('force.download');
-    // ->middleware('auth:filament.admin');
-    
+// ->middleware('auth:filament.admin');

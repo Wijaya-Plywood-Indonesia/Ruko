@@ -107,7 +107,7 @@ class SuratJalansTable
                     ->label('Cetak Surat Jalan')
                     ->icon('heroicon-o-printer')
                     ->color('primary')
-                    ->url(fn($record) => route('surat-jalan.cetak', $record->id))
+                    ->url(fn($record) => route('surat-jalan.gudang.cetak', $record->id))
                     ->openUrlInNewTab()
                 // ->visible(
                 //     fn($record) =>

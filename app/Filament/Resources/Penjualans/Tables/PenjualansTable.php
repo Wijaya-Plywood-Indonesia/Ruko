@@ -211,7 +211,7 @@ class PenjualansTable
                     ->label('Cetak Surat Jalan')
                     ->icon('heroicon-o-truck')
                     ->color('warning') // 🟠 Kuning / Orange
-                    ->url(fn($record) => route('surat-jalan.cetak', $record))
+                    ->url(fn($record) => route('surat-jalan.penjualan.cetak', $record))
                     ->openUrlInNewTab()
                     ->visible(
                         fn($record) =>

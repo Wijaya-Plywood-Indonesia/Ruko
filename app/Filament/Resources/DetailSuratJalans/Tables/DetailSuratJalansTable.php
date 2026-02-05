@@ -66,6 +66,7 @@ class DetailSuratJalansTable
 
                         $nota->update([
                             'validated_by' => auth()->id(),
+                            'status' => 'dikirim',
                         ]);
 
                         Notification::make()
@@ -77,6 +78,36 @@ class DetailSuratJalansTable
                         // Refresh komponen supaya status berubah
                         $livewire->dispatch('$refresh');
                     }),
+                Action::make('batalkan_validasi')
+                    ->label('Batalkan Validasi')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('danger')
+                    ->requiresConfirmation()
+
+                    ->visible(function (RelationManager $livewire) {
+
+                        $nota = $livewire->ownerRecord;
+
+                        return auth()->user()->hasRole('super_admin')
+                            && !empty($nota->validated_by);
+                    })
+
+                    ->action(function (RelationManager $livewire) {
+
+                        $nota = $livewire->ownerRecord;
+
+                        $nota->update([
+                            'validated_by' => null,
+                            'status' => 'draft',
+                        ]);
+
+                        Notification::make()
+                            ->title('Validasi berhasil dibatalkan')
+                            ->success()
+                            ->send();
+                    })
+
+                    ->after(fn($livewire) => $livewire->dispatch('$refresh')),
             ])
             ->filters([
             ])

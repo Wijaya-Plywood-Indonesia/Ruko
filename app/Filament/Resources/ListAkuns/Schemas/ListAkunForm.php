@@ -14,7 +14,7 @@ class ListAkunForm
 {
     public static function configure(Schema $schema): Schema
     {
-return $schema->components([
+        return $schema->components([
             // ===============================
             // Nama Pegawai
             // ===============================
@@ -30,73 +30,74 @@ return $schema->components([
             // ===============================
 
 
-Select::make('role')
-    ->label('Jabatan')
-    ->options(function (Get $get) {
-        $idPegawai = $get('id_pegawai');
+            Select::make('role')
+                ->label('Jabatan')
+                ->options(function (Get $get) {
+                    $idPegawai = $get('id_pegawai');
 
-        if (! $idPegawai) {
-            return Role::pluck('name', 'id');
-        }
+                    if (!$idPegawai) {
+                        return Role::pluck('name', 'id');
+                    }
 
-        /**
-         * Ambil semua akun milik pegawai
-         */
-        $akunIds = ListAkun::where('id_pegawai', $idPegawai)
-            ->pluck('id_akun');
+                    /**
+                     * Ambil semua akun milik pegawai
+                     */
+                    $akunIds = ListAkun::where('id_pegawai', $idPegawai)
+                        ->pluck('id_akun');
 
-        /**
-         * Ambil role yang sudah dipakai oleh akun-akun tersebut
-         */
-        $usedRoleIds = User::whereIn('id', $akunIds)
-            ->with('roles')
-            ->get()
-            ->pluck('roles.*.id')
-            ->flatten()
-            ->unique()
-            ->toArray();
+                    /**
+                     * Ambil role yang sudah dipakai oleh akun-akun tersebut
+                     */
+                    $usedRoleIds = User::whereIn('id', $akunIds)
+                        ->with('roles')
+                        ->get()
+                        ->pluck('roles.*.id')
+                        ->flatten()
+                        ->unique()
+                        ->toArray();
 
-        /**
-         * Tampilkan hanya role yang BELUM dipakai
-         */
-        return Role::whereNotIn('id', $usedRoleIds)
-            ->pluck('name', 'id');
-    })
-    ->searchable()
-    ->preload()
-    ->live()
-    ->required(),
+                    /**
+                     * Tampilkan hanya role yang BELUM dipakai
+                     */
+                    return Role::whereNotIn('id', $usedRoleIds)
+                        ->pluck('name', 'id');
+                })
+                ->searchable()
+                ->preload()
+                ->live()
+                ->required(),
 
-                        // ===============================
-                        // Akun (Filtered by Role)
-                        // ===============================
+            // ===============================
+            // Akun (Filtered by Role)
+            // ===============================
 
             Select::make('id_akun')
-    ->label('Akun')
-    ->disabled(fn (Get $get) => blank($get('role')))
-    ->options(function (Get $get) {
-        $roleId = $get('role');
+                ->label('Akun')
+                ->disabled(fn(Get $get) => blank($get('role')))
+                ->options(function (Get $get) {
+                    $roleId = $get('role');
 
-        if (! $roleId) {
-            return [];
-        }
+                    if (!$roleId) {
+                        return [];
+                    }
 
-        return User::query()
-            ->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId))
-            ->pluck('email', 'id');
-    })
-    ->searchable()
-    ->required()
-    ->live(),
+                    return User::query()
+                        ->whereHas('roles', fn($q) => $q->where('roles.id', $roleId))
+                        ->pluck('email', 'id');
+                })
+                ->searchable()
+                ->required()
+                ->live(),
 
             // ===============================
             // Toko
             // ===============================
             Select::make('id_toko')
                 ->label('Penempatan Toko')
-                ->relationship('toko', 'nama_toko')
+                ->relationship('toko', 'nama_toko', fn($query) => $query->where('status', 'aktif'))
                 ->searchable()
                 ->preload()
                 ->required(),
-        ]);    }
+        ]);
+    }
 }

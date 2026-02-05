@@ -39,12 +39,13 @@ class SuratJalanForm
                 DatePicker::make('tanggal_kirim')
                     ->default(now())
                     ->required(),
+
                 Select::make('toko_asal_id')
                     ->label('Dikirim Dari')
                     ->relationship(
                         'tokoAsal',
                         'nama_toko',
-                        fn($query) => $query->where('status', 'aktif')
+                        modifyQueryUsing: fn($query) => $query->where('status', 'aktif')
                     )
                     ->required(),
                 Select::make('toko_tujuan_id')
@@ -61,7 +62,9 @@ class SuratJalanForm
                         'required' => 'Toko tujuan wajib dipilih.',
                     ]),
                 Select::make('status')
-                    ->options(['draft' => 'Draft', 'dikirim' => 'Dikirim'])
+                    ->options([
+                        'draft' => 'Draft',
+                    ])
                     ->default('draft')
                     ->required(),
 

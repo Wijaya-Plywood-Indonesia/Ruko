@@ -9,6 +9,12 @@ class ListAkun extends Model
 {
     protected $table = 'list_akun';
     protected $guarded = ['id'];
+    protected $fillable = [
+        'id_pegawai',
+        'id_akun',
+        'id_toko',
+    ];
+
 
     public function akun()
     {

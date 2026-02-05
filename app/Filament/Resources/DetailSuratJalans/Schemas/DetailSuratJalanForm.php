@@ -33,9 +33,22 @@ class DetailSuratJalanForm
                 TextInput::make('qty_kirim')
                     ->label("Jumlah Barang")
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->disabled(function ($livewire) {
+                        if (method_exists($livewire, 'getOwnerRecord')) {
+                            return $livewire->getOwnerRecord()->status !== 'draft';
+                        }
+                        return false;
+                    }),
+
                 Textarea::make('catatan')
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->disabled(function ($livewire) {
+                        if (method_exists($livewire, 'getOwnerRecord')) {
+                            return $livewire->getOwnerRecord()->status !== 'draft';
+                        }
+                        return false;
+                    }),
             ]);
     }
 }

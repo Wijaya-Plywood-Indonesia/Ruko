@@ -8,23 +8,16 @@ use App\Models\StokLog;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use App\Models\DetailSuratJalan;
+
 class SuratJalanPenerimaanService
 {
-    /**
-     * Terima surat jalan
-     *
-     * @param  SuratJalan  $suratJalan
-     * @param  array       $details   // ← dari Livewire
-     * @param  int         $userId
-     */
-
     public function terima(
         SuratJalan $suratJalan,
         array $details,
         int $userId
     ): void {
-        // 🔒 proteksi status
-        if ($suratJalan->status !== 'dikirim') {
+
+        if (!in_array($suratJalan->status, ['dikirim', 'perjalanan'])) {
             throw new Exception('Status surat jalan tidak valid');
         }
 
@@ -34,7 +27,6 @@ class SuratJalanPenerimaanService
 
             foreach ($details as $item) {
 
-                /** @var DetailSuratJalan $detail */
                 $detail = DetailSuratJalan::lockForUpdate()->find($item['id']);
 
                 if (!$detail) {
@@ -44,7 +36,6 @@ class SuratJalanPenerimaanService
                 $qtyKirim = (int) $detail->qty_kirim;
                 $qtyDiterima = (int) ($item['qty_diterima'] ?? 0);
 
-                // 🔒 validasi keras
                 if ($qtyDiterima > $qtyKirim) {
                     throw new Exception(
                         'Qty diterima melebihi qty kirim untuk barang ID: ' . $detail->barang_id
@@ -55,43 +46,71 @@ class SuratJalanPenerimaanService
                     $adaSelisih = true;
                 }
 
-                // skip jika tidak ada barang diterima
                 if ($qtyDiterima <= 0) {
                     continue;
                 }
 
-                // =========================
-                // STOK TOKO TUJUAN
-                // =========================
-                $stok = StokBarangToko::firstOrCreate(
-                    [
-                        'barang_id' => $detail->barang_id,
-                        'toko_id' => $suratJalan->toko_tujuan_id,
-                    ],
-                    ['stok' => 0]
-                );
+                // ======================
+                // STOK ASAL (KURANG)
+                // ======================
+                $stokAsal = StokBarangToko::lockForUpdate()
+                    ->where('barang_id', $detail->barang_id)
+                    ->where('toko_id', $suratJalan->toko_asal_id)
+                    ->first();
 
-                $stokAwal = $stok->stok;
-                $stok->increment('stok', $qtyDiterima);
+                if (!$stokAsal) {
+                    throw new Exception('Stok asal tidak ditemukan');
+                }
 
-                // =========================
-                // LOG STOK
-                // =========================
+                if ($stokAsal->stok < $qtyDiterima) {
+                    throw new Exception('Stok asal tidak mencukupi');
+                }
+
+                $stokAsalAwal = $stokAsal->stok;
+                $stokAsal->decrement('stok', $qtyDiterima);
+
                 StokLog::create([
                     'barang_id' => $detail->barang_id,
-                    'toko_id' => $suratJalan->toko_tujuan_id,
-                    'tipe' => 'mutasi_masuk',
+                    'toko_id' => $suratJalan->toko_asal_id,
+                    'tipe' => 'mutasi_keluar',
                     'qty' => $qtyDiterima,
-                    'stok_sebelum' => $stokAwal,
-                    'stok_sesudah' => $stok->stok,
+                    'stok_sebelum' => $stokAsalAwal,
+                    'stok_sesudah' => $stokAsal->stok,
                     'referensi_type' => 'surat_jalan',
                     'referensi_id' => $suratJalan->id,
                     'created_by' => $userId,
                 ]);
 
-                // =========================
-                // UPDATE DETAIL SJ
-                // =========================
+                // ======================
+                // STOK TUJUAN (TAMBAH)
+                // ======================
+                $stokTujuan = StokBarangToko::lockForUpdate()
+                    ->firstOrCreate(
+                        [
+                            'barang_id' => $detail->barang_id,
+                            'toko_id' => $suratJalan->toko_tujuan_id,
+                        ],
+                        ['stok' => 0]
+                    );
+
+                $stokTujuanAwal = $stokTujuan->stok;
+                $stokTujuan->increment('stok', $qtyDiterima);
+
+                StokLog::create([
+                    'barang_id' => $detail->barang_id,
+                    'toko_id' => $suratJalan->toko_tujuan_id,
+                    'tipe' => 'mutasi_masuk',
+                    'qty' => $qtyDiterima,
+                    'stok_sebelum' => $stokTujuanAwal,
+                    'stok_sesudah' => $stokTujuan->stok,
+                    'referensi_type' => 'surat_jalan',
+                    'referensi_id' => $suratJalan->id,
+                    'created_by' => $userId,
+                ]);
+
+                // ======================
+                // UPDATE DETAIL
+                // ======================
                 $detail->update([
                     'qty_diterima' => $qtyDiterima,
                     'catatan' => $item['catatan']
@@ -99,72 +118,14 @@ class SuratJalanPenerimaanService
                 ]);
             }
 
-            // =========================
-            // UPDATE HEADER SJ
-            // =========================
+            // ======================
+            // UPDATE HEADER
+            // ======================
             $suratJalan->update([
                 'status' => $adaSelisih ? 'selisih' : 'diterima',
                 'validated_by' => $userId,
             ]);
+
         });
     }
-    // public function terima(SuratJalan $suratJalan, array $details, int $userId): void
-    // {
-    //     if ($suratJalan->status !== 'dikirim') {
-    //         throw new Exception('Status surat jalan tidak valid');
-    //     }
-
-    //     DB::transaction(function () use ($suratJalan, $details, $userId) {
-
-    //         foreach ($details as $detail) {
-
-    //             $qtyDiterima = (int) ($detail['qty_diterima'] ?? 0);
-
-    //             // skip jika 0 / kosong
-    //             if ($qtyDiterima <= 0) {
-    //                 continue;
-    //             }
-
-    //             // ambil / buat stok toko tujuan
-    //             $stok = StokBarangToko::firstOrCreate(
-    //                 [
-    //                     'barang_id' => $detail['barang_id'] ?? $detail['id'] ?? null,
-    //                     'toko_id' => $suratJalan->toko_tujuan_id,
-    //                 ],
-    //                 ['stok' => 0]
-    //             );
-
-    //             $stokAwal = $stok->stok;
-    //             $stok->stok += $qtyDiterima;
-    //             $stok->save();
-
-    //             // log stok
-    //             StokLog::create([
-    //                 'barang_id' => $stok->barang_id,
-    //                 'toko_id' => $suratJalan->toko_tujuan_id,
-    //                 'tipe' => 'mutasi_masuk',
-    //                 'qty' => $qtyDiterima,
-    //                 'stok_sebelum' => $stokAwal,
-    //                 'stok_sesudah' => $stok->stok,
-    //                 'referensi_type' => 'surat_jalan',
-    //                 'referensi_id' => $suratJalan->id,
-    //                 'created_by' => $userId,
-    //             ]);
-
-    //             // update detail surat jalan
-    //             $suratJalan->details()
-    //                 ->where('id', $detail['id'])
-    //                 ->update([
-    //                     'qty_diterima' => $qtyDiterima,
-    //                     'catatan' => $detail['catatan'] ?? null,
-    //                 ]);
-    //         }
-
-    //         // update header surat jalan
-    //         $suratJalan->update([
-    //             'status' => 'diterima',
-    //             'validated_by' => $userId,
-    //         ]);
-    //     });
-    // }
 }
