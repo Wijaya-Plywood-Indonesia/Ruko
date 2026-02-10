@@ -8,6 +8,7 @@ use App\Models\Pembeli;
 use App\Models\Penjualan;
 use App\Models\DetailPenjualan;
 use App\Models\RekeningPerusahaan;
+use App\Models\StokBarangToko;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
@@ -46,12 +47,17 @@ class PosPenjualan extends Page
     public ?string $plat_kendaraan = null;
     public ?string $nama_sopir = null;
     public $no_nota;
+    public ?string $tanggal = null;
+    public ?string $keterangan_pembayaran = null;
+    public ?string $keterangan_nota = null;
 
     /* ================= MOUNT ================= */
     public function mount(): void
     {
         $this->searchResults = collect();
         $this->no_nota = $this->generateNoNota();
+        $this->tanggal = now();
+        // dd($this->tanggal);
     }
 
     //generate nota 
@@ -87,8 +93,14 @@ class PosPenjualan extends Page
         }
 
         $this->searchResults = Barang::query()
-            ->where('nama_barang', 'like', "%{$this->search}%")
-            ->orWhere('barcode', 'like', "%{$this->search}%")
+            ->where(function ($q) {
+                $q->where('nama_barang', 'like', "%{$this->search}%")
+                ->orWhere('barcode', 'like', "%{$this->search}%");
+            })
+            ->whereHas('stok_toko', function ($q) {
+                $q->where('stok', '>', 0);
+            })
+            ->with('stok_toko') // biar bisa diakses di view
             ->limit(8)
             ->get();
     }
@@ -110,7 +122,7 @@ class PosPenjualan extends Page
             return;
         }
 
-        if ($barang->stok_minimum < 1) {
+        if ($barang->stok_toko?->stok < 1) {
             Notification::make()
                 ->title('Stok barang habis')
                 ->body('Barang tidak bisa ditambahkan ke keranjang.')
@@ -149,7 +161,7 @@ class PosPenjualan extends Page
             return;
         }
 
-        $stock = Barang::find($id)?->stok_minimum ?? 0;
+        $stock = Barang::find($id)?->stok_toko?->stok ?? 0;
         $qty = max(1, (int) $this->cart[$id]['qty']);
 
         if ($qty > $stock) {
@@ -336,13 +348,15 @@ class PosPenjualan extends Page
 
             $penjualan = Penjualan::create([
                 'no_nota' => $this->no_nota,
-                'tanggal' => now(),
+                'tanggal' => $this->tanggal, //! Disini ubah coy
                 'pembeli_id' => $pembeli->id,
                 'rekening_perusahaan_id' => $rekening?->id,
                 'nama_customer' => $this->nama_customer,
                 'alamat' => $this->alamat,
                 'is_member' => (bool) $this->is_member,
                 'metode_pembayaran' => $this->metode_pembayaran,
+                'keterangan' => $this->keterangan_nota,
+                'keterangan_pembayaran' => $this->keterangan_pembayaran,
                 'bank' => $rekening?->nama_bank,
                 'no_rekening' => $rekening?->no_rekening,
                 'kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->kendaraan : null,
@@ -355,10 +369,12 @@ class PosPenjualan extends Page
             ]);
 
             foreach ($this->cart as $item) {
-                $stock = Barang::find($item['barang_id'])?->stok_minimum ?? 0;
 
-                Barang::where('id', $item['barang_id'])
-                    ->update(['stok_minimum' => $stock - $item['qty']]);
+            // ! SERVICE KURANGI STOCK
+                // $stock = StokBarangToko::find($item['barang_id'])?->stok ?? 0;
+
+                // StokBarangToko::where('id', $item['barang_id'])
+                //     ->update(['stok' => $stock - $item['qty']]);
 
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
@@ -395,7 +411,6 @@ class PosPenjualan extends Page
         $this->alamat = '';
         $this->telepon = '';
         $this->pembeli_id = null;
-
         $this->no_nota = $this->generateNoNota();
     }
 }

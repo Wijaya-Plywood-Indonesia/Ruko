@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\PenjualanTerakhirWidget;
 use App\Filament\Widgets\PosButton;
-use Filament\Pages\Page;
 
 use Filament\Pages\Dashboard as BaseDashboard;
 

@@ -32,8 +32,8 @@ class PenjualanInfolist
                             ->label('Status Pelanggan')
                             ->formatStateUsing(fn(bool $state) => $state ? 'Dia Member' : 'Reguler'),
                         TextEntry::make('keterangan')
-                            ->placeholder('kosong')
-                            ->label('Keterangan'),
+                            ->placeholder('Tidak Ada Catatan')
+                            ->label('Keterangan Nota'),
 
                     ]),
 
@@ -66,7 +66,9 @@ class PenjualanInfolist
                         TextEntry::make('kembalian')
                             ->money('IDR', locale: 'id_ID')
                             ->color(fn($state) => $state < 0 ? 'danger' : 'success'),
-                        TextEntry::make('keterangan')->placeholder('Tidak Ada Catatan')
+                        TextEntry::make('keterangan_pembayaran')
+                            ->label('Keterangan Pembayaran')
+                            ->placeholder('Tidak Ada Catatan')
                         ,
                     ]),
 

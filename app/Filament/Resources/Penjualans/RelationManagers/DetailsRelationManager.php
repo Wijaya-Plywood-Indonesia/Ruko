@@ -23,6 +23,22 @@ class DetailsRelationManager extends RelationManager
 {
     protected static string $relationship = 'details';
 
+    protected function canCreate(): bool
+    {
+        return true;
+    }
+
+    protected function canEdit($record): bool
+    {
+        return true;
+    }
+
+    protected function canDelete($record): bool
+    {
+        return true;
+    }
+
+
     public function form(Schema $schema): Schema
     {
         return $schema
