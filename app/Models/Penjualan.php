@@ -26,6 +26,7 @@ class Penjualan extends Model
         'plat_kendaraan',
         'status_transaksi',
         'keterangan',
+        'keterangan_pembayaran',
         'toko_id', // ⬅️ tambahkan ini
     ];
 

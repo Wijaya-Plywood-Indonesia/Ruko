@@ -319,30 +319,49 @@
         }
     </style>
 
-    {{-- =========================================================
-        WRAPPER
-        ========================================================= --}}
-    <div class="pos-wrapper">
-        <div style="display: flex; width: 100%; justify-content: space-between;">
-            <h2 class="pos-title">Point of Sale</h2>
-            <div style="margin-top: 12px; font-size: 14px">
-                <strong>Kasir:</strong> {{ auth()->user()->name }}
+        {{-- =========================================================
+            WRAPPER
+            ========================================================= --}}
+        <div class="pos-wrapper">
+            <div style="display: flex; width: 100%; justify-content: space-between;">
+                <h2 class="pos-title">Point of Sale</h2>
+                <div style="margin-top: 12px; font-size: 14px">
+                    <strong>Kasir:</strong> {{ auth()->user()->name }}
+                </div>
             </div>
-        </div>
 
-<div class="pos-divider"></div>
+        <div class="pos-divider"></div>
 
-{{-- ===================== NOMOR NOTA ===================== --}}
-<h6 style="margin-bottom: 8px; font-weight: 700;">
-    Nomor Nota
-</h6>
+        {{-- ===================== TANGGAL PENJUALAN ===================== --}}
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Tanggal Penjualan
+        </h6>
 
-<input 
-    type="text" 
-    wire:model.live="no_nota" 
-    class="pos-input" 
-    style="max-width: 300px;" 
-/>
+        <input 
+            type="datetime-local" 
+            wire:model.defer="tanggal" 
+            class="pos-input" 
+            style="max-width: 300px;" 
+        />
+        <div class="pos-divider"></div>
+        {{-- ===================== NOMOR NOTA ===================== --}}
+        <h6 style="margin-bottom: 8px; font-weight: 700;">
+            Nomor Nota
+        </h6>
+
+        <input 
+            type="text" 
+            wire:model.live="no_nota" 
+            class="pos-input" 
+            style="max-width: 300px;" 
+        />
+        <input 
+            type="text" 
+            wire:model.live="keterangan_nota" 
+            placeholder="keterangan nota"
+            class="pos-input" 
+            style="max-width: 300px;" 
+        />
         <div class="pos-divider"></div>
         {{-- ===================== CUSTOMER ===================== --}}
 
@@ -667,6 +686,13 @@
                 </select>
             </div>
             @endif
+
+            <input
+                wire:model.live="keterangan_pembayaran"
+                class="pos-input grid-span-full"
+                placeholder="Keterangan Pembayaran"
+            />
+
         </div>
 
         {{-- ===================== Pengiriman ===================== --}}
