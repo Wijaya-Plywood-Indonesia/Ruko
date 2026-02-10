@@ -350,6 +350,22 @@ class PosPenjualan extends Page
             $this->nama_sopir = null;
         }
     }
+    public function updateHargaJual(int $id): void
+    {
+        if (!isset($this->cart[$id])) {
+            return;
+        }
+
+        $harga = (int) ($this->cart[$id]['harga_jual'] ?? 0);
+
+        // minimal 0 biar aman
+        $harga = max(0, $harga);
+
+        $this->cart[$id]['harga_jual'] = $harga;
+
+        // hitung ulang subtotal
+        $this->updateSubtotal($id);
+    }
 
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
