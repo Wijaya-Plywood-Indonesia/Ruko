@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Penjualans\Tables;
 
 use App\Filament\Resources\Penjualans\PenjualanResource;
+use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -56,7 +57,13 @@ class PenjualansTable
                 TextColumn::make('keterangan')
                     ->placeholder('kosong')
                     ->toggleable(isToggledHiddenByDefault: true)
-                    ->dateTime()
+                    // ->dateTime()
+                    ->sortable(),
+
+                TextColumn::make('keterangan_pembayaran')
+                    ->placeholder('kosong')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    // ->dateTime()
                     ->sortable(),
 
                 TextColumn::make('nama_customer')
@@ -118,17 +125,6 @@ class PenjualansTable
                     ])
 
                     ->action(function ($record, array $data) {
-                        // dd([
-                        //     'auth_default_id' => auth()->id(),
-                        //     'auth_filament_id' => filament()->auth()->id(),
-                        //     'record_user_id' => $record->user_id,
-                        //     'record_user_id_type' => gettype($record->user_id),
-                        //     'auth_default_type' => gettype(auth()->id()),
-                        //     'auth_filament_type' => gettype(filament()->auth()->id()),
-                        //     'strict_compare' => $record->user_id === filament()->auth()->id(),
-                        //     'loose_compare' => $record->user_id == filament()->auth()->id(),
-                        //     'full_record' => $record->toArray(),
-                        // ]);
                         // HARD BACKEND PROTECTION
                         if ($record->user_id === filament()->auth()->id()) {
                             Notification::make()
@@ -139,10 +135,24 @@ class PenjualansTable
                             return;
                         }
 
+                        $status = $data['status_transaksi'];
+                        if ($status === 'LUNAS') {
+                            app(StokPenyesuaianService::class)
+                                ->lunas($record->id);
+                        }
                         $record->update([
                             'validated_by' => filament()->auth()->id(),
-                            'status_transaksi' => $data['status_transaksi'],
+                            'status_transaksi' => $status,
                         ]);
+
+
+                        // if ($status === 'DIBATALKAN') {
+                        //     Notification::make()
+                        //         ->title('Transaksi berhasil dibatalkan')
+                        //         ->body("Stock telah di kembalikan sejumlah $stok ")
+                        //         ->success()
+                        //         ->send();
+                        // }
 
                         Notification::make()
                             ->title('Transaksi berhasil divalidasi')

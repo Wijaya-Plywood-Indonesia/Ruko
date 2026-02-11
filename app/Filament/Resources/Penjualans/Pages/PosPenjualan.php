@@ -9,11 +9,11 @@ use App\Models\Pembeli;
 use App\Models\Penjualan;
 use App\Models\DetailPenjualan;
 use App\Models\RekeningPerusahaan;
+use App\Models\StokBarangToko;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use App\Models\StokBarangToko;
 
 
 class PosPenjualan extends Page
@@ -54,6 +54,9 @@ class PosPenjualan extends Page
     public ?string $plat_kendaraan = null;
     public ?string $nama_sopir = null;
     public $no_nota;
+    public ?string $tanggal = null;
+    public ?string $keterangan_pembayaran = null;
+    public ?string $keterangan_nota = null;
 
     /* ================= MOUNT ================= */
     public function mount(): void
@@ -70,6 +73,8 @@ class PosPenjualan extends Page
             $this->no_nota = $this->generateNoNota();
         }
 
+        $this->tanggal = now();
+        // dd($this->tanggal);
     }
 
 
@@ -147,28 +152,33 @@ class PosPenjualan extends Page
 
     public function selectBarang(int $id): void
     {
-        $barang = Barang::with('satuan')->find($id);
-        if (!$barang) {
-            return;
-        }
+        $barang = Barang::find($id);
+        if (!$barang) return;
+
         $stokToko = StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
-            ->value('stok') ?? 0;
+            ->first();
 
-        if ($stokToko < 1) {
+        $stok = $stokToko?->stok ?? 0;
 
-            $namaToko = IdentitasToko::find($this->toko_id)?->nama_toko ?? 'Toko Tidak Diketahui';
-            $namaBarang = $barang->nama_barang ?? 'Barang';
-
+        if ($stok < 1) {
+            $namaToko = IdentitasToko::find($this->toko_id)?->nama_toko ?? 'Toko';
             Notification::make()
                 ->title('Stok barang habis')
-                ->body("Barang **{$namaBarang}** habis di **{$namaToko}**.")
+                ->body("Barang {$barang->nama_barang} habis di {$namaToko}")
                 ->danger()
                 ->send();
-
             return;
         }
+
         if (isset($this->cart[$id])) {
+            if ($this->cart[$id]['qty'] + 1 > $stok) {
+                Notification::make()
+                    ->title('Stok tidak mencukupi')
+                    ->warning()
+                    ->send();
+                return;
+            }
             $this->cart[$id]['qty']++;
         } else {
             $this->cart[$id] = [
@@ -185,13 +195,13 @@ class PosPenjualan extends Page
         }
 
         $this->updateSubtotal($id);
-
         $this->search = '';
         $this->searchResults = collect();
         $this->showDropdown = false;
     }
 
     /* ================= CART ================= */
+    // public function updateQty(int $id): void
     public function updateQty(int $id): void
     {
         if (!isset($this->cart[$id])) {
@@ -201,6 +211,8 @@ class PosPenjualan extends Page
         $stock = StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
             ->value('stok') ?? 0;
+
+        // $stock = Barang::find($id)?->stok_toko?->stok ?? 0;
         $qty = max(1, (int) $this->cart[$id]['qty']);
 
         if ($qty > $stock) {
@@ -403,13 +415,15 @@ class PosPenjualan extends Page
 
             $penjualan = Penjualan::create([
                 'no_nota' => $this->no_nota,
-                'tanggal' => now(),
+                'tanggal' => $this->tanggal, //! Disini ubah coy
                 'pembeli_id' => $pembeli->id,
                 'rekening_perusahaan_id' => $rekening?->id,
                 'nama_customer' => $this->nama_customer,
                 'alamat' => $this->alamat,
                 'is_member' => (bool) $this->is_member,
                 'metode_pembayaran' => $this->metode_pembayaran,
+                'keterangan' => $this->keterangan_nota,
+                'keterangan_pembayaran' => $this->keterangan_pembayaran,
                 'bank' => $rekening?->nama_bank,
                 'no_rekening' => $rekening?->no_rekening,
                 'kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->kendaraan : null,
@@ -422,28 +436,64 @@ class PosPenjualan extends Page
                 'toko_id' => $this->toko_id,   // <—— TAMBAHKAN INI
             ]);
 
+            // foreach ($this->cart as $item) {
+
+            //     // Ambil stok per toko
+            //     // $stokToko = StokBarangToko::firstOrCreate(
+            //     //     [
+            //     //         'barang_id' => $item['barang_id'],
+            //     //         'toko_id' => $this->toko_id,
+            //     //     ],
+            //     //     [
+            //     //         'stok' => 0, // jika belum ada record
+            //     //     ]
+            //     // );
+            // // ! SERVICE KURANGI STOCK
+            //     // $stock = StokBarangToko::find($item['barang_id'])?->stok ?? 0;
+
+            //     // StokBarangToko::where('id', $item['barang_id'])
+            //     //     ->update(['stok' => $stock - $item['qty']]);
+
+            //     // Cek stok cukup atau tidak
+            //     if ($stokToko->stok < $item['qty']) {
+            //         throw new \Exception("Stok barang '{$item['nama_barang']}' tidak mencukupi.");
+            //     }
+
+            //     // Kurangi stok menggunakan helper model
+            //     $stokToko->kurang($item['qty']);
+
+            //     // Simpan detail penjualan
+            //     DetailPenjualan::create([
+            //         'penjualan_id' => $penjualan->id,
+            //         'barang_id' => $item['barang_id'],
+            //         'nama_barang' => $item['nama_barang'],
+            //         'satuan' => $item['satuan'],
+            //         'qty' => $item['qty'],
+            //         'harga_awal' => $item['harga_awal'],
+            //         'harga_jual' => $item['harga_jual'],
+            //         'potongan' => $item['potongan'],
+            //         'subtotal' => $item['subtotal'],
+            //     ]);
+            // }
             foreach ($this->cart as $item) {
+                $stokToko = StokBarangToko::where('barang_id', $item['barang_id'])
+                    ->where('toko_id', $this->toko_id)
+                    ->lockForUpdate()
+                    ->first();
 
-                // Ambil stok per toko
-                $stokToko = StokBarangToko::firstOrCreate(
-                    [
-                        'barang_id' => $item['barang_id'],
-                        'toko_id' => $this->toko_id,
-                    ],
-                    [
-                        'stok' => 0, // jika belum ada record
-                    ]
-                );
+                if (!$stokToko || $stokToko->stok < $item['qty']) {
+                    Notification::make()
+                    ->title('Simpan Penjualan Gagal')
+                    ->body("Stok {$item['nama_barang']} tidak mencukupi.")
+                    ->danger()
+                    ->send();
 
-                // Cek stok cukup atau tidak
-                if ($stokToko->stok < $item['qty']) {
-                    throw new \Exception("Stok barang '{$item['nama_barang']}' tidak mencukupi.");
+                    return;
                 }
 
-                // Kurangi stok menggunakan helper model
-                $stokToko->kurang($item['qty']);
+                //! Kurangi stok
+                // $stokToko->decrement('stok', $item['qty']);
 
-                // Simpan detail penjualan
                 DetailPenjualan::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $item['barang_id'],
@@ -456,6 +506,7 @@ class PosPenjualan extends Page
                     'subtotal' => $item['subtotal'],
                 ]);
             }
+
         });
 
         $kembalian = $this->kembalian;
@@ -479,7 +530,6 @@ class PosPenjualan extends Page
         $this->alamat = '';
         $this->telepon = '';
         $this->pembeli_id = null;
-
         $this->no_nota = $this->generateNoNota();
     }
 }
