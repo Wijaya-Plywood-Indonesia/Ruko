@@ -54,6 +54,7 @@ class StokBarangTokosTable
                 EditAction::make(),
 
             ])
+            ->defaultSort('created_at', 'desc')
             ->toolbarActions([
                 Action::make('sinkronStokSemuaToko')
                     ->label('Sinkronkan Stok Semua Toko')
@@ -75,22 +76,21 @@ class StokBarangTokosTable
 
                         DB::transaction(function () use ($barangIds, $tokoIds) {
 
+                            $data = [];
+
                             foreach ($tokoIds as $tokoId) {
-
-                                $data = $barangIds->map(fn($barangId) => [
-                                    'barang_id' => $barangId,
-                                    'toko_id' => $tokoId,
-                                    'stok' => 0,
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ])->toArray();
-
-                                DB::table('stok_barang_toko')->upsert(
-                                    $data,
-                                    ['barang_id', 'toko_id'], // unique key
-                                    [] // tidak update jika sudah ada
-                                );
+                                foreach ($barangIds as $barangId) {
+                                    $data[] = [
+                                        'barang_id' => $barangId,
+                                        'toko_id' => $tokoId,
+                                        'stok' => 0,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ];
+                                }
                             }
+
+                            DB::table('stok_barang_toko')->insertOrIgnore($data);
                         });
 
                         Notification::make()

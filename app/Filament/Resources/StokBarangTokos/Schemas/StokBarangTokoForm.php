@@ -28,8 +28,6 @@ class StokBarangTokoForm
                     ->label('Stok')
                     ->numeric()
                     ->default(0)
-                    ->disabled()      // ⛔ stok tidak diinput manual
-                    ->dehydrated(),   // tetap tersimpan
             ]);
     }
 }
