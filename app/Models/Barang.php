@@ -42,6 +42,10 @@ class Barang extends Model
     {
         return $this->belongsTo(Satuan::class, 'id_satuan');
     }
+    public function stok_toko()
+    {
+        return $this->hasOne(StokBarangToko::class, 'barang_id');
+    }
     public function penjualanDetails()
     {
         return $this->hasMany(DetailPenjualan::class, 'barang_id');

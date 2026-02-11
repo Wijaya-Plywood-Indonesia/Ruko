@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 
 class StokPenyesuaianService
@@ -47,5 +48,67 @@ class StokPenyesuaianService
                 'created_by' => $userId,
             ]);
         });
+    }
+    public function lunas(
+        int $id_penjualan
+    ) {
+        $penjualanDetails = DB::table('penjualan_details')
+            ->where('penjualan_id', $id_penjualan)
+            ->select(['barang_id', 'qty', "nama_barang"])
+            ->get();
+
+        foreach ($penjualanDetails as $detail) {
+            $barang = StokBarangToko::
+                select('id', 'stok')
+                ->find($detail->barang_id)
+            ;
+
+            if (!$barang) {
+                return; // atau throw exception
+            }
+            $stokSebelum = (int) $barang->stok;
+            $stokSesudah = $stokSebelum - (int) $detail->qty;
+
+            $barang->update([
+                'stok' => $stokSesudah,
+            ]);
+            Notification::make()
+                ->title('Transaksi berhasil dibatalkan')
+                ->body("Stok $detail->nama_barang di kembalikan sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->success()
+                ->send();
+        }
+
+    }
+    public function dibatalkan(
+        int $id_penjualan
+    ) {
+        $penjualanDetails = DB::table('penjualan_details')
+            ->where('penjualan_id', $id_penjualan)
+            ->select(['barang_id', 'qty', "nama_barang"])
+            ->get();
+
+        foreach ($penjualanDetails as $detail) {
+            $barang = StokBarangToko::
+                select('id', 'stok')
+                ->find($detail->barang_id)
+            ;
+
+            if (!$barang) {
+                return; // atau throw exception
+            }
+            $stokSebelum = (int) $barang->stok;
+            $stokSesudah = $stokSebelum + (int) $detail->qty;
+
+            $barang->update([
+                'stok' => $stokSesudah,
+            ]);
+            Notification::make()
+                ->title('Transaksi berhasil dibatalkan')
+                ->body("Stok $detail->nama_barang di kembalikan sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->success()
+                ->send();
+        }
+
     }
 }
