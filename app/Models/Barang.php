@@ -50,4 +50,11 @@ class Barang extends Model
     {
         return $this->hasMany(DetailPenjualan::class, 'barang_id');
     }
+
+    public function stokBarangTokos()
+    {
+        // Pastikan foreign key 'barang_id' sesuai dengan di database
+        return $this->hasMany(StokBarangToko::class, 'barang_id');
+    }
+
 }

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Penjualans\RelationManagers;
 
-use App\Filament\Traits\SyncBarangSatuan;
 use App\Models\Barang;
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\BulkActionGroup;
@@ -44,24 +43,34 @@ class DetailsRelationManager extends RelationManager
                             ->relationship(
                                 'barang',
                                 'nama_barang',
-                                modifyQueryUsing: function (Builder $query) {
+                                modifyQueryUsing: function (Builder $query, $operation) {
+                                    // Jika sedang EDIT, kita tidak perlu memfilter query
+                                    // agar data yang sudah terpilih tetap muncul di dropdown
+                                    if ($operation === 'edit') {
+                                        return $query;
+                                    }
+
                                     $user = auth()->user();
                                     $tokoUser = $user->tokoUtama()->first();
 
                                     if (!$tokoUser) {
-                                        $query->whereRaw('1 = 0');
-                                        return;
+                                        return $query->whereRaw('1 = 0');
                                     }
 
-                                    $barangQuery = StokPenyesuaianService::queryBarangByToko($tokoUser->id_toko);
+                                    $penjualan = $this->getOwnerRecord();
+                                    $barangQuery = StokPenyesuaianService::queryBarangByToko($tokoUser->id_toko, $penjualan->id);
 
-                                    // inject query service ke relationship
-                                    $query->fromSub($barangQuery, 'barangs');
+                                    // Inject query service ke relationship
+                                    return $query->fromSub($barangQuery, 'barangs');
                                 }
                             )
+                            // 1. DISABLE SAAT EDIT: Mengunci input agar barang tidak bisa diubah setelah disimpan
+                            ->disabled(fn ($operation) => $operation === 'edit')
+                            // 2. DEHYDRATED: Penting! Agar nilai 'barang_id' tetap terkirim ke backend saat simpan, meskipun disabled
+                            ->dehydrated()
+                            ->live(onBlur: true) // 🔥 Menambahkan Live agar reaktif
                             ->searchable()
                             ->preload()
-                            ->reactive() // 🔥 penting
                             ->afterStateUpdated(function ($state, callable $set, $get) {
                                 if (!$state) {
                                     return;
@@ -78,12 +87,11 @@ class DetailsRelationManager extends RelationManager
                                     StokPenyesuaianService::calculate_subtotal(
                                         $barang->harga_jual,
                                         $get('qty') ?? 1,
-                                        $get('potongan') ?? 0
+                                        ($get('potongan') ?? 0) * ($get('qty') ?? 1)
                                     )
                                 );
                             })
                             ->required(),
-
                         TextInput::make('satuan')
                             ->label('Satuan')
                             ->disabled()
@@ -103,6 +111,7 @@ class DetailsRelationManager extends RelationManager
                             ->default(1)
                             ->minValue(1)
                             ->required()
+                            ->live(onBlur: true) // 🔥 Menambahkan Live agar reaktif
                             ->afterStateUpdated(
                                 fn($get, $set) =>
                                 $set(
@@ -110,7 +119,7 @@ class DetailsRelationManager extends RelationManager
                                     StokPenyesuaianService::calculate_subtotal(
                                         $get('harga_jual'),
                                         $get('qty'),
-                                        $get('potongan')
+                                        $get('potongan') * ($get('qty') ?? 0)
                                     )
                                 )
                             ),
@@ -121,6 +130,7 @@ class DetailsRelationManager extends RelationManager
                             ->prefix('Rp')
                             ->dehydrated()
                             ->required()
+                            ->live(onBlur: true) // 🔥 Menambahkan Live agar reaktif
                             ->afterStateUpdated(
                                 fn($get, $set) =>
                                 $set(
@@ -128,7 +138,7 @@ class DetailsRelationManager extends RelationManager
                                     StokPenyesuaianService::calculate_subtotal(
                                         $get('harga_jual'),
                                         $get('qty'),
-                                        $get('potongan')
+                                        $get('potongan') * ($get('qty') ?? 0)
                                     )
                                 )
                             ),
@@ -144,6 +154,7 @@ class DetailsRelationManager extends RelationManager
                         TextInput::make('potongan')
                             ->label('Potongan')
                             ->numeric()
+                            ->live(onBlur: true) // 🔥 Menambahkan Live agar reaktif
                             ->prefix('Rp')
                             ->default(
                                 function () {
@@ -158,7 +169,7 @@ class DetailsRelationManager extends RelationManager
                                     StokPenyesuaianService::calculate_subtotal(
                                         $get('harga_jual'),
                                         $get('qty'),
-                                        $get('potongan')
+                                        $get('potongan') * ($get('qty') ?? 1)
                                     )
                                 )
                             ),
@@ -170,7 +181,8 @@ class DetailsRelationManager extends RelationManager
                             ->numeric()
                             ->prefix('Rp')
                             ->disabled()
-                            ->dehydrated(),
+                            ->dehydrated()
+                            ->extraInputAttributes(['class' => 'font-bold text-lg']),
 
                     ]),
 
@@ -263,11 +275,12 @@ class DetailsRelationManager extends RelationManager
                             $data['nama_barang'] = $barang->nama_barang;
                             $data['harga_awal'] = $barang->harga_jual;
                             $data['qty'] = (int) $data['qty'];
+                            // $data['potongan'] = ($data['potongan'] ?? 0) * ($data['qty'] ?? 1);
 
                             StokPenyesuaianService::validateSubtotal(
                                 $data['harga_jual'] ?? 0,
                                 $data['qty'] ?? 0,
-                                $data['potongan'] ?? 0
+                                $data['potongan']
                             );
                         } catch (ValidationException $e) {
 

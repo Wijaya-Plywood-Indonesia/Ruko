@@ -115,16 +115,16 @@ class StokPenyesuaianService
 
     }
 
-    public static function queryBarangByToko(int $tokoId): Builder
+    public static function queryBarangByToko(int $tokoId, int $penjualanId): Builder
     {
-        $stokTable = (new StokBarangToko)->getTable();
-
         return Barang::query()
-            ->leftJoin($stokTable, function ($join) use ($stokTable, $tokoId) {
-                $join->on("$stokTable.barang_id", '=', 'barangs.id')
-                     ->where("$stokTable.toko_id", $tokoId);
+            ->whereHas('stokBarangTokos', function ($query) use ($tokoId) {
+                $query->where('toko_id', $tokoId)
+                      ->where('stok', '>', 0);
             })
-            ->where("$stokTable.stok", '>', 0)
+            ->whereDoesntHave('penjualanDetails', function ($query) use ($penjualanId) {
+                $query->where('penjualan_id', $penjualanId);
+            })
             ->select('barangs.*');
     }
 
