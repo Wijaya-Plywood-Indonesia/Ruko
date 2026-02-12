@@ -135,24 +135,17 @@ class PenjualansTable
                             return;
                         }
 
+                        // ! CALL SERVICE
                         $status = $data['status_transaksi'];
                         if ($status === 'LUNAS') {
                             app(StokPenyesuaianService::class)
                                 ->lunas($record->id);
                         }
+
                         $record->update([
                             'validated_by' => filament()->auth()->id(),
                             'status_transaksi' => $status,
                         ]);
-
-
-                        // if ($status === 'DIBATALKAN') {
-                        //     Notification::make()
-                        //         ->title('Transaksi berhasil dibatalkan')
-                        //         ->body("Stock telah di kembalikan sejumlah $stok ")
-                        //         ->success()
-                        //         ->send();
-                        // }
 
                         Notification::make()
                             ->title('Transaksi berhasil divalidasi')
@@ -169,10 +162,22 @@ class PenjualansTable
                     ->visible(
                         fn($record) =>
                         !empty($record->validated_by)
-                        && $record->status_transaksi !== 'LUNAS'
+                        && 
+                        (
+                            $record->status_transaksi !== 'LUNAS' || filament()->auth()->user()->hasRole("super_admin")
+                        
+                        )
+
                     )
 
                     ->action(function ($record) {
+                        // ! CALL SERVICE
+                        $status = $record->status_transaksi;
+                        if ($status === 'LUNAS') {
+                            app(StokPenyesuaianService::class)
+                                ->validasi_batal_dari_lunas($record->id);
+                        }
+                        
                         $record->update([
                             'validated_by' => null,
                             'status_transaksi' => 'BELUM DIBAYAR',

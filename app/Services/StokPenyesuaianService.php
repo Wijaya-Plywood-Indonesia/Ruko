@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Barang;
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StokPenyesuaianService
 {
@@ -73,14 +76,14 @@ class StokPenyesuaianService
                 'stok' => $stokSesudah,
             ]);
             Notification::make()
-                ->title('Transaksi berhasil dibatalkan')
-                ->body("Stok $detail->nama_barang di kembalikan sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->title('Transaksi Lunas')
+                ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
                 ->success()
                 ->send();
         }
 
     }
-    public function dibatalkan(
+    public function validasi_batal_dari_lunas(
         int $id_penjualan
     ) {
         $penjualanDetails = DB::table('penjualan_details')
@@ -106,9 +109,51 @@ class StokPenyesuaianService
             Notification::make()
                 ->title('Transaksi berhasil dibatalkan')
                 ->body("Stok $detail->nama_barang di kembalikan sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
-                ->success()
+                ->danger()
                 ->send();
         }
 
+    }
+
+    public static function queryBarangByToko(int $tokoId): Builder
+    {
+        $stokTable = (new StokBarangToko)->getTable();
+
+        return Barang::query()
+            ->leftJoin($stokTable, function ($join) use ($stokTable, $tokoId) {
+                $join->on("$stokTable.barang_id", '=', 'barangs.id')
+                     ->where("$stokTable.toko_id", $tokoId);
+            })
+            ->where("$stokTable.stok", '>', 0)
+            ->select('barangs.*');
+    }
+
+    public static function calculate_subtotal(
+        float|int|null $hargaJual,
+        int|null $qty,
+        float|int|null $potongan = 0
+    ): float {
+        $hargaJual = (float) ($hargaJual ?? 0);
+        $qty       = (int) ($qty ?? 0);
+        $potongan  = (float) ($potongan ?? 0);
+
+        $subtotal = ($hargaJual * $qty) - $potongan;
+
+        return max($subtotal, 0);
+    }
+
+    public static function validateSubtotal(
+        float|int|null $hargaJual,
+        int|null $qty,
+        float|int|null $potongan = 0
+    ): void {
+        $subtotal = self::calculate_subtotal($hargaJual, $qty, $potongan);
+
+        if ($subtotal <= 0) {
+
+            throw ValidationException::withMessages([
+                    'subtotal' => 'Pembelian tidak wajar. Subtotal harus lebih dari 0.',
+                ]);
+        }
     }
 }

@@ -40,6 +40,8 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+
+
     protected function casts(): array
     {
         return [
@@ -54,7 +56,7 @@ class User extends Authenticatable
 
     public function tokoUtama()
     {
-        return $this->hasOne(ListAkun::class, 'id_akun');
+        return $this->hasOne(ListAkun::class, 'id_akun', 'id');
     }
 
 }

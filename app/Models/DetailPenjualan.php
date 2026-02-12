@@ -44,4 +44,23 @@ class DetailPenjualan extends Model
     {
         return $this->belongsTo(Barang::class);
     }
+
+    public function search_barang()
+    {
+        // return Barang::query()
+        //     ->leftJoin($t, function ($q) use ($t, $toko) {
+        //         $q->on("$t.barang_id", '=', 'barangs.id')
+        //             ->where("$t.toko_id", $toko);
+        //     })
+        //     ->select(
+        //         'barangs.*',
+        //         DB::raw("COALESCE($t.stok, 0) as stok_aktual")
+        //     )
+        //     ->where(function ($query) {
+        //         $query->where('barangs.nama_barang', 'like', "%{$this->search}%")
+        //             ->orWhere('barangs.barcode', 'like', "%{$this->search}%");
+        //     })
+        //     ->limit(8)
+        //     ->get();
+    }
 }
