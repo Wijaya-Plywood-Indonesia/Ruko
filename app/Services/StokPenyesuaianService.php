@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Barang;
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
+use App\Services\StokLogs\StokLogService;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,6 @@ class StokPenyesuaianService
         ?string $catatan
     ): void {
         DB::transaction(function () use ($barangId, $tokoId, $stokFisik, $userId, $catatan) {
-
             $stok = StokBarangToko::lockForUpdate()->firstOrCreate(
                 [
                     'barang_id' => $barangId,
@@ -62,7 +62,7 @@ class StokPenyesuaianService
 
         foreach ($penjualanDetails as $detail) {
             $barang = StokBarangToko::
-                select('id', 'stok')
+                select('id', 'stok', 'toko_id')
                 ->find($detail->barang_id)
             ;
 
@@ -75,12 +75,31 @@ class StokPenyesuaianService
             $barang->update([
                 'stok' => $stokSesudah,
             ]);
+            StokLogService::buatLog(
+                barangId: $detail->barang_id,
+                tokoId: $barang->toko_id,
+                tipe: 'penjualan',
+                qty: $detail->qty,
+                refType: "penjualans",
+                refId: $id_penjualan,
+                stokTerakhir: $stokSebelum,
+                stokSesudah: $stokSesudah
+            );
             Notification::make()
-                ->title('Transaksi Lunas')
-                ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->title("Stok $detail->nama_barang berhasil dikurangi")
+                // ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->body("Total Stok menjadi $stokSesudah")
                 ->success()
                 ->send();
+
+
         }
+
+        Notification::make()
+            ->title('Transaksi Lunas')
+            ->success()
+            ->send();
+
 
     }
     public function validasi_batal_dari_lunas(
@@ -93,7 +112,7 @@ class StokPenyesuaianService
 
         foreach ($penjualanDetails as $detail) {
             $barang = StokBarangToko::
-                select('id', 'stok')
+                select('id', 'stok', 'toko_id')
                 ->find($detail->barang_id)
             ;
 
@@ -106,12 +125,27 @@ class StokPenyesuaianService
             $barang->update([
                 'stok' => $stokSesudah,
             ]);
+            StokLogService::buatLog(
+                barangId: $detail->barang_id,
+                tokoId: $barang->toko_id,
+                tipe: 'penjualan',
+                qty: $detail->qty,
+                refType: "penjualans",
+                refId: $id_penjualan,
+                stokTerakhir: $stokSebelum,
+                stokSesudah: $stokSesudah
+            );
+
             Notification::make()
-                ->title('Transaksi berhasil dibatalkan')
-                ->body("Stok $detail->nama_barang di kembalikan sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
-                ->danger()
+                ->title("Stok $detail->nama_barang berhasil di kembalikan")
+                ->body("Total Stok menjadi $stokSesudah")
+                ->success()
                 ->send();
-        }
+            }
+        Notification::make()
+            ->title('Transaksi dibatalkan')
+            ->success()
+            ->send();
 
     }
 
@@ -120,7 +154,7 @@ class StokPenyesuaianService
         return Barang::query()
             ->whereHas('stokBarangTokos', function ($query) use ($tokoId) {
                 $query->where('toko_id', $tokoId)
-                      ->where('stok', '>', 0);
+                    ->where('stok', '>', 0);
             })
             ->whereDoesntHave('penjualanDetails', function ($query) use ($penjualanId) {
                 $query->where('penjualan_id', $penjualanId);
@@ -134,8 +168,8 @@ class StokPenyesuaianService
         float|int|null $potongan = 0
     ): float {
         $hargaJual = (float) ($hargaJual ?? 0);
-        $qty       = (int) ($qty ?? 0);
-        $potongan  = (float) ($potongan ?? 0);
+        $qty = (int) ($qty ?? 0);
+        $potongan = (float) ($potongan ?? 0);
 
         $subtotal = ($hargaJual * $qty) - $potongan;
 
@@ -152,8 +186,8 @@ class StokPenyesuaianService
         if ($subtotal <= 0) {
 
             throw ValidationException::withMessages([
-                    'subtotal' => 'Pembelian tidak wajar. Subtotal harus lebih dari 0.',
-                ]);
+                'subtotal' => 'Pembelian tidak wajar. Subtotal harus lebih dari 0.',
+            ]);
         }
     }
 }

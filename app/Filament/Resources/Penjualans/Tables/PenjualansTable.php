@@ -100,7 +100,7 @@ class PenjualansTable
                     // Pembuat transaksi TIDAK boleh validasi
                     ->disabled(
                         fn($record) =>
-                        $record->user_id === filament()->auth()->id()
+                        $record->user_id === filament()->auth()->id() && !filament()->auth()->user()->hasRole("super_admin")
                     )
 
                     ->modalHeading('Validasi Transaksi')
@@ -126,7 +126,7 @@ class PenjualansTable
 
                     ->action(function ($record, array $data) {
                         // HARD BACKEND PROTECTION
-                        if ($record->user_id === filament()->auth()->id()) {
+                        if ($record->user_id === filament()->auth()->id() && !filament()->auth()->user()->hasRole("super_admin")) {
                             Notification::make()
                                 ->title('Anda tidak boleh memvalidasi transaksi sendiri')
                                 ->danger()
@@ -185,7 +185,7 @@ class PenjualansTable
 
                         Notification::make()
                             ->title('Validasi transaksi berhasil dibatalkan')
-                            ->danger()
+                            ->success()
                             ->send();
                     }),
                 ViewAction::make(),
