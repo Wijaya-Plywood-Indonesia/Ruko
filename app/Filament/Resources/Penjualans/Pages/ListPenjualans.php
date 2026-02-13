@@ -6,7 +6,6 @@ use App\Exports\LaporanPenjualanDetailExport;
 use App\Exports\LaporanPenjualanExport;
 use App\Exports\LaporanKeranjangPenjualanExport;
 use App\Filament\Resources\Penjualans\PenjualanResource;
-use App\Models\DetailPenjualan;
 use App\Models\Penjualan;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;

@@ -83,7 +83,7 @@ class PreviewExport extends Page
                     'nama_sopir' => $p->nama_sopir,
                     'status_transaksi' => $p->status_transaksi,
                     // Load detail hanya jika dibutuhkan
-                    'data_penjualan_detail' => $this->viewType === 'full' ? $this->data_detail($p->id) : [],
+                    'data_penjualan_detail' => $this->viewType === 'full' || $this->viewType === 'detail'  ? $this->data_detail($p->id) : [],
                 ];
             })
             ->toArray();
