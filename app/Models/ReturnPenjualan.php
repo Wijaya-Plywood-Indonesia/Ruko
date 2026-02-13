@@ -4,31 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Penjualan extends Model
+class ReturnPenjualan extends Model
 {
-    //
-    protected $fillable = [
-        'no_nota',
-        'tanggal',
-        'nama_customer',
-        'is_member',
-        'alamat',
-        'metode_pembayaran',
-        'bank',
-        'no_rekening',
-        'kendaraan',
-        'nama_sopir',
-        'total',
-        'bayar',
-        'kembalian',
-        'user_id',
-        'validated_by',
-        'plat_kendaraan',
-        'status_transaksi',
-        'keterangan',
-        'keterangan_pembayaran',
-        'toko_id', // ⬅️ tambahkan ini
-    ];
+    protected $table = "penjualan_return";
+    protected $guarded = ["id"];
 
     protected $casts = [
         'tanggal' => 'datetime',
@@ -46,6 +25,10 @@ class Penjualan extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function penjualan()
+    {
+        return $this->belongsTo(Penjualan::class);
+    }
     public function details()
     {
         return $this->hasMany(DetailPenjualan::class);
@@ -53,7 +36,7 @@ class Penjualan extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class);
     }
 
     public function validator()
