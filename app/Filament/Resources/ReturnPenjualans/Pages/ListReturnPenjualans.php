@@ -18,11 +18,14 @@ class ListReturnPenjualans extends ListRecords
 
             Action::make('formRetur')
                 ->label('Form Retur Barang')
-                ->icon('heroicon-o-document')
+                ->icon('heroicon-o-document-text')
                 ->color('info')
-                ->url(ReturnPenjualanResource::getUrl('form'))
-                ->openUrlInNewTab(false)
-
+                // Gunakan static method getUrl langsung dari Class Page-nya
+                ->url(fn(): string => FormReturnPenjualan::getUrl())
+                // Opsi tambahan agar loading lebih smooth (ciri khas SPA Laravel)
+                ->extraAttributes([
+                    'x-on:click' => "window.location.href = '" . FormReturnPenjualan::getUrl() . "'",
+                ])
         ];
     }
 }
