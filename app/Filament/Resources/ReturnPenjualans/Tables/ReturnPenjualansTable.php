@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ReturnPenjualans\Tables;
 
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
@@ -27,9 +28,9 @@ class ReturnPenjualansTable
                     ->color(fn(string $state): string => match ($state) {
                         // ['DIPROSES', 'DITOLAK', 'DITERIMA', 'SELESAI' ]
                         'SELESAI' => 'success',
-                        'DIRPOSES' => 'warning',
-                        'DITERIMA' => 'warning',
-                        // 'PENDING' => 'gray',
+                        'DIPROSES' => 'warning',
+                        'DITERIMA' => 'success',
+                        'PENDING' => 'warning',
                         'DITOLAK' => 'danger',
                         default => 'secondary',
                     })
@@ -48,7 +49,8 @@ class ReturnPenjualansTable
 
                 TextColumn::make('tanggal')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                ,
 
                 TextColumn::make('keterangan')
                     ->placeholder('kosong')
@@ -64,24 +66,29 @@ class ReturnPenjualansTable
                     ->toggleable(isToggledHiddenByDefault: true),
 
 
-                TextColumn::make('total')
-                    ->label('Total Pembelian')
+                TextColumn::make('bayar')
+                    ->label('Total Bayar')
                     ->money('IDR', locale: 'id_ID')
                     ->sortable(),
 
+                TextColumn::make('details_return_sum_qty') // Harus format: {relasi}_sum_{kolom}
+                    ->label('Total Qty')
+                    ->sum('details_return', 'qty')
+                    ->alignCenter()
+                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])
             ->recordActions([
-                Action::make('validasi_transaksi')
+                Action::make('validasi_static')
                     ->label('Validasi Transaksi')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
 
                     // Muncul hanya jika BELUM divalidasi
-                    ->visible(fn($record) => empty($record->validated_by))
+                    ->visible(fn($record) => empty($record->validate_by))
 
                     // Pembuat transaksi TIDAK boleh validasi
                     ->disabled(
@@ -104,6 +111,7 @@ class ReturnPenjualansTable
                             ->options([
                                 'DIOLAK' => 'DIOLAK',
                                 'DITERIMA' => 'DITERIMA',
+                                'PENDING' => 'PENDING',
                                 'DIPROSES' => 'DIPROSES',
                                 'SELESAI' => 'SELESAI',
                             ])
@@ -147,11 +155,11 @@ class ReturnPenjualansTable
 
                     ->visible(
                         fn($record) =>
-                        !empty($record->validated_by)
-                        && 
+                        !empty($record->validate_by)
+                        &&
                         (
                             $record->status_return !== 'LUNAS' || filament()->auth()->user()->hasRole("super_admin")
-                        
+
                         )
 
                     )
@@ -163,7 +171,7 @@ class ReturnPenjualansTable
                             app(StokPenyesuaianService::class)
                                 ->validasi_batal_dari_lunas($record->id);
                         }
-                        
+
                         $record->update([
                             'validated_by' => null,
                             'status_return' => 'BELUM DIBAYAR',
@@ -184,7 +192,7 @@ class ReturnPenjualansTable
                 //     ->openUrlInNewTab()
                 //     ->visible(
                 //         fn($record) =>
-                //         !empty($record->validated_by)
+                //         !empty($record->validate_by)
                 //         && !in_array($record->status_transaksi, [
                 //             'DIBATALKAN',
                 //             'BELUM DIBAYAR',
@@ -200,7 +208,7 @@ class ReturnPenjualansTable
                 //     ->openUrlInNewTab()
                 //     ->visible(
                 //         fn($record) =>
-                //         !empty($record->validated_by)
+                //         !empty($record->validate_by)
                 //         && !in_array($record->status_transaksi, [
                 //             'DIBATALKAN',
                 //             'BELUM DIBAYAR',
@@ -216,7 +224,7 @@ class ReturnPenjualansTable
                 //     ->openUrlInNewTab()
                 //     ->visible(
                 //         fn($record) =>
-                //         !empty($record->validated_by)
+                //         !empty($record->validate_by)
                 //         && !in_array($record->status_transaksi, [
                 //             'DIBATALKAN',
                 //             'BELUM DIBAYAR',
@@ -246,6 +254,9 @@ class ReturnPenjualansTable
                             ->success()
                             ->send();
                     }),
+
+                DeleteAction::make()
+                    ->visible(fn($record) => filament()->auth()->user()->hasRole("super_admin"))
 
             ]);
     }

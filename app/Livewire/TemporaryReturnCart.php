@@ -31,13 +31,25 @@ class TemporaryReturnCart extends Component implements HasForms, HasTable, HasAc
      * Struktur: [id => ['qty' => 0, 'keterangan' => '...']]
      */
     public array $listIdRetur = [];
+    // Tambahkan listener ini di dalam class TemporaryReturnCart
+    #[On('trigger-submit-pengembalian')]
+    public function triggerSubmit()
+    {
+        if (empty($this->listIdRetur)) {
+            Notification::make()->title('Keranjang Kosong')->danger()->send();
+            return;
+        }
 
+        // Kirim data keranjang ke parent (FormReturnPenjualan)
+        $this->dispatch('proses-submit-final', keranjangItems: $this->listIdRetur);
+    }
     /**
      * Listener untuk menangkap data dari dispatch parent (FormReturnPenjualan)
      */
     #[On('tambah-ke-keranjang-retur')]
     public function tambahBarang($id, $qty, $keterangan_retur, $nama_barang, $satuan, $harga_jual, $subtotal, $potongan, $qty_beli)
     {
+
         // Simpan semua parameter ke dalam array berdasarkan ID
         $this->listIdRetur[$id] = [
             'id' => $id,
@@ -199,7 +211,7 @@ class TemporaryReturnCart extends Component implements HasForms, HasTable, HasAc
                         unset($this->listIdRetur[$record->id]);
                         // Jangan lupa reset table agar barisnya hilang
                         $this->resetTable();
-$this->dispatch('hapus-dari-keranjang-parent', id: $record->id);
+                        $this->dispatch('hapus-dari-keranjang-parent', id: $record->id);
                         Notification::make()
                             ->title('Data retur dihapus')
                             ->success()

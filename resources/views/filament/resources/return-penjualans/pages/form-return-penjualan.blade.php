@@ -4,6 +4,7 @@
 
     
 @endphp
+
 <x-filament-panels::page>
     <style>
         .hide-datalist-arrow::-webkit-calendar-picker-indicator {
@@ -15,12 +16,13 @@
         {{ $this->form }}
     </form>
 
-    {{-- 🔥 Tampilkan Infolist jika data ditemukan --}}
-    @if ($penjualanTerpilih)
-        <div class="mt-6">
-            {{ $this->infoNota }}
-        </div>
-        <div class="my-6">
+        {{-- 🔥 Tampilkan Infolist jika data ditemukan --}}
+    @if ($this->penjualanTerpilih && isset($this->penjualanTerpilih->id))        
+        {{-- Di form-return-penjualan.blade.php --}}
+            <div class="mt-6" wire:key="info-nota-{{ $penjualanTerpilih->id }}">
+                {{ $this->infoNota }}
+            </div>
+            <div class="mb-6">
             <x-filament::section
             icon="heroicon-m-information-circle"
             icon-color="info"
@@ -55,5 +57,12 @@
 
             @livewire('temporary_return_cart')
         </x-filament::section>        
-    @endif
+
+        <div class="mt-6">
+            {{ $this->footerActions }}
+        </div>
+@endif
+
 </x-filament-panels::page>
+
+

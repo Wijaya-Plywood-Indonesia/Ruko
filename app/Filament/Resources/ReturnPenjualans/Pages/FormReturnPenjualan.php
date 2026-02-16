@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\ReturnPenjualans\Pages;
 
+use App\Models\ReturnPenjualan;
+use App\Models\ReturnPenjualanDetail;
+use Filament\Schemas\Components\Actions;
+use Illuminate\Support\Facades\DB;
+
 use Filament\Schemas\Concerns\InteractsWithSchemas; // SESUAI DOKU 4.X
 use Filament\Schemas\Contracts\HasSchemas;         // SESUAI DOKU 4.X
 use App\Filament\Resources\ReturnPenjualans\ReturnPenjualanResource;
@@ -57,7 +62,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
 
     public ?array $data = [];
     public $dataDetails = null;
-    public $penjualanTerpilih = null;
+    public ?Penjualan $penjualanTerpilih = null;
     public array $barangReturSementaras = [];
 
     public function mount(): void
@@ -90,8 +95,12 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                     ->pluck('no_nota')
                                     ->toArray();
                             })
-                            ->extraInputAttributes(['class' => 'hide-datalist-arrow'])
-                            ->live()
+                            ->extraInputAttributes([
+                                'class' => 'hide-datalist-arrow'
+
+                            ])
+                            ->live(debounce: 200)
+
                             ->afterStateUpdated(fn($state) => $this->pilihNota($state))
                             ->required(),
                     ]),
@@ -212,14 +221,19 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
         $penjualan = Penjualan::where('no_nota', $nota)
             ->whereNotNull("validated_by")
             ->whereIn('status_transaksi', ['LUNAS', 'COD'])
+            // Memastikan nota ini belum ada di tabel penjualan_return
+            ->whereDoesntHave('returns')
             ->first();
-
+            
         if ($penjualan) {
             $this->penjualanTerpilih = $penjualan;
             $this->resetTable();
+            $this->getSchema('infoNota')->record($penjualan);
         } else {
             $this->addError('data.nomor_nota', 'Silakan pilih nota yang valid terlebih dahulu.');
+            $this->barangReturSementaras = [];
         }
+
     }
 
     public function table(Table $table): Table
@@ -307,13 +321,13 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
 
                                 TextInput::make('harga_jual')
                                     ->label('Harga Jual')
-                                    ->default(number_format($record->harga_jual, 0, ',', '.'))
+                                    ->default(number_format((float) $record->harga_jual, 0, ',', '.'))
                                     ->prefix('IDR')
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('qty_beli')
-                                    ->label('Jumlah Beli (Maksimal)')
+                                    ->label('Jumlah Beli (Maksimal Retur)')
                                     ->default($record->qty)
                                     ->suffix($record->satuan)
                                     ->disabled()
@@ -321,7 +335,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
 
                                 TextInput::make('subtotal')
                                     ->label('Total Bayar Item')
-                                    ->default(number_format($record->subtotal, 0, ',', '.'))
+                                    ->default(number_format((float) $record->subtotal, 0, ',', '.'))
                                     ->prefix('IDR')
                                     ->disabled()
                                     ->dehydrated(),
@@ -344,7 +358,16 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                     ->minValue(1)
                                     ->required()
                                     ->reactive()
+                                    ->afterStateUpdated(function ($state) use ($record) {
+                                        $this->resetErrorBag('qty_retur');
+                                        if ($state == 0) {
+                                            $this->addError('data.qty_retur', 'Jumlah retur tidak boleh nol.');
+                                        } else if ($state > $record->qty) {
+                                            $this->addError('data.qty_retur', 'Jumlah retur tidak boleh melebihi jumlah beli.');
+                                        }
+                                    })
                                     ->hint(fn($state) => "Sisa barang: " . ($record->qty - $state)),
+
 
                                 Textarea::make('keterangan_retur')
                                     ->label('Alasan Retur (Reason)')
@@ -357,7 +380,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                         $idUnik = $record->id;
 
                         // Simpan ke state array
-                    // 1. Simpan ke state lokal agar tombol langsung ter-disable
+                        // 1. Simpan ke state lokal agar tombol langsung ter-disable
                         $this->barangReturSementaras[$idUnik] = true;
                         // Kirim event ke tabel sementara (TemporaryReturnCart)
                         // Di file Parent (FormReturnPenjualan / Resource)
@@ -392,13 +415,134 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
 
 
     protected $listeners = [
-    'hapus-dari-keranjang-parent' => 'handleBarangDihapus'
-];
+        'hapus-dari-keranjang-parent' => 'handleBarangDihapus',
+        'proses-submit-final' => 'submitRetur' // Menghubungkan event ke method submitRetur
+    ];
+    public function handleBarangDihapus($id)
+    {
+        if (isset($this->barangReturSementaras[$id])) {
+            unset($this->barangReturSementaras[$id]);
+        }
+    }
+    public function booted()
+    {
+        // Memastikan setiap request Livewire tahu record mana yang dipakai Schema
+        if ($this->penjualanTerpilih) {
+            $this->getSchema('infoNota')->record($this->penjualanTerpilih);
+        }
+    }
 
-public function handleBarangDihapus($id)
-{
-    if (isset($this->barangReturSementaras[$id])) {
-        unset($this->barangReturSementaras[$id]);
+    public function resetKeranjangOnly()
+    {
+        $this->barangReturSementaras = []; // Menghapus tanda 'disabled' di tabel atas
+        $this->dispatch('reset-keranjang'); // Mengosongkan tabel bawah
+        Notification::make()->title('Keranjang dikosongkan')->info()->send();
+    }
+    public function submitRetur($keranjangItems)
+    {
+        if (empty($keranjangItems)) {
+            Notification::make()->title('Keranjang Kosong')->danger()->send();
+            return;
+        }
+        try {
+            DB::transaction(function () use ($keranjangItems) {
+                $returnHeader = ReturnPenjualan::create([
+                    // 'penjualan_id' => $this->penjualanTerpilih->id,
+                    'no_nota' => $this->penjualanTerpilih->no_nota,
+                    'nama_customer' => $this->penjualanTerpilih->nama_customer ?? 'Tidak Diketahui',
+                    'tanggal' => now(),
+                    'is_member' => $this->penjualanTerpilih->is_member ?? false,
+                    'alamat' => $this->penjualanTerpilih->alamat ?? null,
+                    'metode_pembayaran' => $this->penjualanTerpilih->metode_pembayaran ?? 'TUNAI',
+                    'bank' => $this->penjualanTerpilih->bank ?? null,
+                    'no_rekening' => $this->penjualanTerpilih->no_rekening ?? null,
+                    'kendaraan' => $this->penjualanTerpilih->kendaraan ?? null,
+                    'plat_kendaraan' => $this->penjualanTerpilih->plat_kendaraan ?? null,
+                    'nama_sopir' => $this->penjualanTerpilih->nama_sopir ?? null,
+                    'total' => collect($keranjangItems)->sum(fn($item) => $item['harga_jual'] * $item['qty']),
+                    'bayar' => collect($keranjangItems)->sum(fn($item) => $item['harga_jual'] * $item['qty']),
+                    'kembalian' => 0,
+                    'created_by' => auth()->id(),
+                    'validated_by' => null,
+                    // 'toko_id' => $this->penjualanTerpilih->toko_id,
+                    'status_return' => 'PENDING',
+                ]);
+
+                foreach ($keranjangItems as $item) {
+                    ReturnPenjualanDetail::create([
+                        'id_return' => $returnHeader->id,
+                        'id_barang' => $item['id'] ?? null,
+                        'nama_barang' => $item['nama_barang'],
+                        'satuan' => $item['satuan'],
+                        'harga_awal' => $item['harga_awal'] ?? 0,
+                        'harga_jual' => $item['harga_jual'],
+                        'potongan' => $item['potongan'] ?? 0,
+                        'qty' => $item['qty'],
+                        'subtotal' => $item['harga_jual'] * $item['qty'],
+                        'keterangan' => $item['keterangan'],
+                    ]);
+                }
+            });
+            Notification::make()->title('Retur Berhasil Disimpan')->success()->send();
+            return redirect()->to(ReturnPenjualanResource::getUrl('index'));
+        } catch (\Throwable $th) {
+            dd($th);
+            Notification::make()->title('Retur Gagal Disimpan')->danger()->send();
+            // return redirect()->to(ReturnPenjualanResource::getUrl('index'));
+            //throw $th;
+        }
+
+    }
+
+    public function resetNota()
+    {
+        $this->data['nomor_nota'] = '';
+        $this->penjualanTerpilih = null;
+        $this->barangReturSementaras = [];
+        $this->dispatch('reset-keranjang');
+        $this->dispatch('scroll-to-top');
+    }
+
+    public function footerActions(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Actions::make([
+                    Action::make('kembali')
+                        ->label('Kembali')
+                        ->color('gray')
+                        ->icon('heroicon-m-arrow-left')
+                        ->requiresConfirmation()
+                        ->url(fn() => ReturnPenjualanResource::getUrl('index')),
+
+                    Action::make('resetNota')
+                        ->label('Reset Nota')
+                        ->color('danger')
+                        ->icon('heroicon-m-no-symbol')
+                        ->outlined()
+                        ->requiresConfirmation()
+                        ->action(fn() => $this->resetNota()),
+
+                    Action::make('resetKeranjang')
+                        ->label('Reset Keranjang')
+                        ->color('warning')
+                        ->icon('heroicon-m-trash')
+                        ->outlined()
+                        ->requiresConfirmation()
+                        ->action(fn() => $this->resetKeranjangOnly()),
+
+                    Action::make('submitRetur')
+                        ->label('PROSES SIMPAN RETUR')
+                        ->color('success')
+                        ->icon('heroicon-m-check-circle')
+                        ->requiresConfirmation()
+                        ->action(fn() => $this->dispatch('trigger-submit-pengembalian')->to('temporary-return-cart')),
+                ])
+                    ->fullWidth()
+                    ->extraAttributes([
+                        'class' => 'flex justify-end !flex-row w-full',
+                    ])
+            ]);
     }
 }
-}
+

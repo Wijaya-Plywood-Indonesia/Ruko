@@ -55,7 +55,7 @@ class Penjualan extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function user_return()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -77,4 +77,13 @@ class Penjualan extends Model
     {
         return $this->belongsTo(IdentitasToko::class, 'toko_id');
     }
-}
+
+    // Tambahkan di dalam class Penjualan
+    public function returns()
+    {
+        // Sesuaikan 'penjualan_id' dengan foreign key di tabel penjualan_return Anda
+        return $this->hasMany(ReturnPenjualan::class, 'no_nota', 'no_nota');
+    }
+
+// Di dalam class ReturnPenjualan
+    }

@@ -55,4 +55,9 @@ class ReturnPenjualan extends Model
     {
         return $this->belongsTo(IdentitasToko::class, 'toko_id');
     }
+    // Di dalam class ReturnPenjualan
+    public function details_return()
+    {
+        return $this->hasMany(ReturnPenjualanDetail::class, 'id_return', 'id');
+    }
 }
