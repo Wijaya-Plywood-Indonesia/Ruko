@@ -44,7 +44,7 @@ return new class extends Migration {
 
             // Keterangan & Status
             $table->text('keterangan')->nullable();
-            $table->enum('status_return', ['DIPROSES', 'DITOLAK', 'DITERIMA', 'SELESAI' ]);
+            $table->enum('status_return', ['DIPROSES', 'DITOLAK', 'DITERIMA', 'SELESAI', 'PENDING' ]);
             // $table->enum('tipe_return', ['REFUND', 'REPLACE', 'REPAIR' ]);
             // $table->enum('lokasi_barang', ['CUSTOMER', 'TOKO', 'GUDANG', 'PABRIK' ]);
 

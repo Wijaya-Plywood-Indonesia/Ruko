@@ -6,6 +6,7 @@ use App\Filament\Resources\Penjualans\PenjualanResource;
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -260,6 +261,9 @@ class PenjualansTable
                             ->success()
                             ->send();
                     }),
+
+                    DeleteAction::make()
+                    ->visible(fn($record) => filament()->auth()->user()->hasRole("super_admin"))
 
             ])
             ->headerActions([

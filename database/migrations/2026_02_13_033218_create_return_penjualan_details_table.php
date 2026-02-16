@@ -11,11 +11,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('penjualan_return', function (Blueprint $table) {
-            $table->foreignId('toko_id')
-                ->after('barang_id') 
-                ->constrained('identitas_toko')
-                ->restrictOnDelete();
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Tabel Penjualan Detail (Item Barang)
+        |--------------------------------------------------------------------------
+        */
+        Schema::create('penjualan_return_detail', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('id_return')
+                ->constrained('penjualan_return')
+                ->cascadeOnDelete();
+
+            // Relasi opsional ke master barang
+            $table->foreignId('id_barang')
+                ->nullable()
+                ->constrained('barangs')
+                ->nullOnDelete();
+
+            // Snapshot barang
+            $table->string('nama_barang');
+            $table->string('satuan')->nullable();
+
+            // Qty & Harga
+            $table->decimal('harga_awal', 15, 2);
+            $table->decimal('harga_jual', 15, 2);
+            $table->decimal('potongan', 15, 2);
+            $table->integer('qty');
+            $table->decimal('subtotal', 15, 2);
+
+            // Keterangan (diskon / negosiasi)
+            $table->text('keterangan')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -24,10 +52,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('penjualan_return', function (Blueprint $table) {
-            // Hapus foreign key dan kolom jika migration di-rollback
-            $table->dropForeign(['toko_id']);
-            $table->dropColumn('toko_id');
-        });
+        Schema::dropIfExists('penjualan_return_detail');
     }
 };
