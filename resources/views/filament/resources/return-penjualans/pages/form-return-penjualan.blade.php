@@ -55,6 +55,7 @@
                 Berikut adalah detail item retur untuk nota ini.
             </x-slot>
 
+            @livewire('past-return-penjualan', ['no_nota' => $penjualanTerpilih->no_nota])
             @livewire('temporary_return_cart')
         </x-filament::section>        
 

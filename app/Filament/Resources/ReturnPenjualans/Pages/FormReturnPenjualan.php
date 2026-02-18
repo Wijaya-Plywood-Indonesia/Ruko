@@ -222,13 +222,14 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
             ->whereNotNull("validated_by")
             ->whereIn('status_transaksi', ['LUNAS', 'COD'])
             // Memastikan nota ini belum ada di tabel penjualan_return
-            ->whereDoesntHave('returns')
+            // ? ->whereDoesntHave('returns')
             ->first();
-            
+
         if ($penjualan) {
             $this->penjualanTerpilih = $penjualan;
             $this->resetTable();
             $this->getSchema('infoNota')->record($penjualan);
+            $this->dispatch('past-return-penjualan-updated');
         } else {
             $this->addError('data.nomor_nota', 'Silakan pilih nota yang valid terlebih dahulu.');
             $this->barangReturSementaras = [];
@@ -300,7 +301,21 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                     ->icon('heroicon-m-arrow-uturn-left')
                     ->color('warning')
                     // 🔥 LOGIKA DISABLE: Jika ID ada di array, maka tombol mati
-                    ->disabled(fn(DetailPenjualan $record) => $this->isSudahAdaDiRetur($record->id))
+                    ->disabled(function (DetailPenjualan $record) {
+                        // 1. Ambil ID Return berdasarkan nota
+                        $returnIds = ReturnPenjualan::where('no_nota', $this->data['nomor_nota'])->pluck('id');
+
+                        // 2. Hitung total qty yang sudah diretur untuk barang ini secara spesifik
+                        $totalTeretur = ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                            ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
+                            ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
+            
+                        // 3. Logika: Disable jika (Total teretur >= Qty beli) ATAU sudah masuk list sementara
+                        $isLunasRetur = $totalTeretur >= $record->qty;
+                        $isDalamKeranjang = $this->isSudahAdaDiRetur($record->id);
+
+                        return $isLunasRetur || $isDalamKeranjang;
+                    })
                     ->modalHeading('Input Detail Retur Barang')
                     ->modalWidth('2xl') // Kita buat agak lebar karena fieldnya banyak
                     ->form(fn(DetailPenjualan $record) => [
@@ -354,24 +369,56 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                     ->label('Jumlah Yang Diretur')
                                     ->numeric()
                                     ->default(1)
-                                    ->maxValue($record->qty) // Validasi tidak boleh lebih dari beli
+                                    ->maxValue(
+                                        function ($get) use ($record) {
+                                            // 1. Ambil ID Return berdasarkan nota
+                                            $returnIds = ReturnPenjualan::where('no_nota', $this->data['nomor_nota'])->pluck('id');
+
+                                            // 2. Hitung total qty yang sudah diretur untuk barang ini secara spesifik
+                                            $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                                                ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
+                                                ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
+
+                                            // 3. Hitung sisa maksimal yang bisa diretur
+                                            $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0);
+                                            return $sisaBisaDiretur;
+                                        }
+                                    ) // Validasi tidak boleh lebih dari beli
                                     ->minValue(1)
                                     ->required()
                                     ->reactive()
-                                    ->afterStateUpdated(function ($state) use ($record) {
-                                        $this->resetErrorBag('qty_retur');
-                                        if ($state == 0) {
-                                            $this->addError('data.qty_retur', 'Jumlah retur tidak boleh nol.');
-                                        } else if ($state > $record->qty) {
-                                            $this->addError('data.qty_retur', 'Jumlah retur tidak boleh melebihi jumlah beli.');
-                                        }
-                                    })
-                                    ->hint(fn($state) => "Sisa barang: " . ($record->qty - $state)),
+                                    // ->afterStateUpdated(function ($state) use ($record) {
+                                    //     $this->resetErrorBag('qty_retur');
+                                    //     $returnIds = ReturnPenjualan::where('no_nota', $this->data['nomor_nota'])->pluck('id');
 
+                                    //     // 2. Hitung total qty yang sudah diretur untuk barang ini secara spesifik
+                                    //     $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                                    //         ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
+                                    //         ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
+                            
 
+                                    //     if ($state == 0) {
+                                    //         $this->addError('data.qty_retur', 'Jumlah retur tidak boleh nol.');
+                                    //     } else if ($state > ($record->qty - $totalTeretur - $state)) {
+                                    //         $this->addError('data.qty_retur', 'Jumlah retur tidak boleh melebihi jumlah beli yang tersisa.');
+                                    //     }
+                                    // })
+
+                                    ->hint(function($state) use ($record) {
+                                        $returnIds = ReturnPenjualan::where('no_nota', $this->data['nomor_nota'])->pluck('id');
+                                        $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                                            ->where('id_barang', $record->barang_id)
+                                            ->sum('qty');
+
+                                        // dd($state, $record->barang_id, $record->qty, $totalTeretur, $returnIds->toArray());
+
+                                        $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0) - ($state ?? 0);
+                                        return "Sisa bisa diretur: {$sisaBisaDiretur} {$record->satuan}";
+                                    }),
                                 Textarea::make('keterangan_retur')
                                     ->label('Alasan Retur (Reason)')
                                     ->placeholder('Contoh: Barang cacat produksi / expired')
+                                    ->maxLength(255)
                                     ->required() // Biasanya retur wajib ada alasan
                                     ->rows(3),
                             ]),
@@ -387,6 +434,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                         $this->dispatch(
                             'tambah-ke-keranjang-retur',
                             id: $record->id,
+                            barang_id: $record->barang_id,
                             qty: $data['qty_retur'],
                             keterangan_retur: $data['keterangan_retur'],
                             nama_barang: $record->barang->nama_barang,
@@ -463,15 +511,14 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                     'bayar' => collect($keranjangItems)->sum(fn($item) => $item['harga_jual'] * $item['qty']),
                     'kembalian' => 0,
                     'created_by' => auth()->id(),
-                    'validated_by' => null,
-                    // 'toko_id' => $this->penjualanTerpilih->toko_id,
-                    'status_return' => 'PENDING',
+                    'validate_by' => null,
+                    'status_return' => 'DIPROSES',
                 ]);
 
                 foreach ($keranjangItems as $item) {
                     ReturnPenjualanDetail::create([
                         'id_return' => $returnHeader->id,
-                        'id_barang' => $item['id'] ?? null,
+                        'id_barang' => $item['barang_id'] ?? null,
                         'nama_barang' => $item['nama_barang'],
                         'satuan' => $item['satuan'],
                         'harga_awal' => $item['harga_awal'] ?? 0,

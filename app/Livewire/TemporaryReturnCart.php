@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\DetailPenjualan;
+use App\Models\ReturnPenjualan;
+use App\Models\ReturnPenjualanDetail;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -43,16 +45,19 @@ class TemporaryReturnCart extends Component implements HasForms, HasTable, HasAc
         // Kirim data keranjang ke parent (FormReturnPenjualan)
         $this->dispatch('proses-submit-final', keranjangItems: $this->listIdRetur);
     }
+
+
     /**
      * Listener untuk menangkap data dari dispatch parent (FormReturnPenjualan)
      */
     #[On('tambah-ke-keranjang-retur')]
-    public function tambahBarang($id, $qty, $keterangan_retur, $nama_barang, $satuan, $harga_jual, $subtotal, $potongan, $qty_beli)
+    public function tambahBarang($id, $barang_id, $qty, $keterangan_retur, $nama_barang, $satuan, $harga_jual, $subtotal, $potongan, $qty_beli)
     {
 
         // Simpan semua parameter ke dalam array berdasarkan ID
         $this->listIdRetur[$id] = [
             'id' => $id,
+            'barang_id' => $barang_id,
             'qty' => $qty,
             'keterangan' => $keterangan_retur,
             'nama_barang' => $nama_barang,
@@ -71,8 +76,16 @@ class TemporaryReturnCart extends Component implements HasForms, HasTable, HasAc
             ->query(function () {
                 $ids = array_keys($this->listIdRetur);
                 // Return query kosong jika tidak ada data, agar tidak error
-                return DetailPenjualan::query()->whereIn('id', count($ids) > 0 ? $ids : [0]);
+                return DetailPenjualan::query()->whereIn('id', count($ids) > 0 ? $ids : [0])
+                ;
             })
+            ->header(
+                // Kita gunakan view sederhana untuk judul
+                fn() => view('filament.components.table-header', [
+                    'title' => 'Detail Return saat ini',
+                    'description' => 'Berikut ini merupakan barang yang kamu retur saat ini.',
+                ])
+            )
             ->columns([
                 TextColumn::make('barang.nama_barang')
                     ->label('Barang Retur')
@@ -175,13 +188,36 @@ class TemporaryReturnCart extends Component implements HasForms, HasTable, HasAc
                                     ->label('Jumlah Yang Diretur')
                                     ->numeric()
                                     ->required()
-                                    ->maxValue($record->qty)
-                                    ->minValue(1)
+                                    ->maxValue(
+                                        function ($get) use ($record) {
+                                            // 1. Ambil ID Return berdasarkan nota
+                                            $returnIds = ReturnPenjualan::where('no_nota', $record->penjualan?->no_nota)->pluck('id');
+                                            // 2. Hitung total qty yang sudah diretur untuk barang ini secara spesifik
+                                            $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                                                ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
+                                                ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
+                                
+                                            // 3. Hitung sisa maksimal yang bisa diretur
+                                            $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0);
+                                            return $sisaBisaDiretur;
+                                        }
+                                    )->minValue(1)
                                     ->reactive()
-                                    ->hint(fn($state) => "Sisa barang di nota: " . ($record->qty - $state)),
+                                    ->hint(function ($state) use ($record) {
+                                        $returnIds = ReturnPenjualan::where('no_nota', $record->penjualan?->no_nota)->pluck('id');
+                                        $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
+                                            ->where('id_barang', $record->barang_id)
+                                            ->sum('qty');
+
+                                        // dd($state, $record->barang_id, $record->qty, $totalTeretur, $returnIds->toArray());
+                            
+                                        $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0) - ($state ?? 0);
+                                        return "Sisa bisa diretur: {$sisaBisaDiretur} {$record->satuan}";
+                                    }),
 
                                 Textarea::make('keterangan_retur')
                                     ->label('Alasan Retur (Reason)')
+                                    ->maxLength(255)
                                     ->required()
                                     ->rows(3),
                             ]),

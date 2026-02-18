@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ReturnPenjualans\Pages;
 
 use App\Filament\Resources\ReturnPenjualans\ReturnPenjualanResource;
 use App\Models\DetailPenjualan;
+use App\Models\ReturnPenjualan;
 use App\Models\ReturnPenjualanDetail;
 use DB;
 use Filament\Actions\Action;
@@ -30,7 +31,7 @@ use Filament\Tables\Table;
 class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, HasTable, HasActions, HasSchemas
 {
     protected static ?string $title = 'Edit Detail Transaksi Retur';
-
+    protected string $view = 'filament.resources.return-penjualans.pages.edit-return-penjualan';
     public array $listIdRetur = []; // State keranjang untuk sinkronisasi
     /**
      * 🔥 SOLUSI TOTAL BENTROK TRAIT
@@ -56,9 +57,20 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
         parent::mount($record);
 
         // Sinkronisasi data dari DB ke State Array saat pertama kali load
-        $this->listIdRetur = ReturnPenjualanDetail::where('id_return', $this->getRecord()->id)
+        ReturnPenjualanDetail::where('id_return', $this->getRecord()->id)
             ->get()
             ->mapWithKeys(function ($item) {
+                $this->listIdRetur[$item->id] = [ // Gunakan detail_penjualan_id sebagai key utama
+                    'id_detail_retur' => $item->id, // Untuk keperluan update DB nantinya
+                    'qty' => $item->qty,
+                    'keterangan' => $item->keterangan,
+                    'nama_barang' => $item->nama_barang,
+                    'satuan' => $item->satuan,
+                    'harga_jual' => $item->harga_jual,
+                    'qty_beli' => $item->detailPenjualan?->qty ?? $item->qty, // Ambil qty beli dari relasi DetailPenjualan jika ada
+                    'subtotal' => $item->subtotal,
+                    'potongan' => $item->potongan,
+                ];
                 return [
                     $item->detail_penjualan_id => [
                         'id_detail_retur' => $item->id, // Untuk keperluan update DB nantinya
@@ -86,36 +98,19 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                 ->modalHeading('Simpan Perubahan Detail?')
                 ->modalDescription('Semua perubahan pada tabel detail akan dipermanenkan ke database.')
                 ->action(function () {
-                    DB::transaction(function () {
-                        // 1. Hapus data lama yang sudah tidak ada di listIdRetur (opsional, tergantung logic bisnis)
-                        ReturnPenjualanDetail::where('id_return', $this->getRecord()->id)
-                            ->whereNotIn('detail_penjualan_id', array_keys($this->listIdRetur))
-                            ->delete();
+                    $totalActual = ReturnPenjualanDetail::where('id_return', $this->getRecord()->id)
+                        ->sum(DB::raw('harga_jual * qty'));
 
-                        // 2. Update atau Create data baru
-                        foreach ($this->listIdRetur as $detailPenjualanId => $val) {
-                            ReturnPenjualanDetail::updateOrCreate(
-                                [
-                                    'id_return' => $this->getRecord()->id,
-                                    'detail_penjualan_id' => $detailPenjualanId,
-                                ],
-                                [
-                                    'qty' => $val['qty'],
-                                    'subtotal' => $val['harga_jual'] * $val['qty'],
-                                    'keterangan' => $val['keterangan'],
-                                ]
-                            );
-                        }
-
-                        // 3. Update Total di Parent (Header Retur)
-                        $totalBaru = collect($this->listIdRetur)->sum(fn($item) => $item['harga_jual'] * $item['qty']);
-                        $this->getRecord()->update(['total' => $totalBaru]);
-                    });
+                    $this->getRecord()->update([
+                        'total' => $totalActual,
+                    ]);
 
                     Notification::make()->title('Data Berhasil Disinkronisasi')->success()->send();
-                }),
+                })
+                ->visible(fn() => auth()->user()?->hasRole("super_admin"))
+            ,
 
-                    // Ganti DeleteAction menjadi Action biasa untuk menghindari error Type Hint Model
+            // Ganti DeleteAction menjadi Action biasa untuk menghindari error Type Hint Model
             Action::make('delete_retur')
                 ->label('Hapus')
                 ->color('danger')
@@ -126,10 +121,10 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                 ->visible(fn() => auth()->user()?->hasRole("super_admin"))
                 ->action(function () {
                     $record = $this->getRecord();
-                    
+
                     // Hapus detail terlebih dahulu (jika tidak ada cascade delete di DB)
                     ReturnPenjualanDetail::where('id_return', $record->id)->delete();
-                    
+
                     $record->delete();
 
                     Notification::make()
@@ -138,8 +133,9 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                         ->send();
 
                     return redirect()->to(ReturnPenjualanResource::getUrl('index'));
-                }),
-    ];
+                })
+            ,
+        ];
     }
     public function table(Table $table): Table
     {
@@ -147,8 +143,19 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
             ->query(function () {
                 // Kita gunakan DetailPenjualan sebagai base model untuk tabel 
                 // tapi difilter berdasarkan apa yang ada di listIdRetur
-                return DetailPenjualan::whereIn('id', array_keys($this->listIdRetur));
+                // dd($this->listIdRetur); // Debug untuk memastikan state array sudah benar
+    
+                $query = ReturnPenjualanDetail::where('id_return', $this->getRecord()->id);
+                return $query;
             })
+            ->header(
+                // Kita gunakan view sederhana untuk judul
+                fn() => view('filament.components.table-header', [
+                    'title' => 'Detail Return Penjualan',
+                    'description' => 'Berikut ini merupakan barang yang kamu return.',
+                ])
+            )
+
             ->columns([
                 TextColumn::make('nama_barang')
                     ->label('Barang Retur')
@@ -193,8 +200,12 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                     ->modalHeading('Edit Detail Retur Barang')
                     ->modalWidth('2xl')
                     ->mountUsing(function ($form, $record) {
-                        // Ambil data langsung dari array state
-                        $state = $this->listIdRetur[$record->id];
+                        // Keamanan: Cek apakah data ada di state sebelum load
+                        $state = $this->listIdRetur[$record->id] ?? null;
+                        if (!$state) {
+                            Notification::make()->title('Data tidak ditemukan')->danger()->send();
+                            return;
+                        }
 
                         $form->fill([
                             'qty_retur' => $state['qty'],
@@ -206,75 +217,100 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                             'subtotal' => number_format($state['subtotal'], 0, ',', '.'),
                             'potongan' => number_format($state['potongan'], 0, ',', '.'),
                         ]);
-                    })->form(fn(DetailPenjualan $record) => [
-                        // --- INFORMASI BARANG (DISABLED & DEHYDRATED) ---
-                        Grid::make(2)
+                    })
+                    ->form(fn(ReturnPenjualanDetail $record) => [
+                        // ... grid informasi barang tetap sama (disabled) ...
+
+                        Grid::make(2) // Bagi dua kolom agar tidak kepanjangan kebawah
                             ->schema([
                                 TextInput::make('barang_nama')
                                     ->label('Nama Barang')
+                                    ->default($record->barang->nama_barang)
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('satuan')
                                     ->label('Satuan')
+                                    ->default($record->satuan)
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('harga_jual_display')
                                     ->label('Harga Jual')
+                                    ->default(number_format((float) $record->harga_jual, 0, ',', '.'))
                                     ->prefix('IDR')
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('qty_beli')
-                                    ->label('Jumlah Beli (Maksimal)')
-                                    ->suffix($this->listIdRetur[$record->id]['satuan'])
+                                    ->label('Jumlah Beli (Maksimal Retur)')
+                                    ->default($record->qty)
+                                    ->suffix($record->satuan)
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('subtotal')
                                     ->label('Total Bayar Item')
+                                    ->default(number_format((float) $record->subtotal, 0, ',', '.'))
                                     ->prefix('IDR')
                                     ->disabled()
                                     ->dehydrated(),
 
                                 TextInput::make('potongan')
                                     ->label('Potongan Harga')
+                                    ->default(number_format($record->potongan ?? 0, 0, ',', '.'))
                                     ->disabled()
                                     ->dehydrated(),
                             ]),
 
                         Section::make('Koreksi Data Retur')
-                            ->description('Silahkan ubah jumlah atau alasan retur')
                             ->schema([
                                 TextInput::make('qty_retur')
                                     ->label('Jumlah Yang Diretur')
                                     ->numeric()
                                     ->required()
-                                    ->maxValue($record->qty)
+                                    // Validasi Berlapis: Cek terhadap qty di database asli ($record->qty)
+                                    ->maxValue(fn() => $record->qty)
                                     ->minValue(1)
                                     ->reactive()
-                                    ->hint(fn($state) => "Sisa barang di nota: " . ($record->qty - $state)),
+                                    ->helperText(fn($state, $component) => "Maksimal yang bisa diretur: {$record->qty} {$record->satuan}"),
 
                                 Textarea::make('keterangan_retur')
-                                    ->label('Alasan Retur (Reason)')
+                                    ->label('Alasan Retur')
                                     ->required()
+                                    ->maxLength(255) // Keamanan: Batasi panjang string
                                     ->rows(3),
                             ]),
                     ])
-                    ->action(function (array $data, $record) {
-                        // Update state array
-                        $this->listIdRetur[$record->id]['qty'] = $data['qty_retur'];
-                        $this->listIdRetur[$record->id]['keterangan'] = $data['keterangan_retur'];
+                    ->action(function (array $data, ReturnPenjualanDetail $record) {
+                        // Validasi Akhir sebelum simpan ke state
+                        if ($data['qty_retur'] > $record->qty) {
+                            Notification::make()->title('Jumlah retur melebihi pembelian!')->danger()->send();
+                            return;
+                        }
+
+                        // Update state array dengan sinkronisasi harga
+                        $this->listIdRetur[$record->id] = array_merge($this->listIdRetur[$record->id], [
+                            'qty' => $data['qty_retur'],
+                            'keterangan' => $data['keterangan_retur'],
+                        ]);
+
+                        ReturnPenjualanDetail::where('id', $record->id)->update([
+                            'qty' => $data['qty_retur'],
+                            'keterangan' => $data['keterangan_retur'],
+                            'subtotal' => $record->harga_jual * $data['qty_retur'], // Update subtotal sesuai qty baru
+                        ]);
 
                         Notification::make()
-                            ->title('Berhasil diubah')
-                            ->body("Detail retur {$record->barang->nama_barang} telah diperbarui.")
+                            ->title('Detail retur diperbarui')
                             ->success()
                             ->send();
 
                         $this->resetTable();
-                    }),
+
+                    })
+                    ->visible(fn() => auth()->user()?->hasRole("super_admin"))
+                ,
                 Action::make('hapus')
                     ->label('Batal')
                     ->color('danger')
@@ -288,13 +324,18 @@ class EditReturnPenjualan extends EditRecord implements HasForms, HasInfolists, 
                         // Jangan lupa reset table agar barisnya hilang
                         $this->resetTable();
                         $this->dispatch('hapus-dari-keranjang-parent', id: $record->id);
+
+                        ReturnPenjualanDetail::where('id', $record->id)->delete();
                         Notification::make()
                             ->title('Data retur dihapus')
                             ->success()
                             ->send();
 
-                    }),
+                    })
+                    ->visible(fn() => auth()->user()?->hasRole("super_admin"))
+                ,
             ])
+            // ->headerAc
             ->emptyStateHeading('Keranjang retur masih kosong')
             ->emptyStateDescription('Pilih barang pada tabel daftar barang di atas untuk diretur.')
             ->emptyStateIcon('heroicon-o-shopping-cart');
