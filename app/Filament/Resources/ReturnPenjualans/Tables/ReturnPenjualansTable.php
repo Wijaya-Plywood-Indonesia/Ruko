@@ -74,6 +74,7 @@ class ReturnPenjualansTable
                 TextColumn::make('details_return_sum_qty') // Harus format: {relasi}_sum_{kolom}
                     ->label('Total Qty')
                     ->sum('details_return', 'qty')
+                    ->default(0)
                     ->alignCenter()
                     ->sortable(),
             ])
@@ -109,7 +110,7 @@ class ReturnPenjualansTable
                         Select::make('status_return')
                             ->label('Status Retur')
                             ->options([
-                                'DIOLAK' => 'DIOLAK',
+                                'DITOLAK' => 'DITOLAK',
                                 'DITERIMA' => 'DITERIMA',
                                 'PENDING' => 'PENDING',
                                 'DIPROSES' => 'DIPROSES',
@@ -131,13 +132,15 @@ class ReturnPenjualansTable
 
                         // ! CALL SERVICE
                         $status = $data['status_return'];
-                        if ($status === 'SELESAI') {
-                            app(StokPenyesuaianService::class)
-                                ->lunas($record->id);
-                        }
+                        // if ($status === 'SELESAI') {
+                        //     app(StokPenyesuaianService::class)
+                        //         ->lunas($record->id);
+                        // }
+
+                        // dd(filament()->auth()->id());
 
                         $record->update([
-                            'validated_by' => filament()->auth()->id(),
+                            'validate_by' => filament()->auth()->id(),
                             'status_return' => $status,
                         ]);
 
@@ -158,7 +161,7 @@ class ReturnPenjualansTable
                         !empty($record->validate_by)
                         &&
                         (
-                            $record->status_return !== 'LUNAS' || filament()->auth()->user()->hasRole("super_admin")
+                            $record->status_return !== 'SELESAI' || filament()->auth()->user()->hasRole("super_admin")
 
                         )
 
@@ -167,14 +170,14 @@ class ReturnPenjualansTable
                     ->action(function ($record) {
                         // ! CALL SERVICE
                         $status = $record->status_return;
-                        if ($status === 'LUNAS') {
+                        if ($status === 'SELESAI') {
                             app(StokPenyesuaianService::class)
                                 ->validasi_batal_dari_lunas($record->id);
                         }
 
                         $record->update([
-                            'validated_by' => null,
-                            'status_return' => 'BELUM DIBAYAR',
+                            'validate_by' => null,
+                            'status_return' => 'DIPROSES',
                         ]);
 
                         Notification::make()
@@ -183,54 +186,6 @@ class ReturnPenjualansTable
                             ->send();
                     }),
                 ViewAction::make(),
-                //  EditAction::make(),
-                // Action::make('cetak')
-                //     ->label('Cetak Nota')
-                //     ->icon('heroicon-o-printer')
-                //     ->color('primary') // 🔵 Biru
-                //     ->url(fn($record) => route('nota.cetak', $record))
-                //     ->openUrlInNewTab()
-                //     ->visible(
-                //         fn($record) =>
-                //         !empty($record->validate_by)
-                //         && !in_array($record->status_transaksi, [
-                //             'DIBATALKAN',
-                //             'BELUM DIBAYAR',
-                //             'PENDING',
-                //         ])
-                //     ),
-
-                // Action::make('cetakThermal')
-                //     ->label('Cetak Thermal')
-                //     ->icon('heroicon-o-printer')
-                //     ->color('success') // 🟢 Hijau
-                //     ->url(fn($record) => route('nota.cetakThermal', $record))
-                //     ->openUrlInNewTab()
-                //     ->visible(
-                //         fn($record) =>
-                //         !empty($record->validate_by)
-                //         && !in_array($record->status_transaksi, [
-                //             'DIBATALKAN',
-                //             'BELUM DIBAYAR',
-                //             'PENDING',
-                //         ])
-                //     ),
-
-                // Action::make('suratJalan')
-                //     ->label('Cetak Surat Jalan')
-                //     ->icon('heroicon-o-truck')
-                //     ->color('warning') // 🟠 Kuning / Orange
-                //     ->url(fn($record) => route('surat-jalan.penjualan.cetak', $record))
-                //     ->openUrlInNewTab()
-                //     ->visible(
-                //         fn($record) =>
-                //         !empty($record->validate_by)
-                //         && !in_array($record->status_transaksi, [
-                //             'DIBATALKAN',
-                //             'BELUM DIBAYAR',
-                //             'PENDING',
-                //         ])
-                //     ),
                 Action::make('edit_keterangan')
                     ->label('Edit Keterangan')
                     ->icon('heroicon-o-pencil-square')
