@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Barang;
+use App\Models\ReturnPenjualanDetail;
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
 use App\Services\StokLogs\StokLogService;
@@ -102,6 +103,58 @@ class StokPenyesuaianService
 
 
     }
+
+    public function selesai(
+        int $id_penjualan
+    ) {
+    $penjualanDetails = ReturnPenjualanDetail::where('id_return', $id_penjualan)
+            ->select(['id_barang', 'qty', "nama_barang"])
+            ->get();
+
+        foreach ($penjualanDetails as $detail) {
+            $barang = StokBarangToko::
+                select('id', 'stok', 'toko_id')
+                ->find($detail->id_barang)
+            ;
+
+            if (!$barang) {
+                return; // atau throw exception
+            }
+            $stokSebelum = (int) $barang->stok;
+            $stokSesudah = $stokSebelum - (int) $detail->qty;
+
+            $barang->update([
+                'stok' => $stokSesudah,
+            ]);
+            StokLogService::buatLog(
+                barangId: $detail->id_barang,
+                tokoId: $barang->toko_id,
+                tipe: 'retur',
+                qty: $detail->qty,
+                refType: "penjualan_return",
+                refId: $id_penjualan,
+                stokTerakhir: $stokSebelum,
+                stokSesudah: $stokSesudah
+            );
+            Notification::make()
+                ->title("Stok $detail->nama_barang berhasil dikurangi")
+                // ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
+                ->body("Total Stok menjadi $stokSesudah")
+                ->success()
+                ->send();
+
+
+        }
+
+        Notification::make()
+            ->title('Return Selesai')
+            ->success()
+            ->send();
+
+
+    }
+
+    
     public function validasi_batal_dari_lunas(
         int $id_penjualan
     ) {
@@ -144,6 +197,51 @@ class StokPenyesuaianService
             }
         Notification::make()
             ->title('Transaksi dibatalkan')
+            ->success()
+            ->send();
+
+    }
+    public function validasi_batal_dari_selesai(
+        int $id_penjualan
+    ) {
+        $penjualanDetails = ReturnPenjualanDetail::where('id_return', $id_penjualan)
+            ->select(['id_barang', 'qty', "nama_barang"])
+            ->get();
+
+        foreach ($penjualanDetails as $detail) {
+            $barang = StokBarangToko::
+                select('id', 'stok', 'toko_id')
+                ->find($detail->id_barang)
+            ;
+
+            if (!$barang) {
+                return; // atau throw exception
+            }
+            $stokSebelum = (int) $barang->stok;
+            $stokSesudah = $stokSebelum + (int) $detail->qty;
+
+            $barang->update([
+                'stok' => $stokSesudah,
+            ]);
+            StokLogService::buatLog(
+                barangId: $detail->id_barang,
+                tokoId: $barang->toko_id,
+                tipe: 'retur',
+                qty: $detail->qty,
+                refType: "penjualan_return",
+                refId: $id_penjualan,
+                stokTerakhir: $stokSebelum,
+                stokSesudah: $stokSesudah
+            );
+
+            Notification::make()
+                ->title("Stok $detail->nama_barang berhasil di kembalikan")
+                ->body("Total Stok menjadi $stokSesudah")
+                ->success()
+                ->send();
+            }
+        Notification::make()
+            ->title('Return dibatalkan')
             ->success()
             ->send();
 

@@ -132,12 +132,10 @@ class ReturnPenjualansTable
 
                         // ! CALL SERVICE
                         $status = $data['status_return'];
-                        // if ($status === 'SELESAI') {
-                        //     app(StokPenyesuaianService::class)
-                        //         ->lunas($record->id);
-                        // }
-
-                        // dd(filament()->auth()->id());
+                        if ($status === 'SELESAI') {
+                            app(StokPenyesuaianService::class)
+                                ->selesai($record->id);
+                        }
 
                         $record->update([
                             'validate_by' => filament()->auth()->id(),
@@ -172,16 +170,16 @@ class ReturnPenjualansTable
                         $status = $record->status_return;
                         if ($status === 'SELESAI') {
                             app(StokPenyesuaianService::class)
-                                ->validasi_batal_dari_lunas($record->id);
+                                ->validasi_batal_dari_selesai($record->id);
                         }
 
                         $record->update([
                             'validate_by' => null,
-                            'status_return' => 'DIPROSES',
+                            'status_return' => 'DITOLAK',
                         ]);
 
                         Notification::make()
-                            ->title('Validasi transaksi berhasil dibatalkan')
+                            ->title('Validasi return berhasil dibatalkan')
                             ->success()
                             ->send();
                     }),
