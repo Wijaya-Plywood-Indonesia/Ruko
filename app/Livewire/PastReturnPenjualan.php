@@ -19,40 +19,52 @@ class PastReturnPenjualan extends Component implements HasForms, HasTable, HasAc
 {
     use InteractsWithForms, InteractsWithTable, InteractsWithActions;
     public ?string $no_nota = null;
+    public bool $isNotaAvailable = false;
 
     public function isReadOnly(): bool
     {
         return true; // Pastikan tabel ini hanya untuk read-only
     }
 
-    public function mountNota($no_nota)
+    #[On('past-return-penjualan-updated')]
+    public function mountNota($no_nota = null)
     {
         $this->no_nota = $no_nota;
+
+        $returnIds = ReturnPenjualan::where('no_nota', $this->no_nota)->pluck('id');
+
+        // Jika nota kosong atau tidak ada retur, kembalikan query kosong yang valid
+        if ($returnIds->isEmpty()) {
+            $this->isNotaAvailable = false;
+            return ReturnPenjualanDetail::query()->whereRaw('1 = 0');
+        }else{
+            $this->isNotaAvailable = true;
+        }
+
         $this->resetTable();
     }
 
-    
-
-    #[On('past-return-penjualan-updated')]
     public function table(Table $table): Table
     {
         return $table
-        ->query(function () {
+            ->query(function () {
                 // Ambil ID semua retur berdasarkan nota
                 $returnIds = ReturnPenjualan::where('no_nota', $this->no_nota)->pluck('id');
 
                 // Jika nota kosong atau tidak ada retur, kembalikan query kosong yang valid
                 if ($returnIds->isEmpty()) {
+                    $this->isNotaAvailable = false;
                     return ReturnPenjualanDetail::query()->whereRaw('1 = 0');
                 }
 
+                $this->isNotaAvailable = true;
                 return ReturnPenjualanDetail::query()->whereIn('id_return', $returnIds);
             })
             ->header(
                 // Kita gunakan view sederhana untuk judul
                 fn() => view('filament.components.table-header', [
-                    'title' => 'Detail Return saat ini',
-                    'description' => 'Berikut ini merupakan barang yang kamu retur saat ini.',
+                    'title' => 'Detail Return sebelumnya',
+                    'description' => 'Berikut ini merupakan barang yang sudah diretur sebelumnya.',
                 ])
             )
             ->columns([

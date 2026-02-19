@@ -229,7 +229,8 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
             $this->penjualanTerpilih = $penjualan;
             $this->resetTable();
             $this->getSchema('infoNota')->record($penjualan);
-            $this->dispatch('past-return-penjualan-updated');
+            // Contoh di Parent Component (FormReturnPenjualan)
+            $this->dispatch('past-return-penjualan-updated', no_nota: $penjualan->no_nota);
         } else {
             $this->addError('data.nomor_nota', 'Silakan pilih nota yang valid terlebih dahulu.');
             $this->barangReturSementaras = [];
@@ -378,7 +379,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                             $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
                                                 ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
                                                 ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
-
+                                
                                             // 3. Hitung sisa maksimal yang bisa diretur
                                             $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0);
                                             return $sisaBisaDiretur;
@@ -395,7 +396,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                     //     $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
                                     //         ->where('id_barang', $record->barang_id) // Sesuaikan: barang_id sesuai Model Anda
                                     //         ->sum('qty'); // Langsung sum lebih aman daripada get()->first()
-                            
+
 
                                     //     if ($state == 0) {
                                     //         $this->addError('data.qty_retur', 'Jumlah retur tidak boleh nol.');
@@ -404,14 +405,14 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                                     //     }
                                     // })
 
-                                    ->hint(function($state) use ($record) {
+                                    ->hint(function ($state) use ($record) {
                                         $returnIds = ReturnPenjualan::where('no_nota', $this->data['nomor_nota'])->pluck('id');
                                         $totalTeretur = (int) ReturnPenjualanDetail::whereIn('id_return', $returnIds)
                                             ->where('id_barang', $record->barang_id)
                                             ->sum('qty');
 
                                         // dd($state, $record->barang_id, $record->qty, $totalTeretur, $returnIds->toArray());
-
+                            
                                         $sisaBisaDiretur = $record->qty - ($totalTeretur ?? 0) - ($state ?? 0);
                                         return "Sisa bisa diretur: {$sisaBisaDiretur} {$record->satuan}";
                                     }),
@@ -488,11 +489,19 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
     }
     public function submitRetur($keranjangItems)
     {
-        if (empty($keranjangItems)) {
-            Notification::make()->title('Keranjang Kosong')->danger()->send();
-            return;
-        }
         try {
+            if (empty($keranjangItems)) {
+                Notification::make()->title('Keranjang Kosong')->danger()->send();
+                return;
+            }
+
+            Notification::make()->title('Proses Menyimpan Retur')
+            ->body('Sedang menyimpan data retur, mohon tunggu sebentar...')
+            ->warning()
+            ->send();
+
+
+
             DB::transaction(function () use ($keranjangItems) {
                 $returnHeader = ReturnPenjualan::create([
                     // 'penjualan_id' => $this->penjualanTerpilih->id,
@@ -530,11 +539,15 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                     ]);
                 }
             });
-            Notification::make()->title('Retur Berhasil Disimpan')->success()->send();
+            Notification::make()->title('Retur Berhasil Disimpan')
+            ->body("Retur untuk nota {$this->penjualanTerpilih->no_nota} berhasil disimpan.")
+            ->success()->send();
             return redirect()->to(ReturnPenjualanResource::getUrl('index'));
         } catch (\Throwable $th) {
-            dd($th);
-            Notification::make()->title('Retur Gagal Disimpan')->danger()->send();
+            // dd($th);
+            Notification::make()->title('Retur Gagal Disimpan')->
+                body("Terjadi kesalahan saat menyimpan retur. Silahkan Hubungi Tim  IT")->
+                danger()->send();
             // return redirect()->to(ReturnPenjualanResource::getUrl('index'));
             //throw $th;
         }
@@ -579,7 +592,7 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                         ->action(fn() => $this->resetKeranjangOnly()),
 
                     Action::make('submitRetur')
-                        ->label('PROSES SIMPAN RETUR')
+                        ->label('Simpan Return Pernjualan')
                         ->color('success')
                         ->icon('heroicon-m-check-circle')
                         ->requiresConfirmation()
