@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Barang;
+use App\Models\ReturnPenjualanDetail;
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
 use App\Services\StokLogs\StokLogService;
@@ -179,13 +180,58 @@ class StokPenyesuaianService
                 ->send();
         });
     }
+    public function validasi_batal_dari_selesai(
+        int $id_penjualan
+    ) {
+        $penjualanDetails = ReturnPenjualanDetail::where('id_return', $id_penjualan)
+            ->select(['id_barang', 'qty', "nama_barang"])
+            ->get();
+
+        foreach ($penjualanDetails as $detail) {
+            $barang = StokBarangToko::
+                select('id', 'stok', 'toko_id')
+                ->find($detail->id_barang)
+            ;
+
+            if (!$barang) {
+                return; // atau throw exception
+            }
+            $stokSebelum = (int) $barang->stok;
+            $stokSesudah = $stokSebelum + (int) $detail->qty;
+
+            $barang->update([
+                'stok' => $stokSesudah,
+            ]);
+            StokLogService::buatLog(
+                barangId: $detail->id_barang,
+                tokoId: $barang->toko_id,
+                tipe: 'retur',
+                qty: $detail->qty,
+                refType: "penjualan_return",
+                refId: $id_penjualan,
+                stokTerakhir: $stokSebelum,
+                stokSesudah: $stokSesudah
+            );
+
+            Notification::make()
+                ->title("Stok $detail->nama_barang berhasil di kembalikan")
+                ->body("Total Stok menjadi $stokSesudah")
+                ->success()
+                ->send();
+        }
+        Notification::make()
+            ->title('Return dibatalkan')
+            ->success()
+            ->send();
+
+    }
 
     public static function queryBarangByToko(int $tokoId, int $penjualanId): Builder
     {
         return Barang::query()
             ->whereHas('stokBarangTokos', function ($q) use ($tokoId) {
                 $q->where('toko_id', $tokoId)
-                  ->where('stok', '>', 0);
+                    ->where('stok', '>', 0);
             })
             ->whereDoesntHave('penjualanDetails', function ($q) use ($penjualanId) {
                 $q->where('penjualan_id', $penjualanId);
@@ -197,7 +243,7 @@ class StokPenyesuaianService
         int|null $qty,
         float|int|null $potongan = 0
     ): float {
-        $subtotal = ((float)$hargaJual * (int)$qty) - (float)$potongan;
+        $subtotal = ((float) $hargaJual * (int) $qty) - (float) $potongan;
         return max($subtotal, 0);
     }
 

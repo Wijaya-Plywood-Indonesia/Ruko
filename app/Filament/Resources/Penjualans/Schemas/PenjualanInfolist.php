@@ -107,6 +107,8 @@ class PenjualanInfolist
                             ->label('Diubah')
                             ->dateTime('d M Y H:i'),
                     ]),
-            ]);
+                    ]
+                    
+                    );
     }
 }

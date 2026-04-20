@@ -4,6 +4,11 @@ namespace App\Filament\Resources\Penjualans\Tables;
 
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -79,9 +84,10 @@ class PenjualansTable
                     ->color('success')
                     ->requiresConfirmation()
 
-                    ->visible(fn ($record) => empty($record->validated_by))
+                    ->visible(fn($record) => empty($record->validated_by))
 
-                    ->disabled(fn ($record) =>
+                    ->disabled(
+                        fn($record) =>
                         $record->user_id === filament()->auth()->id()
                         && !filament()->auth()->user()->hasRole('super_admin')
                     )
@@ -92,7 +98,7 @@ class PenjualansTable
                     ->form([
                         TextInput::make('validator_name')
                             ->label('Validator')
-                            ->default(fn () => filament()->auth()->user()->name)
+                            ->default(fn() => filament()->auth()->user()->name)
                             ->disabled()
                             ->dehydrated(false),
 
@@ -156,7 +162,8 @@ class PenjualansTable
                     ->color('danger')
                     ->requiresConfirmation()
 
-                    ->visible(fn ($record) =>
+                    ->visible(
+                        fn($record) =>
                         !empty($record->validated_by)
                         && (
                             $record->status_transaksi !== 'LUNAS'
@@ -200,9 +207,10 @@ class PenjualansTable
                     ->label('Cetak Nota')
                     ->icon('heroicon-o-printer')
                     ->color('primary')
-                    ->url(fn ($record) => route('nota.cetak', $record))
+                    ->url(fn($record) => route('nota.cetak', $record))
                     ->openUrlInNewTab()
-                    ->visible(fn ($record) =>
+                    ->visible(
+                        fn($record) =>
                         !empty($record->validated_by)
                         && !in_array($record->status_transaksi, [
                             'DIBATALKAN',
@@ -233,6 +241,19 @@ class PenjualansTable
                             ->success()
                             ->send();
                     }),
+
+
+                DeleteAction::make()
+                    ->visible(fn($record) => filament()->auth()->user()->hasRole("super_admin"))
+
+            ])
+            ->headerActions([
+                //
+            ])
+            ->toolbarActions([
+                // BulkActionGroup::make([
+                //     DeleteBulkAction::make(),
+                // ]),
             ]);
     }
 }
