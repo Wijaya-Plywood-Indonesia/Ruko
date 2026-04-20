@@ -90,6 +90,7 @@ class StokLogsTable
                     ->sortable(),
 
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 // nanti bisa tambahin filter Masuk / Keluar
             ])
