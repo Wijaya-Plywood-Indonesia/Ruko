@@ -164,7 +164,7 @@
                         <td>{{ $detail->barang->nama_barang }}</td>
                         <td class="text-center">{{ $detail->satuan }}</td>
                         <td class="text-right">
-                            {{ number_format($detail->qty) }}
+                            {{ number_format($detail->qty, 2) }}
                         </td>
                         <td class="text-right">
                             {{ number_format($detail->harga_jual) }}

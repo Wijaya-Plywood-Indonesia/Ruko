@@ -23,7 +23,7 @@ class DetailPenjualan extends Model
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty' => 'float',
         'harga_awal' => 'decimal:2',
         'harga_jual' => 'decimal:2',
         'subtotal' => 'decimal:2',

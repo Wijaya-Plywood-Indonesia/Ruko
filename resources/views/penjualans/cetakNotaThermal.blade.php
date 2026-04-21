@@ -131,7 +131,7 @@
 
                     <tr>
                         <td class="small">
-                            {{ number_format($detail->qty) }}
+                            {{ number_format($detail->qty, 2) }}
                             {{ $detail->satuan }}
                             x {{ number_format($detail->harga_jual) }}
                         </td>

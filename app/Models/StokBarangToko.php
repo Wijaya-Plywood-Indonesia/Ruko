@@ -22,7 +22,7 @@ class StokBarangToko extends Model
      * Casts
      */
     protected $casts = [
-        'stok' => 'integer',
+        'stok' => 'float',
     ];
 
     /* =========================
@@ -43,12 +43,12 @@ class StokBarangToko extends Model
      |  HELPERS
      ========================= */
 
-    public function tambah(int $qty): void
+    public function tambah(float $qty): void
     {
         $this->increment('stok', $qty);
     }
 
-    public function kurang(int $qty): void
+    public function kurang(float $qty): void
     {
         $this->decrement('stok', $qty);
     }

@@ -85,8 +85,8 @@ class StokPenyesuaianService
                     ]);
                 }
 
-                $stokSebelum = (int) $stok->stok;
-                $stokSesudah = $stokSebelum - (int) $detail->qty;
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum - (float) $detail->qty;
 
                 if ($stokSesudah < 0) {
                     throw ValidationException::withMessages([
@@ -102,7 +102,7 @@ class StokPenyesuaianService
                     barangId: $detail->barang_id,
                     tokoId: $tokoId,
                     tipe: 'penjualan',
-                    qty: -$detail->qty,
+                    qty: -(float) $detail->qty,
                     refType: "penjualans",
                     refId: $id_penjualan,
                     stokTerakhir: $stokSebelum,
@@ -149,8 +149,8 @@ class StokPenyesuaianService
                     ]);
                 }
 
-                $stokSebelum = (int) $stok->stok;
-                $stokSesudah = $stokSebelum + (int) $detail->qty;
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum + (float) $detail->qty;
 
                 $stok->update([
                     'stok' => $stokSesudah,
@@ -160,7 +160,7 @@ class StokPenyesuaianService
                     barangId: $detail->barang_id,
                     tokoId: $tokoId,
                     tipe: 'batal_penjualan',
-                    qty: $detail->qty,
+                    qty: (float) $detail->qty,
                     refType: "penjualans",
                     refId: $id_penjualan,
                     stokTerakhir: $stokSebelum,

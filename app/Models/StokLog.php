@@ -28,9 +28,9 @@ class StokLog extends Model
      * Casts
      */
     protected $casts = [
-        'qty' => 'integer',
-        'stok_sebelum' => 'integer',
-        'stok_sesudah' => 'integer',
+        'qty' => 'float',
+        'stok_sebelum' => 'float',
+        'stok_sesudah' => 'float',
     ];
 
     /* =========================

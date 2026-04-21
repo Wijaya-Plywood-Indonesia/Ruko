@@ -409,7 +409,7 @@
                                 <small>Rp {{ number_format($barang->harga_jual) }}</small><br>
                                <small>
     Stock:
-    {{ ($barang->stok_aktual ?? 0) > 0 ? $barang->stok_aktual : 'Kosong' }}
+    {{ ($barang->stok_aktual ?? 0) > 0 ? number_format((float) $barang->stok_aktual, 2) : 'Kosong' }}
 </small>
                             </div>
                     @endforeach
@@ -450,7 +450,8 @@
 
                                 <input
                                     type="number"
-                                    min="1"
+                                    min="0.01"
+                                    step="0.01"
                                     class="pos-input"
                                     style="
                                         width: 70px;
@@ -551,7 +552,8 @@
                         <button wire:click="decrementQty({{ $id }})">−</button>
                         <input
                             type="number"
-                            min="1"
+                            min="0.01"
+                            step="0.01"
                             wire:model.lazy="cart.{{ $id }}.qty"
                             wire:change="updateQty({{ $id }})"
                         />
@@ -764,8 +766,8 @@
     />
 
     @php
-        $bayar = (int) ($this->bayar ?? 0);
-        $total = (int) ($this->total ?? 0);
+        $bayar = (float) ($this->bayar ?? 0);
+        $total = (float) ($this->total ?? 0);
         $selisih = $bayar - $total;
 
         $color = $selisih < 0 ? 'color:red;' : '';

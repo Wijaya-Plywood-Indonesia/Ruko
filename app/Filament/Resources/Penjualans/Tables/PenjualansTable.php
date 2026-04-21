@@ -84,7 +84,10 @@ class PenjualansTable
                     ->color('success')
                     ->requiresConfirmation()
 
-                    ->visible(fn($record) => empty($record->validated_by))
+                    ->visible(
+                        fn($record) => empty($record->validated_by)
+                        && !in_array($record->status_transaksi, ['LUNAS', 'COD', 'DIBATALKAN'])
+                    )
 
                     ->disabled(
                         fn($record) =>
@@ -165,10 +168,7 @@ class PenjualansTable
                     ->visible(
                         fn($record) =>
                         !empty($record->validated_by)
-                        && (
-                            $record->status_transaksi !== 'LUNAS'
-                            || filament()->auth()->user()->hasRole('super_admin')
-                        )
+                        && filament()->auth()->user()->hasRole('super_admin')
                     )
 
                     ->action(function ($record) {
