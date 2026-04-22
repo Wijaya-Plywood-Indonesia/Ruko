@@ -42,6 +42,12 @@ class IndukAkun extends Model
     {
         return $query->where('status', 'aktif');
     }
+
+    public function isLeaf(): bool
+{
+    // Contoh logika: mengembalikan true jika tidak punya anak akun
+    return $this->anakAkuns()->count() === 0;
+}
     /** Semua anak (untuk count) */
     public function allAnakAkuns()
     {
