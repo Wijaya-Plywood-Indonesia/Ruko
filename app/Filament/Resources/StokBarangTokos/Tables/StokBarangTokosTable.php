@@ -32,7 +32,7 @@ class StokBarangTokosTable
 
                 TextColumn::make('stok')
                     ->label('Stok')
-                    ->numeric()
+                    ->numeric(decimalPlaces: 2)
                     ->sortable(),
 
                 TextColumn::make('created_at')

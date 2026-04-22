@@ -34,7 +34,8 @@ class StokLogsTable
                  |  TRANSAKSI
                  ========================= */
 
-                BadgeColumn::make('tipe')
+                TextColumn::make('tipe')
+                    ->badge()
                     ->label('Tipe')
                     ->colors([
                         'success' => ['pembelian', 'mutasi_masuk', 'retur'],
@@ -46,18 +47,23 @@ class StokLogsTable
 
                 TextColumn::make('qty')
                     ->label('Qty')
-                    ->numeric()
                     ->alignCenter()
+                    ->numeric(decimalPlaces: 2)
+                    ->searchable()
                     ->sortable(),
 
                 TextColumn::make('stok_sebelum')
                     ->label('Stok Sebelum')
-                    ->numeric()
+                    ->searchable()
+                    ->alignCenter()
+                    ->numeric(decimalPlaces: 2)
                     ->sortable(),
 
                 TextColumn::make('stok_sesudah')
                     ->label('Stok Sesudah')
-                    ->numeric()
+                    ->alignCenter()
+                    ->searchable()
+                    ->numeric(decimalPlaces: 2)
                     ->sortable(),
 
                 /* =========================
