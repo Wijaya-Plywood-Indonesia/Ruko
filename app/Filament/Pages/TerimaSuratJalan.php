@@ -20,7 +20,6 @@ class TerimaSuratJalan extends Page implements HasForms
     use InteractsWithForms;
 
     public static ?string $navigationLabel = 'Terima Barang';
-
     protected static string|UnitEnum|null $navigationGroup = 'Stock Barang';
 
     public function getView(): string
@@ -102,13 +101,18 @@ class TerimaSuratJalan extends Page implements HasForms
         $this->details = $this->suratJalan->details
             ->map(function ($detail) {
 
-                $qtyDefault = $detail->qty_diterima ?? $detail->qty_kirim;
+                $qtyDefault = !empty($detail->qty_diterima) && (float) $detail->qty_diterima > 0
+                    ? $detail->qty_diterima
+                    : $detail->qty_kirim;
 
                 return [
                     'id' => $detail->id,
                     'barang' => $detail->barang->nama_barang ?? '-',
-                    'qty_kirim' => (int) $detail->qty_kirim,
-                    'qty_diterima' => (int) $qtyDefault,
+
+                    // ✅ FIX: gunakan float
+                    'qty_kirim' => number_format((float) $detail->qty_kirim, 2, '.', ''),
+                    'qty_diterima' => number_format((float) $qtyDefault, 2, '.', ''),
+
                     'catatan' => $detail->catatan,
                     'locked' => false,
                 ];
@@ -129,20 +133,28 @@ class TerimaSuratJalan extends Page implements HasForms
 
         foreach ($this->details as $item) {
 
-            if ((int) $item['qty_diterima'] > (int) $item['qty_kirim']) {
+            $qtyKirim = (float) $item['qty_kirim'];
+            $qtyDiterima = (float) $item['qty_diterima'];
+
+            // ✅ validasi decimal
+            if ($qtyDiterima > $qtyKirim) {
                 throw ValidationException::withMessages([
                     'details' => 'Qty diterima tidak boleh melebihi qty kirim',
                 ]);
             }
 
-            if ((int) $item['qty_diterima'] < 0) {
+            if ($qtyDiterima < 0) {
                 throw ValidationException::withMessages([
                     'details' => 'Qty diterima tidak boleh minus',
                 ]);
             }
         }
 
-        if (collect($this->details)->sum('qty_diterima') <= 0) {
+        // ✅ sum decimal aman
+        $totalDiterima = collect($this->details)
+            ->sum(fn($item) => (float) $item['qty_diterima']);
+
+        if ($totalDiterima <= 0) {
             Notification::make()
                 ->title('Tidak ada barang yang diterima')
                 ->danger()

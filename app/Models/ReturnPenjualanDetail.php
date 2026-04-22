@@ -14,7 +14,7 @@ class ReturnPenjualanDetail extends Model
         'harga_jual' => 'decimal:2',
         'potongan' => 'decimal:2',
         'subtotal' => 'decimal:2',
-        'qty' => 'integer',
+        'qty' => 'decimal:2',
     ];
 
     public function returnPenjualan()

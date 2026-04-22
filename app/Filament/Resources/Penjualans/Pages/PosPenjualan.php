@@ -23,6 +23,7 @@ class PosPenjualan extends Page
 
     /* ================= identitas Toko ================= */
     public ?int $toko_id = null;
+    public ?string $kodeToko = null;
     public $daftarToko = [];
 
     /* ================= STATE ================= */
@@ -153,7 +154,8 @@ class PosPenjualan extends Page
     public function selectBarang(int $id): void
     {
         $barang = Barang::find($id);
-        if (!$barang) return;
+        if (!$barang)
+            return;
 
         $stokToko = StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
@@ -161,7 +163,7 @@ class PosPenjualan extends Page
 
         $stok = $stokToko?->stok ?? 0;
 
-        if ($stok < 1) {
+        if ($stok < 0.01) {
             $namaToko = IdentitasToko::find($this->toko_id)?->nama_toko ?? 'Toko';
             Notification::make()
                 ->title('Stok barang habis')
@@ -208,12 +210,12 @@ class PosPenjualan extends Page
             return;
         }
 
-        $stock = StokBarangToko::where('barang_id', $id)
+        $stock = (float) (StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
-            ->value('stok') ?? 0;
+            ->value('stok') ?? 0);
 
         // $stock = Barang::find($id)?->stok_toko?->stok ?? 0;
-        $qty = max(1, (int) $this->cart[$id]['qty']);
+        $qty = max(0.01, (float) $this->cart[$id]['qty']);
 
         if ($qty > $stock) {
             Notification::make()
@@ -234,22 +236,22 @@ class PosPenjualan extends Page
 
     public function incrementQty(int $id): void
     {
-        $this->cart[$id]['qty']++;
+        $this->cart[$id]['qty'] = round((float) $this->cart[$id]['qty'] + 1, 2);
         $this->updateQty($id);
     }
 
     public function decrementQty(int $id): void
     {
-        if ($this->cart[$id]['qty'] <= 1) {
+        if ((float) $this->cart[$id]['qty'] <= 0.01) {
             Notification::make()
                 ->title('Minimal Jumlah Barang')
-                ->body('Minimal jumlah barang adalah 1.')
+                ->body('Minimal jumlah barang adalah 0.01.')
                 ->danger()
                 ->send();
             return;
         }
 
-        $this->cart[$id]['qty']--;
+        $this->cart[$id]['qty'] = round((float) $this->cart[$id]['qty'] - 1, 2);
         $this->updateQty($id);
     }
 
@@ -264,8 +266,8 @@ class PosPenjualan extends Page
             return;
         }
 
-        $potongan = max(0, (int) $this->cart[$id]['potongan']);
-        $qty = max(1, (int) $this->cart[$id]['qty']);
+        $potongan = max(0, (float) $this->cart[$id]['potongan']);
+        $qty = max(0.01, (float) $this->cart[$id]['qty']);
 
         $this->cart[$id]['potongan'] = $potongan;
         $this->cart[$id]['total_potongan'] = $potongan * $qty;
@@ -483,10 +485,10 @@ class PosPenjualan extends Page
 
                 if (!$stokToko || $stokToko->stok < $item['qty']) {
                     Notification::make()
-                    ->title('Simpan Penjualan Gagal')
-                    ->body("Stok {$item['nama_barang']} tidak mencukupi.")
-                    ->danger()
-                    ->send();
+                        ->title('Simpan Penjualan Gagal')
+                        ->body("Stok {$item['nama_barang']} tidak mencukupi.")
+                        ->danger()
+                        ->send();
 
                     return;
                 }

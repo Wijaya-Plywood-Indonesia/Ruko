@@ -24,8 +24,10 @@ class DetailSuratJalansTable
                     ->sortable(),
                 TextColumn::make('qty_kirim')
                     ->numeric()
+                    ->numeric(decimalPlaces: 2)
                     ->sortable(),
                 TextColumn::make('qty_diterima')
+                    ->numeric(decimalPlaces: 2)
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('created_at')

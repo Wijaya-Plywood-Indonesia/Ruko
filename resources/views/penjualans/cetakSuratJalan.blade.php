@@ -162,13 +162,13 @@ td, th {
     <td class="text-center">{{ $i + 1 }}</td>
     <td>{{ $detail->barang->nama_barang }}</td>
     <td class="text-center">{{ $detail->satuan }}</td>
-    <td class="text-center">{{ number_format($detail->qty) }}</td>
+    <td class="text-center">{{ number_format($detail->qty,2 ) }}</td>
     <td>{{ $detail->keterangan ?? '' }}</td>
 </tr>
 @endforeach
 <tr>
     <td colspan="3" class="text-right"><strong>Total</strong></td>
-    <td class="text-center"><strong>{{ number_format($penjualan->details->sum('qty')) }}</strong></td>
+    <td class="text-center"><strong>{{ number_format($penjualan->details->sum('qty'), 2) }}</strong></td>
     <td></td>
 </tr>
 </tbody>
@@ -239,13 +239,13 @@ td, th {
     <td class="text-center">{{ $i + 1 }}</td>
     <td>{{ $detail->barang->nama_barang }}</td>
     <td class="text-center">{{ $detail->satuan }}</td>
-    <td class="text-center">{{ number_format($detail->qty) }}</td>
+    <td class="text-center">{{ number_format($detail->qty,2) }}</td>
     <td>{{ $detail->keterangan ?? '' }}</td>
 </tr>
 @endforeach
 <tr>
     <td colspan="3" class="text-right"><strong>Total</strong></td>
-    <td class="text-center"><strong>{{ number_format($penjualan->details->sum('qty')) }}</strong></td>
+    <td class="text-center"><strong>{{ number_format($penjualan->details->sum('qty'),2) }}</strong></td>
     <td></td>
 </tr>
 </tbody>

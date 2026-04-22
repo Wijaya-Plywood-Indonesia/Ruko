@@ -22,17 +22,22 @@ class StokPenyesuaianService
         ?string $catatan
     ): void {
         DB::transaction(function () use ($barangId, $tokoId, $stokFisik, $userId, $catatan) {
-            $stok = StokBarangToko::lockForUpdate()->firstOrCreate(
-                [
+
+            $stok = StokBarangToko::where('barang_id', $barangId)
+                ->where('toko_id', $tokoId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$stok) {
+                $stok = StokBarangToko::create([
                     'barang_id' => $barangId,
                     'toko_id' => $tokoId,
-                ],
-                ['stok' => 0]
-            );
+                    'stok' => 0,
+                ]);
+            }
 
             $stokSebelum = $stok->stok;
 
-            // kalau tidak ada perubahan → stop
             if ($stokSebelum === $stokFisik) {
                 return;
             }
@@ -53,153 +58,127 @@ class StokPenyesuaianService
             ]);
         });
     }
-    public function lunas(
-        int $id_penjualan
-    ) {
-        $penjualanDetails = DB::table('penjualan_details')
-            ->where('penjualan_id', $id_penjualan)
-            ->select(['barang_id', 'qty', "nama_barang"])
-            ->get();
 
-        foreach ($penjualanDetails as $detail) {
-            $barang = StokBarangToko::
-                select('id', 'stok', 'toko_id')
-                ->find($detail->barang_id)
-            ;
+    public function lunas(int $id_penjualan): void
+    {
+        DB::transaction(function () use ($id_penjualan) {
 
-            if (!$barang) {
-                return; // atau throw exception
+            $tokoId = DB::table('penjualans')
+                ->where('id', $id_penjualan)
+                ->value('toko_id');
+
+            $details = DB::table('penjualan_details')
+                ->where('penjualan_id', $id_penjualan)
+                ->select(['barang_id', 'qty', 'nama_barang'])
+                ->get();
+
+            foreach ($details as $detail) {
+
+                $stok = StokBarangToko::where('barang_id', $detail->barang_id)
+                    ->where('toko_id', $tokoId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stok) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Stok {$detail->nama_barang} tidak ditemukan"
+                    ]);
+                }
+
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum - (float) $detail->qty;
+
+                if ($stokSesudah < 0) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Stok {$detail->nama_barang} tidak mencukupi"
+                    ]);
+                }
+
+                $stok->update([
+                    'stok' => $stokSesudah,
+                ]);
+
+                StokLogService::buatLog(
+                    barangId: $detail->barang_id,
+                    tokoId: $tokoId,
+                    tipe: 'penjualan',
+                    qty: -(float) $detail->qty,
+                    refType: "penjualans",
+                    refId: $id_penjualan,
+                    stokTerakhir: $stokSebelum,
+                    stokSesudah: $stokSesudah
+                );
+
+                Notification::make()
+                    ->title("Stok {$detail->nama_barang} berkurang")
+                    ->body("Sisa stok: $stokSesudah")
+                    ->success()
+                    ->send();
             }
-            $stokSebelum = (int) $barang->stok;
-            $stokSesudah = $stokSebelum - (int) $detail->qty;
 
-            $barang->update([
-                'stok' => $stokSesudah,
-            ]);
-            StokLogService::buatLog(
-                barangId: $detail->barang_id,
-                tokoId: $barang->toko_id,
-                tipe: 'penjualan',
-                qty: $detail->qty,
-                refType: "penjualans",
-                refId: $id_penjualan,
-                stokTerakhir: $stokSebelum,
-                stokSesudah: $stokSesudah
-            );
             Notification::make()
-                ->title("Stok $detail->nama_barang berhasil dikurangi")
-                // ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
-                ->body("Total Stok menjadi $stokSesudah")
+                ->title('Transaksi Lunas')
                 ->success()
                 ->send();
-
-
-        }
-
-        Notification::make()
-            ->title('Transaksi Lunas')
-            ->success()
-            ->send();
-
-
+        });
     }
 
-    public function selesai(
-        int $id_penjualan
-    ) {
-    $penjualanDetails = ReturnPenjualanDetail::where('id_return', $id_penjualan)
-            ->select(['id_barang', 'qty', "nama_barang"])
-            ->get();
+    public function batalLunas(int $id_penjualan): void
+    {
+        DB::transaction(function () use ($id_penjualan) {
 
-        foreach ($penjualanDetails as $detail) {
-            $barang = StokBarangToko::
-                select('id', 'stok', 'toko_id')
-                ->find($detail->id_barang)
-            ;
+            $tokoId = DB::table('penjualans')
+                ->where('id', $id_penjualan)
+                ->value('toko_id');
 
-            if (!$barang) {
-                return; // atau throw exception
+            $details = DB::table('penjualan_details')
+                ->where('penjualan_id', $id_penjualan)
+                ->select(['barang_id', 'qty', 'nama_barang'])
+                ->get();
+
+            foreach ($details as $detail) {
+
+                $stok = StokBarangToko::where('barang_id', $detail->barang_id)
+                    ->where('toko_id', $tokoId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stok) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Stok {$detail->nama_barang} tidak ditemukan"
+                    ]);
+                }
+
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum + (float) $detail->qty;
+
+                $stok->update([
+                    'stok' => $stokSesudah,
+                ]);
+
+                StokLogService::buatLog(
+                    barangId: $detail->barang_id,
+                    tokoId: $tokoId,
+                    tipe: 'batal_penjualan',
+                    qty: (float) $detail->qty,
+                    refType: "penjualans",
+                    refId: $id_penjualan,
+                    stokTerakhir: $stokSebelum,
+                    stokSesudah: $stokSesudah
+                );
+
+                Notification::make()
+                    ->title("Stok {$detail->nama_barang} dikembalikan")
+                    ->body("Total stok: $stokSesudah")
+                    ->success()
+                    ->send();
             }
-            $stokSebelum = (int) $barang->stok;
-            $stokSesudah = $stokSebelum - (int) $detail->qty;
-
-            $barang->update([
-                'stok' => $stokSesudah,
-            ]);
-            StokLogService::buatLog(
-                barangId: $detail->id_barang,
-                tokoId: $barang->toko_id,
-                tipe: 'retur',
-                qty: $detail->qty,
-                refType: "penjualan_return",
-                refId: $id_penjualan,
-                stokTerakhir: $stokSebelum,
-                stokSesudah: $stokSesudah
-            );
-            Notification::make()
-                ->title("Stok $detail->nama_barang berhasil dikurangi")
-                // ->body("Stok $detail->nama_barang di kurangi sejumlah $detail->qty, sebelumnya $stokSebelum, sesudah $stokSesudah")
-                ->body("Total Stok menjadi $stokSesudah")
-                ->success()
-                ->send();
-
-
-        }
-
-        Notification::make()
-            ->title('Return Selesai')
-            ->success()
-            ->send();
-
-
-    }
-
-    
-    public function validasi_batal_dari_lunas(
-        int $id_penjualan
-    ) {
-        $penjualanDetails = DB::table('penjualan_details')
-            ->where('penjualan_id', $id_penjualan)
-            ->select(['barang_id', 'qty', "nama_barang"])
-            ->get();
-
-        foreach ($penjualanDetails as $detail) {
-            $barang = StokBarangToko::
-                select('id', 'stok', 'toko_id')
-                ->find($detail->barang_id)
-            ;
-
-            if (!$barang) {
-                return; // atau throw exception
-            }
-            $stokSebelum = (int) $barang->stok;
-            $stokSesudah = $stokSebelum + (int) $detail->qty;
-
-            $barang->update([
-                'stok' => $stokSesudah,
-            ]);
-            StokLogService::buatLog(
-                barangId: $detail->barang_id,
-                tokoId: $barang->toko_id,
-                tipe: 'penjualan',
-                qty: $detail->qty,
-                refType: "penjualans",
-                refId: $id_penjualan,
-                stokTerakhir: $stokSebelum,
-                stokSesudah: $stokSesudah
-            );
 
             Notification::make()
-                ->title("Stok $detail->nama_barang berhasil di kembalikan")
-                ->body("Total Stok menjadi $stokSesudah")
+                ->title('Transaksi dibatalkan')
                 ->success()
                 ->send();
-            }
-        Notification::make()
-            ->title('Transaksi dibatalkan')
-            ->success()
-            ->send();
-
+        });
     }
     public function validasi_batal_dari_selesai(
         int $id_penjualan
@@ -239,7 +218,7 @@ class StokPenyesuaianService
                 ->body("Total Stok menjadi $stokSesudah")
                 ->success()
                 ->send();
-            }
+        }
         Notification::make()
             ->title('Return dibatalkan')
             ->success()
@@ -250,14 +229,13 @@ class StokPenyesuaianService
     public static function queryBarangByToko(int $tokoId, int $penjualanId): Builder
     {
         return Barang::query()
-            ->whereHas('stokBarangTokos', function ($query) use ($tokoId) {
-                $query->where('toko_id', $tokoId)
+            ->whereHas('stokBarangTokos', function ($q) use ($tokoId) {
+                $q->where('toko_id', $tokoId)
                     ->where('stok', '>', 0);
             })
-            ->whereDoesntHave('penjualanDetails', function ($query) use ($penjualanId) {
-                $query->where('penjualan_id', $penjualanId);
-            })
-            ->select('barangs.*');
+            ->whereDoesntHave('penjualanDetails', function ($q) use ($penjualanId) {
+                $q->where('penjualan_id', $penjualanId);
+            });
     }
 
     public static function calculate_subtotal(
@@ -265,12 +243,7 @@ class StokPenyesuaianService
         int|null $qty,
         float|int|null $potongan = 0
     ): float {
-        $hargaJual = (float) ($hargaJual ?? 0);
-        $qty = (int) ($qty ?? 0);
-        $potongan = (float) ($potongan ?? 0);
-
-        $subtotal = ($hargaJual * $qty) - $potongan;
-
+        $subtotal = ((float) $hargaJual * (int) $qty) - (float) $potongan;
         return max($subtotal, 0);
     }
 
@@ -279,12 +252,9 @@ class StokPenyesuaianService
         int|null $qty,
         float|int|null $potongan = 0
     ): void {
-        $subtotal = self::calculate_subtotal($hargaJual, $qty, $potongan);
-
-        if ($subtotal <= 0) {
-
+        if (self::calculate_subtotal($hargaJual, $qty, $potongan) <= 0) {
             throw ValidationException::withMessages([
-                'subtotal' => 'Pembelian tidak wajar. Subtotal harus lebih dari 0.',
+                'subtotal' => 'Subtotal harus lebih dari 0.',
             ]);
         }
     }
