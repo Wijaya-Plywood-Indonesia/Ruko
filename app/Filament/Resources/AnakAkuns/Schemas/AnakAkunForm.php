@@ -13,11 +13,11 @@ class AnakAkunForm
     {
         return $schema
             ->components([
-                // Select::make('id_induk_akun')
-                //     ->relationship('indukAkun', 'nama_induk_akun')
-                //     ->preload()
-                //     ->searchable()
-                //     ->required(),
+                Select::make('id_induk_akun')
+                    ->relationship('indukAkun', 'nama_induk_akun')
+                    ->preload()
+                    ->searchable()
+                    ->required(),
 
                 TextInput::make('kode_anak_akun')
                     ->required()

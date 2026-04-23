@@ -2,28 +2,24 @@
 
 namespace App\Filament\Resources\IndukAkuns;
 
-use App\Filament\Resources\AkunGroups\RelationManagers\AnakAkunsRelationManager;
 use App\Filament\Resources\IndukAkuns\Pages\CreateIndukAkun;
 use App\Filament\Resources\IndukAkuns\Pages\EditIndukAkun;
 use App\Filament\Resources\IndukAkuns\Pages\ListIndukAkuns;
 use App\Filament\Resources\IndukAkuns\Pages\ViewIndukAkun;
+use App\Filament\Resources\IndukAkuns\RelationManagers\AnakAkunsRelationManager;
 use App\Filament\Resources\IndukAkuns\RelationManagers\SubAnakAkunRelationManager;
 use App\Filament\Resources\IndukAkuns\Schemas\IndukAkunForm;
 use App\Filament\Resources\IndukAkuns\Schemas\IndukAkunInfolist;
 use App\Filament\Resources\IndukAkuns\Tables\IndukAkunsTable;
 use App\Models\IndukAkun;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use UnitEnum;
 
 class IndukAkunResource extends Resource
 {
     protected static ?string $model = IndukAkun::class;
-
-    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
     protected static string|UnitEnum|null $navigationGroup = 'Master Data';
 
@@ -47,19 +43,18 @@ class IndukAkunResource extends Resource
     public static function getRelations(): array
     {
         return [
-                //
-            AnakAkunsRelationManager::class,
-            SubAnakAkunRelationManager::class,
+            AnakAkunsRelationManager::class,   // inline form, tanpa select induk
+            SubAnakAkunRelationManager::class,  // inline form, filter anak dari induk ini
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ListIndukAkuns::route('/'),
+            'index'  => ListIndukAkuns::route('/'),
             'create' => CreateIndukAkun::route('/create'),
-            'view' => ViewIndukAkun::route('/{record}'),
-            'edit' => EditIndukAkun::route('/{record}/edit'),
+            'view'   => ViewIndukAkun::route('/{record}'),
+            'edit'   => EditIndukAkun::route('/{record}/edit'),
         ];
     }
 }
