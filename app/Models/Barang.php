@@ -56,5 +56,4 @@ class Barang extends Model
         // Pastikan foreign key 'barang_id' sesuai dengan di database
         return $this->hasMany(StokBarangToko::class, 'barang_id');
     }
-
 }
