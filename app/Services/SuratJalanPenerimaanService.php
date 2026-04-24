@@ -33,8 +33,8 @@ class SuratJalanPenerimaanService
                     continue;
                 }
 
-                $qtyKirim = (int) $detail->qty_kirim;
-                $qtyDiterima = (int) ($item['qty_diterima'] ?? 0);
+                $qtyKirim = (float) $detail->qty_kirim;
+                $qtyDiterima = (float) ($item['qty_diterima'] ?? 0);
 
                 if ($qtyDiterima > $qtyKirim) {
                     throw new Exception(

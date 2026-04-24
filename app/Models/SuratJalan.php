@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\NomorSuratJalanService;
 use Illuminate\Database\Eloquent\Model;
 
 class SuratJalan extends Model
 {
-    //
     protected $table = 'surat_jalan';
 
-    /**
-     * Mass assignable attributes
-     */
     protected $fillable = [
         'no_surat_jalan',
         'tanggal_kirim',
@@ -26,49 +23,57 @@ class SuratJalan extends Model
         'validated_by',
     ];
 
-    /**
-     * Default attribute values
-     */
     protected $attributes = [
         'status' => 'draft',
     ];
 
-    /**
-     * Casts
-     */
     protected $casts = [
         'tanggal_kirim' => 'date',
     ];
 
     /* =========================
+     |  AUTO GENERATE NOMOR
+     ========================= */
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (SuratJalan $model) {
+            if (empty($model->no_surat_jalan)) {
+                $model->no_surat_jalan = NomorSuratJalanService::generate(
+                    $model->tanggal_kirim
+                    ? $model->tanggal_kirim->toDateString()
+                    : null
+                );
+            }
+        });
+    }
+
+    /* =========================
      |  RELATIONSHIPS
      ========================= */
 
-    // Toko asal (gudang pusat)
     public function tokoAsal()
     {
         return $this->belongsTo(IdentitasToko::class, 'toko_asal_id');
     }
 
-    // Toko tujuan (toko ecer)
     public function tokoTujuan()
     {
         return $this->belongsTo(IdentitasToko::class, 'toko_tujuan_id');
     }
 
-    // Pembuat surat jalan
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // Validator / penerima
     public function validatedBy()
     {
         return $this->belongsTo(User::class, 'validated_by');
     }
 
-    // Detail barang (akan kita buat setelah ini)
     public function details()
     {
         return $this->hasMany(DetailSuratJalan::class, 'surat_jalan_id');
@@ -96,17 +101,14 @@ class SuratJalan extends Model
     {
         return $this->status === 'draft';
     }
-
     public function isDikirim(): bool
     {
         return $this->status === 'dikirim';
     }
-
     public function isDiterima(): bool
     {
         return $this->status === 'diterima';
     }
-
     public function isDitolak(): bool
     {
         return $this->status === 'ditolak';
