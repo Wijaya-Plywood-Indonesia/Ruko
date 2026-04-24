@@ -9,6 +9,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class BarangMasuksTable
@@ -19,16 +20,25 @@ class BarangMasuksTable
             ->columns([
                 TextColumn::make('tanggal')
                     ->label("Tanggal Barang Masuk")
-                    ->date()
+                    ->formatStateUsing(function ($state) {
+                        if (!$state)
+                            return '-';
+
+                        return Carbon::parse($state)
+                            ->locale('id')
+                            ->translatedFormat('l , d F Y');
+                    })
                     ->sortable(),
-                TextColumn::make('penerima_barang')
-                    ->label('Penerima barang')
-                    ->searchable(),
                 TextColumn::make('nomor_nota')
                     ->label("Nomor nota")
                     ->searchable(),
+                TextColumn::make('penerima_barang')
+                    ->label('Penerima barang')
+                    ->searchable(),
                 TextColumn::make('created_by')
                     ->label('Dibuat Oleh')
+                    ->badge()
+                    ->color('gray')
                     ->searchable(),
                 TextColumn::make('validated_by')
                     ->label('Divalidasi Oleh')

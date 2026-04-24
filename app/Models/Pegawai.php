@@ -37,4 +37,8 @@ class Pegawai extends Model
         return $this->hasMany(ListAkun::class, 'id_pegawai');
     }
 
+    public function detailPresensi()
+    {
+        return $this->hasMany(DetailPresensi::class, 'id_pegawai');
+    }
 }
