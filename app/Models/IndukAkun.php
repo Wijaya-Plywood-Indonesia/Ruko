@@ -30,10 +30,10 @@ class IndukAkun extends Model
     }
 
     /** Semua anak (untuk count, tanpa ordering overhead) */
-    public function allAnakAkuns(): HasMany
-    {
-        return $this->hasMany(AnakAkun::class, 'id_induk_akun');
-    }
+    // public function allAnakAkuns(): HasMany
+    // {
+    //     return $this->hasMany(AnakAkun::class, 'id_induk_akun');
+    // }
 
     /**
      * Sub Anak Akun melalui Anak Akun (hasManyThrough)

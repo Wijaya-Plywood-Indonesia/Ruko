@@ -56,4 +56,26 @@ class Barang extends Model
         // Pastikan foreign key 'barang_id' sesuai dengan di database
         return $this->hasMany(StokBarangToko::class, 'barang_id');
     }
+
+    public function komposisi()
+    {
+        return $this->hasMany(Komposisi::class, 'id_barang');
+    }
+
+    // Barang ini dipakai sebagai bahan dalam detail komposisi
+    public function detailKomposisi()
+    {
+        return $this->hasMany(DetailKomposisi::class, 'id_barang');
+    }
+
+    // Barang ini dipakai sebagai bahan aktual dalam produksi
+    public function produksiPakanBahan()
+    {
+        return $this->hasMany(ProduksiPakanBahan::class, 'id_barang');
+    }
+
+    public function produksiPakanHasil()
+    {
+        return $this->hasMany(ProduksiPakanHasil::class, 'id_barang');
+    }
 }
