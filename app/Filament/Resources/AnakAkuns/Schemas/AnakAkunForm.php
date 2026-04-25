@@ -20,8 +20,7 @@ class AnakAkunForm
                     ->required(),
 
                 TextInput::make('kode_anak_akun')
-                    ->required()
-                    ->unique(ignoreRecord: true),
+                    ->required(),
 
                 TextInput::make('nama_anak_akun')
                     ->required(),

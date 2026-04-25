@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Penjualans\Tables;
 
+use App\Services\JurnalBalikService;
+use App\Services\JurnalPenjualanTelurService;
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
 
@@ -181,21 +183,28 @@ class PenjualansTable
                             return;
                         }
 
-                        DB::transaction(function () use ($record) {
+                        $userId = filament()->auth()->id();
+
+                        DB::transaction(function () use ($record, $userId) {
 
                             if ($record->status_transaksi === 'LUNAS') {
+                                // Balik stok
                                 app(StokPenyesuaianService::class)
                                     ->batalLunas($record->id);
+
+                                // Buat jurnal balik otomatis
+                                app(JurnalBalikService::class)
+                                    ->buatJurnalBalikDariNota($record->no_nota, $userId);
                             }
 
                             $record->update([
-                                'validated_by' => null,
+                                'validated_by'     => null,
                                 'status_transaksi' => 'BELUM DIBAYAR',
                             ]);
                         });
 
                         Notification::make()
-                            ->title('Validasi transaksi dibatalkan')
+                            ->title('Validasi dibatalkan & jurnal balik telah dibuat')
                             ->success()
                             ->send();
                     }),
