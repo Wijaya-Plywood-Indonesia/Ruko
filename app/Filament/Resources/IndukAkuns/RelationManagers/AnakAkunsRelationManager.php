@@ -39,7 +39,6 @@ class AnakAkunsRelationManager extends RelationManager
                     ->label('Kode Anak Akun')
                     ->required()
                     ->numeric()
-                    ->unique(ignoreRecord: true)
                     ->hint(function () {
                         $induk = $this->ownerRecord;
                         if (!$induk) return 'Induk Akun tidak ditemukan.';
