@@ -23,7 +23,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
-     public function panel(Panel $panel): Panel
+    public function panel(Panel $panel): Panel
     {
         return $panel
             ->default()
@@ -66,6 +66,9 @@ class AdminPanelProvider extends PanelProvider
                     ->collapsed(),
                 NavigationGroup::make(label: 'Stock Barang')
                     ->icon('heroicon-o-archive-box-arrow-down')
+                    ->collapsed(),
+                NavigationGroup::make(label: 'Akuntansi')
+                    ->icon('heroicon-o-calculator')
                     ->collapsed(),
             ])
             ->authMiddleware([
