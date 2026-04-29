@@ -139,17 +139,23 @@ class PenjualansTable
                             return;
                         }
 
-                        $statusBaru = $data['status_transaksi'];
+                        $statusBaru  = $data['status_transaksi'];
+                        $validatorId = filament()->auth()->id();
 
-                        DB::transaction(function () use ($record, $statusBaru) {
+                        DB::transaction(function () use ($record, $statusBaru, $validatorId) {
 
                             if ($statusBaru === 'LUNAS') {
+                                // Penyesuaian stok
                                 app(StokPenyesuaianService::class)
                                     ->lunas($record->id);
+
+                                // Buat jurnal pembantu otomatis
+                                app(JurnalPenjualanTelurService::class)
+                                    ->buatJurnalDariPenjualan($record, $validatorId);
                             }
 
                             $record->update([
-                                'validated_by' => filament()->auth()->id(),
+                                'validated_by'     => $validatorId,
                                 'status_transaksi' => $statusBaru,
                             ]);
                         });

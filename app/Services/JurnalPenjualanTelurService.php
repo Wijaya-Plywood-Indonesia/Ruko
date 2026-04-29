@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AnakAkun;
+use App\Models\Barang;
 use App\Models\IndukAkun;
 use App\Models\JurnalPembantuHeader;
 use App\Models\JurnalPembantuItem;
@@ -12,23 +13,30 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Service Jurnal Pembantu — Penjualan Telur  (v3 final)
+ * Service Jurnal Pembantu — Penjualan Telur  (v4)
  *
- * STRUKTUR JURNAL (1 nota = 1 no_jurnal):
- * ─────────────────────────────────────────
+ * STRUKTUR JURNAL (1 nota = 1 no_jurnal, semua dalam jurnal yang sama):
+ * ───────────────────────────────────────────────────────────────────────
  *  D  1121-00   Kas Tunai Mut
- *  K  4100-01   Penjualan Telur Petian Ruko   ← sesuai jenis
- *  K  4100-02   Penjualan Telur Kiloan Ruko   ← sesuai jenis
- *  K  4100-03   Penjualan Telur Bentes Ruko   ← sesuai jenis
+ *  K  4100-01   Penjualan Telur Petian        ← sesuai jenis
+ *  K  4100-02   Penjualan Telur Kiloan        ← sesuai jenis
+ *  K  4100-03   Penjualan Telur Bentes        ← sesuai jenis
  *  D  6000-01   HPP Telor (petian/kiloan)     ← sesuai jenis
  *  D  6000-02   HPP Bentes                    ← sesuai jenis
- *  K  1411-00   Persediaan Telur Petian RUKO  ← sesuai jenis
- *  K  1412-00   Persediaan Telur Kiloan RUKO  ← sesuai jenis
- *  K  1413-00   Persediaan Telur Bentes RUKO  ← sesuai jenis
+ *  K  1411-00   Persediaan Telur Petian       ← sesuai jenis
+ *  K  1412-00   Persediaan Telur Kiloan       ← sesuai jenis
+ *  K  1413-00   Persediaan Telur Bentes       ← sesuai jenis
  *
- *  (Peti berbayar → no_jurnal terpisah)
- *  D  1121-00   Kas Tunai Mut
- *  K  1600-01   Peti Kosong
+ *  PETI OTOMATIS (dalam jurnal yang SAMA):
+ *  Syarat: total qty kiloan adalah kelipatan 10
+ *    D  1122-00   Kas Tunai Penjualan Lain   (kas peti)
+ *    K  1600-01   Peti Kosong                qty = total_kiloan / 10
+ *
+ *  Contoh:
+ *    30 kg kiloan → 3 peti keluar (30 % 10 == 0 ✓)
+ *    12 kg kiloan → tidak ada peti (12 % 10 != 0)
+ *     8 kg kiloan → tidak ada peti (8 % 10 != 0)
+ *    20 kg kiloan → 2 peti keluar (20 % 10 == 0 ✓)
  */
 class JurnalPenjualanTelurService
 {
@@ -37,24 +45,39 @@ class JurnalPenjualanTelurService
     // Ubah nilai ini jika kode di master akun berubah.
     // ══════════════════════════════════════════════════════════════
 
-    /** Kas masuk — satu akun untuk semua toko (INA / Mut) */
-    const KODE_KAS  = '1121-00';
+    /** Kas masuk untuk penjualan telur */
+    const KODE_KAS      = '1121-00';
 
-    /** Peti kosong */
-    const KODE_PETI = '1600-01';
+    /** Kas masuk untuk peti (akun terpisah sesuai Excel) */
+    const KODE_KAS_PETI = '1122-00';
+
+    /** Peti kosong (persediaan keluar) */
+    const KODE_PETI     = '1600-01';
+
+    /**
+     * 1 peti = berapa kg kiloan
+     * Ubah jika standar berat berubah.
+     */
+    const KG_PER_PETI   = 10;
+
+    /**
+     * Harga peti (Rp/peti) jika tidak ditemukan di master barang.
+     * Sesuaikan dengan harga aktual di lapangan.
+     */
+    const HARGA_PETI_DEFAULT = 6000;
 
     /**
      * Mapping nama_barang → ['kode_pendapatan', 'kode_hpp', 'kode_persediaan']
      *
      * Kode dari DB sub_anak_akuns:
-     *   Pendapatan : 4100-01 petian Ruko | 4100-02 kiloan Ruko | 4100-03 bentes Ruko
-     *   HPP        : 6000-01 hpp telor   | 6000-02 hpp bentes
-     *   Persediaan : 1411-00 petian      | 1412-00 kiloan      | 1413-00 bentes
+     *   Pendapatan : 4100-01 petian | 4100-02 kiloan | 4100-03 bentes
+     *   HPP        : 6000-01 telor  | 6000-02 bentes
+     *   Persediaan : 1411-00 petian | 1412-00 kiloan | 1413-00 bentes
      *
-     * Urutan dari atas = lebih spesifik dulu (bentes harus sebelum telur).
+     * Urutan dari atas = lebih spesifik dulu.
      */
     const KODE_PER_JENIS = [
-        // ── Bentes (harus di atas sebelum keyword 'telur' generik) ───────────
+        // ── Bentes (harus sebelum keyword 'telur' generik) ───────────────────
         'bentes'      => ['4100-03', '6000-02', '1413-00'],
 
         // ── Kiloan / kg ───────────────────────────────────────────────────────
@@ -75,7 +98,7 @@ class JurnalPenjualanTelurService
     ];
 
     // ══════════════════════════════════════════════════════════════
-    // Cache agar tidak query DB berulang dalam 1 request
+    // Cache akun agar tidak query DB berulang dalam 1 request
     // ══════════════════════════════════════════════════════════════
 
     private array $akunCache = [];
@@ -91,24 +114,20 @@ class JurnalPenjualanTelurService
         $penjualan->loadMissing(['details.barang']);
 
         $itemTelur = collect();
-        $itemPeti  = collect();
 
         foreach ($penjualan->details as $detail) {
             $nama = strtolower($detail->nama_barang ?? '');
-
+            // Peti dari detail diabaikan — peti dihitung otomatis dari qty kiloan
             if ($this->isTelur($nama)) {
                 $itemTelur->push($detail);
-            } elseif ($this->isPeti($nama)) {
-                $itemPeti->push($detail);
             }
-            // lainnya (triplek, dll.) → diabaikan
         }
 
-        if ($itemTelur->isEmpty() && $itemPeti->isEmpty()) {
+        if ($itemTelur->isEmpty()) {
             return;
         }
 
-        DB::transaction(function () use ($penjualan, $itemTelur, $itemPeti, $userId) {
+        DB::transaction(function () use ($penjualan, $itemTelur, $userId) {
 
             $tgl      = $penjualan->tanggal->toDateString();
             $nota     = $penjualan->no_nota;
@@ -119,10 +138,19 @@ class JurnalPenjualanTelurService
                 fn($d) => (float) $d->qty * (float) ($d->barang->harga_beli ?? 0)
             );
 
-            // Satu no_jurnal untuk seluruh penjualan + HPP
+            // Hitung jumlah peti otomatis dari total qty kiloan
+            $totalKiloan = $itemTelur
+                ->filter(fn($d) => $this->isKiloan(strtolower($d->nama_barang ?? '')))
+                ->sum('qty');
+
+            $jumlahPeti = ($totalKiloan > 0 && $totalKiloan % self::KG_PER_PETI === 0)
+                ? (int) ($totalKiloan / self::KG_PER_PETI)
+                : 0;
+
+            // Satu no_jurnal untuk seluruh transaksi (penjualan + HPP + peti)
             $noJurnal = $this->nextNomorJurnal();
 
-            // ─── D : Kas Tunai Mut ────────────────────────────────────────────
+            // ─── D : Kas Tunai Mut (penjualan telur) ─────────────────────────
             if ($totalTelur > 0) {
                 $akunKas = $this->resolveAkun(self::KODE_KAS);
                 $ketJual = $this->ket('Penjualan Telur', $nota, $customer);
@@ -158,8 +186,7 @@ class JurnalPenjualanTelurService
                     ]);
                 }
 
-                // ─── K : Pendapatan (per jenis telur) ────────────────────────
-                // Kelompok per kode_pendapatan
+                // ─── K : Pendapatan per jenis telur ──────────────────────────
                 $perPend = $itemTelur->groupBy(
                     fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''))[0]
                 );
@@ -200,11 +227,10 @@ class JurnalPenjualanTelurService
                 }
             }
 
-            // ─── D : HPP  &  K : Persediaan (per jenis telur, no_jurnal sama) ─
+            // ─── D : HPP  &  K : Persediaan ──────────────────────────────────
             if ($totalHpp > 0) {
                 $ketHpp = $this->ket('HPP Penjualan Telur', $nota);
 
-                // Kelompok per pasangan [kode_hpp, kode_persediaan]
                 $perJenis = $itemTelur->groupBy(function ($d) {
                     $kode = $this->kodePerJenis(strtolower($d->nama_barang ?? ''));
                     return $kode[1] . '|' . $kode[2];
@@ -282,54 +308,49 @@ class JurnalPenjualanTelurService
                 }
             }
 
-            // ─── PETI (no_jurnal baru — transaksi terpisah) ───────────────────
-            $itemPetiBayar = $itemPeti->filter(fn($d) => (float) $d->subtotal > 0);
+            // ─── PETI OTOMATIS (dalam jurnal yang sama) ───────────────────────
+            // Muncul hanya jika total qty kiloan adalah kelipatan 10
+            if ($jumlahPeti > 0) {
+                $hargaPeti = $this->hargaPetiDariDB();
+                $ketPeti   = $this->ket('Jual Peti', $nota, $customer);
 
-            if ($itemPetiBayar->isNotEmpty()) {
-                $noJurnalPeti = $this->nextNomorJurnal();
-                $ketPeti      = $this->ket('Penjualan Peti', $nota, $customer);
-                $akunKas      = $this->resolveAkun(self::KODE_KAS);
-                $akunPeti     = $this->resolveAkun(self::KODE_PETI);
-
-                // D: Kas
+                // D: Kas Penjualan Lain (1122-00)
+                $akunKasPeti = $this->resolveAkun(self::KODE_KAS_PETI);
                 $hKasPeti = $this->buatHeader([
                     'no_jurnal_pembantu' => $this->nextNomorPembantu(),
                     'tgl_transaksi'      => $tgl,
                     'jenis_transaksi'    => 'bk',
                     'modul_asal'         => 'penjualan_telur',
-                    'jurnal'             => $noJurnalPeti,
-                    'no_akun'            => $akunKas['kode'],
-                    'nama_akun'          => $akunKas['nama'],
+                    'jurnal'             => $noJurnal,  // ← no_jurnal SAMA
+                    'no_akun'            => $akunKasPeti['kode'],
+                    'nama_akun'          => $akunKasPeti['nama'],
                     'map'                => 'd',
                     'keterangan'         => $ketPeti,
                     'no_dokumen'         => $nota,
                     'dibuat_oleh'        => $userId,
                 ]);
 
-                $urut = 1;
-                foreach ($itemPetiBayar as $d) {
-                    $this->buatItem($hKasPeti->id, [
-                        'urut'        => $urut++,
-                        'jenis_pihak' => 'pelanggan',
-                        'nama_pihak'  => $customer,
-                        'nama_barang' => $d->nama_barang,
-                        'no_dokumen'  => $nota,
-                        'no_referensi'=> (string) $d->id,
-                        'keterangan'  => $d->nama_barang . ' ' . $d->qty . ' pcs',
-                        'banyak'      => $d->qty,
-                        'harga'       => $d->harga_jual,
-                        'created_by'  => $userId,
-                        'updated_by'  => $userId,
-                    ]);
-                }
+                $this->buatItem($hKasPeti->id, [
+                    'urut'        => 1,
+                    'jenis_pihak' => 'pelanggan',
+                    'nama_pihak'  => $customer,
+                    'nama_barang' => 'Peti Kosong',
+                    'no_dokumen'  => $nota,
+                    'keterangan'  => 'Jual Peti ' . $jumlahPeti . ' pcs (dari ' . $totalKiloan . ' kg kiloan)',
+                    'banyak'      => $jumlahPeti,
+                    'harga'       => $hargaPeti,
+                    'created_by'  => $userId,
+                    'updated_by'  => $userId,
+                ]);
 
-                // K: Peti Kosong
+                // K: Peti Kosong keluar (1600-01)
+                $akunPeti = $this->resolveAkun(self::KODE_PETI);
                 $hPetiK = $this->buatHeader([
                     'no_jurnal_pembantu' => $this->nextNomorPembantu(),
                     'tgl_transaksi'      => $tgl,
                     'jenis_transaksi'    => 'bk',
                     'modul_asal'         => 'penjualan_telur',
-                    'jurnal'             => $noJurnalPeti,
+                    'jurnal'             => $noJurnal,  // ← no_jurnal SAMA
                     'no_akun'            => $akunPeti['kode'],
                     'nama_akun'          => $akunPeti['nama'],
                     'map'                => 'k',
@@ -338,20 +359,16 @@ class JurnalPenjualanTelurService
                     'dibuat_oleh'        => $userId,
                 ]);
 
-                $urut = 1;
-                foreach ($itemPetiBayar as $d) {
-                    $this->buatItem($hPetiK->id, [
-                        'urut'        => $urut++,
-                        'nama_barang' => $d->nama_barang,
-                        'no_dokumen'  => $nota,
-                        'no_referensi'=> (string) $d->id,
-                        'keterangan'  => 'Keluar stok ' . $d->nama_barang,
-                        'banyak'      => $d->qty,
-                        'harga'       => $d->harga_jual,
-                        'created_by'  => $userId,
-                        'updated_by'  => $userId,
-                    ]);
-                }
+                $this->buatItem($hPetiK->id, [
+                    'urut'        => 1,
+                    'nama_barang' => 'Peti Kosong',
+                    'no_dokumen'  => $nota,
+                    'keterangan'  => 'Keluar stok peti ' . $jumlahPeti . ' pcs',
+                    'banyak'      => $jumlahPeti,
+                    'harga'       => $hargaPeti,
+                    'created_by'  => $userId,
+                    'updated_by'  => $userId,
+                ]);
             }
         });
     }
@@ -413,10 +430,19 @@ class JurnalPenjualanTelurService
             || str_contains($namaLower, '_kg');
     }
 
-    private function isPeti(string $namaLower): bool
+    /**
+     * Cek apakah barang ini kiloan (untuk hitung peti otomatis)
+     */
+    private function isKiloan(string $namaLower): bool
     {
-        return str_contains($namaLower, 'peti')
-            || str_contains($namaLower, 'kotak');
+        // Bukan bentes dan bukan petian → dianggap kiloan
+        if (str_contains($namaLower, 'bentes')) return false;
+        if (str_contains($namaLower, 'petian') || str_contains($namaLower, '_butir')) return false;
+
+        return str_contains($namaLower, 'kilo')
+            || str_contains($namaLower, '_kg')
+            || str_contains($namaLower, 'telur ruko')  // telur ruko = kiloan
+            || str_contains($namaLower, 'telur_ruko');
     }
 
     /** Kembalikan ['kode_pendapatan', 'kode_hpp', 'kode_persediaan'] */
@@ -428,6 +454,23 @@ class JurnalPenjualanTelurService
             }
         }
         return ['4100-01', '6000-01', '1411-00']; // fallback petian
+    }
+
+    /**
+     * Ambil harga peti dari master barang berdasarkan nama.
+     * Fallback ke konstanta HARGA_PETI_DEFAULT jika tidak ditemukan.
+     */
+    private function hargaPetiDariDB(): float
+    {
+        $barang = Barang::where('nama_barang', 'like', '%peti%')
+            ->where('nama_barang', 'like', '%kosong%')
+            ->first();
+
+        if ($barang && (float) $barang->harga_beli > 0) {
+            return (float) $barang->harga_beli;
+        }
+
+        return self::HARGA_PETI_DEFAULT;
     }
 
     /** Format: "Penjualan Telur | No.Nota: WJY-008619 | Rafa" */
