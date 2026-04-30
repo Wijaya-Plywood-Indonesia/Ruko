@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Penjualans\Tables;
 
+use App\Services\JurnalBalikService;
+use App\Services\JurnalPenjualanTelurService;
 use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
 
@@ -137,17 +139,23 @@ class PenjualansTable
                             return;
                         }
 
-                        $statusBaru = $data['status_transaksi'];
+                        $statusBaru  = $data['status_transaksi'];
+                        $validatorId = filament()->auth()->id();
 
-                        DB::transaction(function () use ($record, $statusBaru) {
+                        DB::transaction(function () use ($record, $statusBaru, $validatorId) {
 
                             if ($statusBaru === 'LUNAS') {
+                                // Penyesuaian stok
                                 app(StokPenyesuaianService::class)
                                     ->lunas($record->id);
+
+                                // Buat jurnal pembantu otomatis
+                                app(JurnalPenjualanTelurService::class)
+                                    ->buatJurnalDariPenjualan($record, $validatorId);
                             }
 
                             $record->update([
-                                'validated_by' => filament()->auth()->id(),
+                                'validated_by'     => $validatorId,
                                 'status_transaksi' => $statusBaru,
                             ]);
                         });
@@ -181,21 +189,28 @@ class PenjualansTable
                             return;
                         }
 
-                        DB::transaction(function () use ($record) {
+                        $userId = filament()->auth()->id();
+
+                        DB::transaction(function () use ($record, $userId) {
 
                             if ($record->status_transaksi === 'LUNAS') {
+                                // Balik stok
                                 app(StokPenyesuaianService::class)
                                     ->batalLunas($record->id);
+
+                                // Buat jurnal balik otomatis
+                                app(JurnalBalikService::class)
+                                    ->buatJurnalBalikDariNota($record->no_nota, $userId);
                             }
 
                             $record->update([
-                                'validated_by' => null,
+                                'validated_by'     => null,
                                 'status_transaksi' => 'BELUM DIBAYAR',
                             ]);
                         });
 
                         Notification::make()
-                            ->title('Validasi transaksi dibatalkan')
+                            ->title('Validasi dibatalkan & jurnal balik telah dibuat')
                             ->success()
                             ->send();
                     }),
