@@ -73,10 +73,6 @@ class IndukAkun extends Model
         return $this->anakAkuns()->count() === 0;
     }
     /** Semua anak (untuk count) */
-    public function allAnakAkuns()
-    {
-        return $this->hasMany(AnakAkun::class, 'id_induk_akun');
-    }
 
     public function subAnakAkun()
     {
