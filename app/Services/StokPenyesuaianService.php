@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Barang;
+use App\Models\Penjualan;
+use App\Models\ReturnPenjualan;
 use App\Models\ReturnPenjualanDetail;
 use App\Models\StokBarangToko;
 use App\Models\StokLog;
@@ -180,50 +181,148 @@ class StokPenyesuaianService
                 ->send();
         });
     }
-    public function validasi_batal_dari_selesai(
-        int $id_penjualan
-    ) {
-        $penjualanDetails = ReturnPenjualanDetail::where('id_return', $id_penjualan)
-            ->select(['id_barang', 'qty', "nama_barang"])
-            ->get();
+    public function selesai(int $id_return): void
+    {
+        DB::transaction(function () use ($id_return) {
+            // Cek log terakhir untuk referensi ini
+            $lastLog = StokLog::where('referensi_type', 'penjualan_return')
+                ->where('referensi_id', $id_return)
+                ->orderBy('id', 'desc')
+                ->first();
 
-        foreach ($penjualanDetails as $detail) {
-            $barang = StokBarangToko::
-                select('id', 'stok', 'toko_id')
-                ->find($detail->id_barang)
-            ;
-
-            if (!$barang) {
-                return; // atau throw exception
+            // Jika log terakhir sudah tipe 'retur', jangan proses lagi
+            if ($lastLog && $lastLog->tipe === 'retur') {
+                return;
             }
-            $stokSebelum = (int) $barang->stok;
-            $stokSesudah = $stokSebelum + (int) $detail->qty;
 
-            $barang->update([
-                'stok' => $stokSesudah,
-            ]);
-            StokLogService::buatLog(
-                barangId: $detail->id_barang,
-                tokoId: $barang->toko_id,
-                tipe: 'retur',
-                qty: $detail->qty,
-                refType: "penjualan_return",
-                refId: $id_penjualan,
-                stokTerakhir: $stokSebelum,
-                stokSesudah: $stokSesudah
-            );
+            $return = ReturnPenjualan::with('details_return')->findOrFail($id_return);
+            
+            // Ambil toko_id dari Penjualan asli karena di tabel return tidak ada
+            $penjualan = Penjualan::where('no_nota', $return->no_nota)->first();
+            $tokoId = $penjualan?->toko_id;
+
+            if (!$tokoId) {
+                throw new \Exception("Toko ID tidak ditemukan untuk nota {$return->no_nota}");
+            }
+
+            foreach ($return->details_return as $detail) {
+                $stok = StokBarangToko::where('barang_id', $detail->id_barang)
+                    ->where('toko_id', $tokoId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stok) {
+                    $stok = StokBarangToko::create([
+                        'barang_id' => $detail->id_barang,
+                        'toko_id' => $tokoId,
+                        'stok' => 0,
+                    ]);
+                }
+
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum + (float) $detail->qty;
+
+                $stok->update([
+                    'stok' => $stokSesudah,
+                ]);
+
+                StokLogService::buatLog(
+                    barangId: $detail->id_barang,
+                    tokoId: $tokoId,
+                    tipe: 'retur',
+                    qty: (float) $detail->qty, // Positif karena barang kembali
+                    refType: "penjualan_return",
+                    refId: $id_return,
+                    stokTerakhir: $stokSebelum,
+                    stokSesudah: $stokSesudah
+                );
+
+                Notification::make()
+                    ->title("Stok {$detail->nama_barang} bertambah (Retur)")
+                    ->body("Total stok: $stokSesudah")
+                    ->success()
+                    ->send();
+            }
 
             Notification::make()
-                ->title("Stok $detail->nama_barang berhasil di kembalikan")
-                ->body("Total Stok menjadi $stokSesudah")
+                ->title('Return Selesai/Diterima')
                 ->success()
                 ->send();
-        }
-        Notification::make()
-            ->title('Return dibatalkan')
-            ->success()
-            ->send();
+        });
+    }
 
+    public function validasi_batal_dari_selesai(int $id_return): void
+    {
+        DB::transaction(function () use ($id_return) {
+            // Cek log terakhir untuk referensi ini
+            $lastLog = StokLog::where('referensi_type', 'penjualan_return')
+                ->where('referensi_id', $id_return)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            // Jika tidak ada log retur atau log terakhir adalah pembatalan, jangan proses lagi
+            if (!$lastLog || $lastLog->tipe === 'batal_retur') {
+                return;
+            }
+
+            $return = ReturnPenjualan::with('details_return')->findOrFail($id_return);
+            
+            // Ambil toko_id dari Penjualan asli
+            $penjualan = Penjualan::where('no_nota', $return->no_nota)->first();
+            $tokoId = $penjualan?->toko_id;
+
+            if (!$tokoId) {
+                throw new \Exception("Toko ID tidak ditemukan untuk nota {$return->no_nota}");
+            }
+
+            foreach ($return->details_return as $detail) {
+                $stok = StokBarangToko::where('barang_id', $detail->id_barang)
+                    ->where('toko_id', $tokoId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stok) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Stok {$detail->nama_barang} tidak ditemukan"
+                    ]);
+                }
+
+                $stokSebelum = (float) $stok->stok;
+                $stokSesudah = $stokSebelum - (float) $detail->qty;
+
+                if ($stokSesudah < 0) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Gagal batal retur: Stok {$detail->nama_barang} akan menjadi negatif"
+                    ]);
+                }
+
+                $stok->update([
+                    'stok' => $stokSesudah,
+                ]);
+
+                StokLogService::buatLog(
+                    barangId: $detail->id_barang,
+                    tokoId: $tokoId,
+                    tipe: 'batal_retur',
+                    qty: -(float) $detail->qty, // Negatif karena batal retur (barang keluar lagi)
+                    refType: "penjualan_return",
+                    refId: $id_return,
+                    stokTerakhir: $stokSebelum,
+                    stokSesudah: $stokSesudah
+                );
+
+                Notification::make()
+                    ->title("Stok {$detail->nama_barang} berkurang (Batal Retur)")
+                    ->body("Total stok: $stokSesudah")
+                    ->success()
+                    ->send();
+            }
+
+            Notification::make()
+                ->title('Return dibatalkan')
+                ->success()
+                ->send();
+        });
     }
 
     public static function queryBarangByToko(int $tokoId, int $penjualanId): Builder
