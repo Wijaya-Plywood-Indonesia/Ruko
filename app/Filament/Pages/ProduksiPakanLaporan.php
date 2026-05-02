@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Illuminate\Support\Facades\Log;
 
 class ProduksiPakanLaporan extends Page
 {
@@ -255,6 +256,22 @@ class ProduksiPakanLaporan extends Page
 
         $this->mentahState   = $mentah;
         $this->campuranState = $campuran;
+
+        Log::info('[ProduksiPakan] State berhasil dibangun', [
+            'jumlah_mentah'   => count($mentah),
+            'jumlah_campuran' => count($campuran),
+            'mentah'   => collect($mentah)->map(fn($r) => [
+                'nama'  => $r['nama'],
+                'awal'  => $r['awal'],
+                'akhir' => $r['akhir'],
+            ])->toArray(),
+            'campuran' => collect($campuran)->map(fn($r) => [
+                'nama'  => $r['nama'],
+                'awal'  => $r['awal'],
+                'masuk' => $r['masuk'],
+                'akhir' => $r['akhir'],
+            ])->toArray(),
+        ]);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
