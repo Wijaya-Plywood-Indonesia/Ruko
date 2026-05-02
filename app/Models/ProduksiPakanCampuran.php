@@ -35,6 +35,6 @@ class ProduksiPakanCampuran extends Model
 
     public function barang()
     {
-        return $this->belongsTo(Barang::class);
+        return $this->belongsTo(Barang::class, 'id_barang');
     }
 }

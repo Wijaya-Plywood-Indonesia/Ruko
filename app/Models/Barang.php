@@ -69,13 +69,13 @@ class Barang extends Model
     }
 
     // Barang ini dipakai sebagai bahan aktual dalam produksi
-    public function produksiPakanBahan()
+    public function produksiPakanCampuran()
     {
-        return $this->hasMany(ProduksiPakanBahan::class, 'id_barang');
+        return $this->hasMany(ProduksiPakanCampuran::class);
     }
 
-    public function produksiPakanHasil()
+    public function produksiPakanMentah()
     {
-        return $this->hasMany(ProduksiPakanHasil::class, 'id_barang');
+        return $this->hasMany(ProduksiPakanMentah::class);
     }
 }
