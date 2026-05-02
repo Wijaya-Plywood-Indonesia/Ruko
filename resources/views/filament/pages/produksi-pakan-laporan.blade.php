@@ -429,6 +429,7 @@
                                 <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(22 163 74); width: 7rem;">Masuk</th>
                                 <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(var(--primary-600)); width: 7rem;">Pulet</th>
                                 <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(var(--primary-600)); width: 7rem;">Layer 1</th>
+                                <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(var(--primary-600)); width: 7rem;">Layer 2</th>
                                 <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(217 119 6); width: 7rem;">Sisa Akhir</th>
                             </tr>
                         </thead>
@@ -449,6 +450,9 @@
                                 </td>
                                 <td style="padding: 0.375rem 0.5rem;">
                                     <input type="number" wire:model.lazy="campuranState.{{ $idx }}.l1" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                </td>
+                                <td style="padding: 0.375rem 0.5rem;">
+                                    <input type="number" wire:model.lazy="campuranState.{{ $idx }}.l2" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td style="padding: 0.625rem 1rem; text-align: center;">
                                     <span class="pp-chip-warning">{{ number_format($item['akhir']) }}</span>

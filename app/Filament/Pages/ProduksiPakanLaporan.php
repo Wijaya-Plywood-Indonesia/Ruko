@@ -13,6 +13,7 @@ use Filament\Pages\Page;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session; // ← TAMBAHAN: untuk simpan draft sementara
 use Carbon\Carbon;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Illuminate\Support\Facades\Log;
@@ -37,53 +38,129 @@ class ProduksiPakanLaporan extends Page
     public ?string $keterangan    = '';
     public bool    $isLocked      = false;
 
-    /* ─── Permission flags (dikompute di computePermissions()) ─────────── */
-
-    /**
-     * true  → user punya role super_admin
-     */
-    public bool $isSuperAdmin = false;
-
-    /**
-     * true  → user yang sedang login adalah yang membuat draft ini
-     */
-    public bool $isCreator = false;
-
-    /**
-     * true  → record sudah pernah disimpan ke DB (minimal sekali klik Simpan Draft)
-     *         CATATAN: record TIDAK terbuat otomatis saat ganti tanggal —
-     *         hanya terbuat saat user klik Simpan Draft.
-     */
-    public bool $isDraftSaved = false;
-
-    /**
-     * Apakah user boleh mengisi / mengubah input di halaman ini.
-     *
-     * Aturan:
-     *   super_admin              → selalu true
-     *   isLocked                 → false   (laporan sudah divalidasi)
-     *   isDraftSaved && isCreator → false  (creator terkunci setelah save pertama)
-     *   else                     → true    (validator bebas edit sampai divalidasi)
-     */
-    public bool $canEdit = true;
-
-    /**
-     * Tombol "Simpan Draft" ditampilkan / tidak.
-     */
-    public bool $showSaveButton = true;
-
-    /**
-     * Tombol "Validasi & Kunci" ditampilkan / tidak.
-     *
-     * Aturan:
-     *   super_admin              → true (kalau belum locked)
-     *   isCreator                → false (creator tidak boleh validasi miliknya)
-     *   else (validator)         → true (kalau draft sudah ada)
-     */
+    /* ─── Permission flags ──────────────────────────────────────────────── */
+    public bool $isSuperAdmin      = false;
+    public bool $isCreator         = false;
+    public bool $isDraftSaved      = false;
+    public bool $canEdit           = true;
+    public bool $showSaveButton    = true;
     public bool $showValidateButton = false;
 
-    /* ─── Internal flag, mencegah infinite loop recalculate ─────────────── */
+    /* ─── Internal flag ─────────────────────────────────────────────────── */
     protected bool $isRecalculating = false;
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     |  SESSION HELPERS
+     |
+     |  Bayangkan Session seperti "catatan sticky" yang ditempel di server
+     |  per-user per-tanggal. Isinya hanya nilai input yang belum disimpan ke DB.
+     |  Key format: pp_draft_{userId}_{tanggal}
+     ═══════════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Membuat key unik untuk session draft ini.
+     * Kenapa pakai userId? Supaya draft user A tidak bocor ke user B
+     * meskipun mereka membuka halaman yang sama.
+     */
+    private function sessionKey(?string $date = null): string
+    {
+        $date = $date ?? $this->selectedDate;
+        return 'pp_draft_' . Auth::id() . '_' . $date;
+    }
+
+    /**
+     * Simpan hanya nilai-nilai yang bisa diinput user ke Session.
+     * Kita TIDAK menyimpan 'awal', 'akhir', 'masuk' — itu dihitung ulang.
+     * Cukup simpan 'p', 'l1', 'l2' yang diketik user, diindex by barang_id
+     * agar bisa dipasangkan kembali meski urutan array berubah.
+     */
+    private function saveToSession(): void
+    {
+        // Tidak ada gunanya simpan ke session jika user tidak boleh edit
+        if (! $this->canEdit || ! $this->selectedDate) return;
+
+        Session::put($this->sessionKey(), [
+            'mentah' => collect($this->mentahState)
+                ->keyBy('barang_id')
+                ->map(fn($i) => [
+                    'p'  => $i['p']  ?? 0,
+                    'l1' => $i['l1'] ?? 0,
+                    'l2' => $i['l2'] ?? 0,
+                ])
+                ->toArray(),
+
+            'campuran' => collect($this->campuranState)
+                ->keyBy('barang_id')
+                ->map(fn($i) => [
+                    'p'  => $i['p']  ?? 0,
+                    'l1' => $i['l1'] ?? 0,
+                    'l2' => $i['l2'] ?? 0, // ← tambah
+                ])
+                ->toArray(),
+
+            'keterangan' => $this->keterangan,
+            'saved_at'   => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Tempel nilai dari Session ke state yang sudah ada.
+     * Kenapa "tempel" (overlay), bukan "ganti penuh"?
+     * Karena state sudah punya data stok_awal dari DB/barang.
+     * Kita hanya perlu mengembalikan nilai input yang belum tersimpan.
+     *
+     * @return bool true jika ada session draft yang berhasil dipulihkan
+     */
+    private function restoreFromSession(): bool
+    {
+        $draft = Session::get($this->sessionKey());
+
+        // Tidak ada session draft → tidak perlu restore
+        if (! $draft) return false;
+
+        // Tempel nilai mentah
+        $mentahDraft = $draft['mentah'] ?? [];
+        foreach ($this->mentahState as $idx => $item) {
+            $saved = $mentahDraft[$item['barang_id']] ?? null;
+            if ($saved) {
+                $this->mentahState[$idx]['p']  = $saved['p']  ?? 0;
+                $this->mentahState[$idx]['l1'] = $saved['l1'] ?? 0;
+                $this->mentahState[$idx]['l2'] = $saved['l2'] ?? 0;
+            }
+        }
+
+        // Tempel nilai campuran
+        $campuranDraft = $draft['campuran'] ?? [];
+        foreach ($this->campuranState as $idx => $item) {
+            $saved = $campuranDraft[$item['barang_id']] ?? null;
+            if ($saved) {
+                $this->campuranState[$idx]['p']  = $saved['p']  ?? 0;
+                $this->campuranState[$idx]['l1'] = $saved['l1'] ?? 0;
+            }
+        }
+
+        $this->keterangan = $draft['keterangan'] ?? '';
+
+        // Hitung ulang 'akhir' & 'masuk' berdasarkan nilai yang baru ditempel
+        $this->recalculateAll();
+
+        Log::info('[ProduksiPakan] Session draft dipulihkan', [
+            'user_id' => Auth::id(),
+            'date'    => $this->selectedDate,
+            'saved_at' => $draft['saved_at'] ?? null,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Hapus session draft setelah berhasil disimpan ke DB.
+     * Sudah tidak diperlukan lagi — DB adalah sumber kebenaran sekarang.
+     */
+    private function clearSession(): void
+    {
+        Session::forget($this->sessionKey());
+    }
 
     /* ═══════════════════════════════════════════════════════════════════════
      |  LIFECYCLE
@@ -91,10 +168,7 @@ class ProduksiPakanLaporan extends Page
 
     public function mount(): void
     {
-        // Deteksi super_admin sekali saat mount, disimpan di property publik
-        // supaya blade bisa memanfaatkannya lewat $isSuperAdmin jika diperlukan.
         $this->isSuperAdmin = Auth::user()->hasRole('super_admin');
-
         $this->selectedDate = now()->format('Y-m-d');
         $this->loadDataByDate();
     }
@@ -114,24 +188,24 @@ class ProduksiPakanLaporan extends Page
 
         $date = Carbon::parse($this->selectedDate)->toDateString();
 
-        // Eager load relasi yang dibutuhkan sekaligus
         $this->currentRecord = ProduksiPakan::with([
             'pakanMentahs.barang.satuan',
             'pakanCampurans.barang.satuan',
         ])->whereDate('tanggal_produksi', $date)->first();
 
         if (! $this->currentRecord) {
-            // ── Tanggal belum punya record ──────────────────────────────────
-            // TIDAK langsung buat record ke DB.
-            // Kita hanya isi state dari daftar Barang + stok kandang,
-            // sehingga user tetap bisa melihat form & mengisinya.
-            // Record baru benar-benar dibuat saat user klik "Simpan Draft".
             $this->isDraftSaved = false;
             $this->isLocked     = false;
             $this->isCreator    = false;
             $this->keterangan   = '';
 
-            $this->buildStateFromBarang();   // ← isi mentahState & campuranState
+            // 1. Bangun state kosong dari daftar Barang + stok kandang
+            $this->buildStateFromBarang();
+
+            // 2. Coba pulihkan nilai input dari session jika ada
+            //    Ini yang mencegah data hilang saat refresh
+            $this->restoreFromSession();
+
             $this->computePermissions();
             return;
         }
@@ -142,40 +216,44 @@ class ProduksiPakanLaporan extends Page
         $this->isCreator    = ($this->currentRecord->created_by === Auth::user()->name);
         $this->keterangan   = $this->currentRecord->keterangan ?? '';
 
-        // Mapping Mentah — nama barang sudah menyertakan satuan: "Jagung (Sak)"
         $this->mentahState = $this->currentRecord->pakanMentahs
             ->map(fn($item) => [
-                'id'       => $item->id,
+                'id'        => $item->id,
                 'barang_id' => $item->id_barang,
-                'nama'     => $this->formatNamaSatuan(
+                'nama'      => $this->formatNamaSatuan(
                     $item->barang?->nama_barang,
                     $item->barang?->satuan?->nama_satuan
                 ),
-                'satuan'   => $item->barang?->satuan?->nama_satuan ?? '-',
-                'awal'     => (float) $item->stok_awal,
-                'p'        => (float) $item->keluar_pullet,
-                'l1'       => (float) $item->keluar_l1,
-                'l2'       => (float) $item->keluar_l2,
-                'akhir'    => (float) $item->stok_akhir,
+                'satuan'    => $item->barang?->satuan?->nama_satuan ?? '-',
+                'awal'      => (float) $item->stok_awal,
+                'p'         => (float) $item->keluar_pullet,
+                'l1'        => (float) $item->keluar_l1,
+                'l2'        => (float) $item->keluar_l2,
+                'akhir'     => (float) $item->stok_akhir,
             ])->toArray();
 
-        // Mapping Campuran
         $this->campuranState = $this->currentRecord->pakanCampurans
             ->map(fn($item) => [
-                'id'       => $item->id,
+                'id'        => $item->id,
                 'barang_id' => $item->id_barang,
-                'nama'     => $this->formatNamaSatuan(
+                'nama'      => $this->formatNamaSatuan(
                     $item->barang?->nama_barang,
                     $item->barang?->satuan?->nama_satuan
                 ),
-                'satuan'   => $item->barang?->satuan?->nama_satuan ?? '-',
-                'awal'     => (float) $item->stok_awal,
-                'masuk'    => (float) $item->masuk,
-                'p'        => (float) $item->keluar_pullet,
-                'l1'       => (float) $item->keluar_l1,
-                'l2'       => (float) $item->keluar_l2,
-                'akhir'    => (float) $item->stok_akhir,
+                'satuan'    => $item->barang?->satuan?->nama_satuan ?? '-',
+                'awal'      => (float) $item->stok_awal,
+                'masuk'     => (float) $item->masuk,
+                'p'         => (float) $item->keluar_pullet,
+                'l1'        => (float) $item->keluar_l1,
+                'l2'        => (float) $item->keluar_l2,
+                'akhir'     => (float) $item->stok_akhir,
             ])->toArray();
+
+        // Jika ada perubahan belum tersimpan (session draft) di atas data DB,
+        // tempel juga — berguna jika user edit lalu refresh sebelum klik Simpan
+        if ($this->canEdit) {
+            $this->restoreFromSession();
+        }
 
         $this->computePermissions();
     }
@@ -184,29 +262,38 @@ class ProduksiPakanLaporan extends Page
 
     private function formatNamaSatuan(?string $nama, ?string $satuan): string
     {
-        $nama   = $nama   ?? 'Unknown';
-        $satuan = $satuan ?? '-';
-        return "{$nama} ({$satuan})";
+        return ($nama ?? 'Unknown') . ' (' . ($satuan ?? '-') . ')';
     }
 
-    /* ─── Bangun state dari Barang + stok kandang (tanpa menyentuh DB) ─── */
+    /* ─── Bangun state dari Barang + stok kandang ─────────────────────── */
 
     /**
-     * Dipanggil ketika tanggal belum punya record.
-     * Mengambil semua barang kategori "pakan", lalu mengambil stok dari
-     * StokBarangToko milik toko "kandang" sebagai stok_awal.
+     * LOGIKA STOK AWAL:
+     * Kita ambil stok dari StokBarangToko dimana toko-nya adalah "kandang".
+     * Kenapa kandang? Karena produksi pakan berada di area kandang,
+     * bukan di toko retail. Jadi stok yang relevan adalah stok kandang.
      *
-     * Kenapa tidak langsung create ke DB? Karena kita hanya mau create
-     * saat user memang berniat menyimpan (klik Simpan Draft), bukan sekadar
-     * mengintip data tanggal lain.
+     * Flow:
+     *   1. Cari IdentitasToko yang nama_tokonya mengandung kata "kandang"
+     *   2. Ambil semua StokBarangToko milik toko tersebut
+     *   3. Buat map [barang_id => stok] agar tidak N+1 query saat loop
+     *   4. Pasangkan ke setiap Barang yang kategorinya "pakan"
      */
     private function buildStateFromBarang(): void
     {
-        // Cari toko "kandang" — case-insensitive
+        // ── DIAGNOSTIC LOG #1: Cari toko kandang ──────────────────────────
         $kandangToko = IdentitasToko::whereRaw('LOWER(nama_toko) LIKE ?', ['%kandang%'])
             ->first();
 
-        // Ambil semua barang pakan beserta satuannya
+        Log::info('[PPakan-DEBUG] Step 1: Cari toko kandang', [
+            'ditemukan'    => $kandangToko ? 'YA' : 'TIDAK',
+            'toko_id'      => $kandangToko?->id,
+            'nama_toko'    => $kandangToko?->nama_toko,
+            // Tampilkan SEMUA toko agar kita tahu nama aslinya
+            'semua_toko'   => IdentitasToko::select('id', 'nama_toko')->get()->toArray(),
+        ]);
+
+        // ── DIAGNOSTIC LOG #2: Ambil semua barang pakan ───────────────────
         $semuaBarang = Barang::with('satuan')
             ->whereHas(
                 'kategori',
@@ -214,15 +301,52 @@ class ProduksiPakanLaporan extends Page
                 $q->whereRaw('LOWER(nama_kategori) LIKE ?', ['%pakan%'])
             )->get();
 
-        // Build stok map: barang_id → stok, supaya tidak N+1 query
+        Log::info('[PPakan-DEBUG] Step 2: Barang pakan ditemukan', [
+            'jumlah'  => $semuaBarang->count(),
+            'barang'  => $semuaBarang->map(fn($b) => [
+                'id'         => $b->id,
+                'nama_barang' => $b->nama_barang,
+                'kategori'   => $b->kategori?->nama_kategori ?? 'NULL',
+            ])->toArray(),
+            // Tampilkan semua kategori yang ada di DB untuk crosscheck
+            'semua_kategori' => \App\Models\Barang::with('kategori')
+                ->get()
+                ->pluck('kategori.nama_kategori')
+                ->unique()
+                ->values()
+                ->toArray(),
+        ]);
+
+        // ── DIAGNOSTIC LOG #3: Ambil stok dari StokBarangToko ─────────────
         $stokMap = [];
+        $rawStokRecords = [];
+
         if ($kandangToko) {
-            StokBarangToko::where('toko_id', $kandangToko->id)
+            $stokMap = StokBarangToko::where('toko_id', $kandangToko->id)
                 ->whereIn('barang_id', $semuaBarang->pluck('id'))
                 ->get()
-                ->each(fn($s) => $stokMap[$s->barang_id] = (float) $s->stok);
+                ->mapWithKeys(fn($s) => [$s->barang_id => (float) $s->stok])
+                ->toArray();
         }
 
+        Log::info('[PPakan-DEBUG] Step 3: StokBarangToko', [
+            'kandang_toko_id'    => $kandangToko?->id,
+            'jumlah_stok_record' => count($rawStokRecords),
+            'stok_records'       => $rawStokRecords,
+            'stok_map'           => $stokMap,
+            // Jika kandangToko ada tapi stok kosong, tampilkan SEMUA stok
+            // milik toko ini tanpa filter barang_id
+            'semua_stok_kandang' => $kandangToko
+                ? StokBarangToko::where('toko_id', $kandangToko->id)
+                ->get()
+                ->map(fn($s) => [
+                    'barang_id' => $s->barang_id,
+                    'stok'      => $s->stok,
+                ])->toArray()
+                : [],
+        ]);
+
+        // ── Build state (sama seperti sebelumnya) ─────────────────────────
         $mentah   = [];
         $campuran = [];
 
@@ -235,8 +359,15 @@ class ProduksiPakanLaporan extends Page
             $stok       = $stokMap[$b->id] ?? 0.0;
             $satuanNama = $b->satuan?->nama_satuan ?? '-';
 
+            Log::info('[PPakan-DEBUG] Step 4: Mapping barang', [
+                'barang_id'   => $b->id,
+                'nama'        => $b->nama_barang,
+                'isCampuran'  => $isCampuran,
+                'stok_di_map' => $stokMap[$b->id] ?? 'TIDAK ADA DI MAP → default 0',
+            ]);
+
             $base = [
-                'id'        => null,          // belum ada ID karena belum disimpan
+                'id'        => null,
                 'barang_id' => $b->id,
                 'nama'      => $this->formatNamaSatuan($b->nama_barang, $satuanNama),
                 'satuan'    => $satuanNama,
@@ -244,7 +375,7 @@ class ProduksiPakanLaporan extends Page
                 'p'         => 0.0,
                 'l1'        => 0.0,
                 'l2'        => 0.0,
-                'akhir'     => $stok,         // akhir = awal saat belum ada pengeluaran
+                'akhir'     => $stok,
             ];
 
             if ($isCampuran) {
@@ -256,50 +387,21 @@ class ProduksiPakanLaporan extends Page
 
         $this->mentahState   = $mentah;
         $this->campuranState = $campuran;
-
-        Log::info('[ProduksiPakan] State berhasil dibangun', [
-            'jumlah_mentah'   => count($mentah),
-            'jumlah_campuran' => count($campuran),
-            'mentah'   => collect($mentah)->map(fn($r) => [
-                'nama'  => $r['nama'],
-                'awal'  => $r['awal'],
-                'akhir' => $r['akhir'],
-            ])->toArray(),
-            'campuran' => collect($campuran)->map(fn($r) => [
-                'nama'  => $r['nama'],
-                'awal'  => $r['awal'],
-                'masuk' => $r['masuk'],
-                'akhir' => $r['akhir'],
-            ])->toArray(),
-        ]);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
      |  PERMISSION COMPUTATION
      ═══════════════════════════════════════════════════════════════════════ */
 
-    /**
-     * Menghitung semua flag permission berdasarkan kondisi saat ini.
-     * Dipanggil setelah setiap perubahan state yang relevan.
-     *
-     * Urutan prioritas (waterfall):
-     *   1. super_admin   → boleh segalanya
-     *   2. isLocked      → semua ditolak
-     *   3. creator & draft sudah disimpan → ditolak edit/save/validate
-     *   4. sisanya (validator / belum ada draft) → boleh edit & save
-     */
     private function computePermissions(): void
     {
-        // ── [1] Super Admin: master key ─────────────────────────────────────
         if ($this->isSuperAdmin) {
             $this->canEdit            = true;
             $this->showSaveButton     = true;
-            // Super admin boleh validasi selama belum locked & record sudah ada
             $this->showValidateButton = ! $this->isLocked && $this->currentRecord !== null;
             return;
         }
 
-        // ── [2] Laporan sudah divalidasi → semua terkunci ───────────────────
         if ($this->isLocked) {
             $this->canEdit            = false;
             $this->showSaveButton     = false;
@@ -307,8 +409,6 @@ class ProduksiPakanLaporan extends Page
             return;
         }
 
-        // ── [3] Creator sudah menyimpan draft → terkunci dari edit ──────────
-        //    Creator tidak perlu/tidak boleh memvalidasi laporannya sendiri.
         if ($this->isDraftSaved && $this->isCreator) {
             $this->canEdit            = false;
             $this->showSaveButton     = false;
@@ -316,75 +416,85 @@ class ProduksiPakanLaporan extends Page
             return;
         }
 
-        // ── [4] Kondisi normal: belum ada draft ATAU user adalah validator ──
-        //    - Belum ada draft     : siapapun boleh membuat draft pertama
-        //    - Validator           : boleh edit & simpan sebelum validasi
-        $this->canEdit        = true;
-        $this->showSaveButton = true;
-
-        // Tombol validasi hanya muncul jika:
-        //   • Draft sudah ada di DB (creator sudah simpan)
-        //   • User BUKAN creator laporan ini
+        $this->canEdit            = true;
+        $this->showSaveButton     = true;
         $this->showValidateButton = $this->isDraftSaved && ! $this->isCreator;
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-     |  RECALCULATE (dipanggil Livewire saat property berubah)
+     |  RECALCULATE
      ═══════════════════════════════════════════════════════════════════════ */
 
     public function updated($propertyName): void
     {
-        // Guard: jangan recalculate jika tidak boleh edit
         if (! $this->canEdit) return;
         if ($this->isRecalculating) return;
 
-        if (str_contains($propertyName, 'State')) {
+        if (str_contains($propertyName, 'State') || $propertyName === 'keterangan') {
             $this->isRecalculating = true;
             $this->recalculateAll();
             $this->isRecalculating = false;
+
+            // Simpan ke session setiap kali ada perubahan input
+            // Ini yang memastikan data tidak hilang saat refresh
+            $this->saveToSession();
         }
     }
 
     private function recalculateAll(): void
     {
-        $totalP  = 0;
-        $totalL1 = 0;
-        $totalL2 = 0;
+        $totalP  = 0.0;
+        $totalL1 = 0.0;
+        $totalL2 = 0.0;
 
-        // Hitung sisa mentah & akumulasi total keluar per kategori
         foreach ($this->mentahState as $idx => $item) {
-            $totalKeluar = ($item['p'] ?? 0) + ($item['l1'] ?? 0) + ($item['l2'] ?? 0);
-            $this->mentahState[$idx]['akhir'] = max(0, ($item['awal'] ?? 0) - $totalKeluar);
+            $p  = (float) ($item['p']  ?? 0);
+            $l1 = (float) ($item['l1'] ?? 0);
+            $l2 = (float) ($item['l2'] ?? 0);
 
-            $totalP  += ($item['p']  ?? 0);
-            $totalL1 += ($item['l1'] ?? 0);
-            $totalL2 += ($item['l2'] ?? 0);
+            $totalKeluar = $p + $l1 + $l2;
+            $this->mentahState[$idx]['akhir'] = max(0, (float) ($item['awal'] ?? 0) - $totalKeluar);
+
+            // Simpan kembali sebagai float agar operasi berikutnya aman
+            $this->mentahState[$idx]['p']  = $p;
+            $this->mentahState[$idx]['l1'] = $l1;
+            $this->mentahState[$idx]['l2'] = $l2;
+
+            $totalP  += $p;
+            $totalL1 += $l1;
+            $totalL2 += $l2;
         }
 
-        // Hitung masuk & sisa campuran (masuk = total mentah yang dipakai)
         foreach ($this->campuranState as $idx => $item) {
             $nama  = strtoupper($item['nama'] ?? '');
-            $masuk = 0;
+            $masuk = 0.0;
 
-            if (str_contains($nama, 'PULET') || str_contains($nama, 'PULLET'))       $masuk = $totalP;
-            elseif (str_contains($nama, 'LAYER 1') || str_contains($nama, 'L1'))     $masuk = $totalL1;
-            elseif (str_contains($nama, 'LAYER 2') || str_contains($nama, 'L2'))     $masuk = $totalL2;
+            if (str_contains($nama, 'PULET') || str_contains($nama, 'PULLET'))   $masuk = $totalP;
+            elseif (str_contains($nama, 'LAYER 1') || str_contains($nama, 'L1')) $masuk = $totalL1;
+            elseif (str_contains($nama, 'LAYER 2') || str_contains($nama, 'L2')) $masuk = $totalL2;
+
+            $p  = (float) ($item['p']  ?? 0);
+            $l1 = (float) ($item['l1'] ?? 0);
+            $l2 = (float) ($item['l2'] ?? 0); // ← tambah
+
 
             $this->campuranState[$idx]['masuk'] = $masuk;
+            $this->campuranState[$idx]['p']     = $p;
+            $this->campuranState[$idx]['l1']    = $l1;
+            $this->campuranState[$idx]['l2']    = $l2; // ← tambah
 
-            $totalMasuk  = ($item['awal'] ?? 0) + $masuk;
-            $totalKeluar = ($item['p']    ?? 0) + ($item['l1'] ?? 0) + ($item['l2'] ?? 0);
+            $totalMasuk  = (float) ($item['awal'] ?? 0) + $masuk;
+            $totalKeluar = $p + $l1 + $l2;
             $this->campuranState[$idx]['akhir'] = max(0, $totalMasuk - $totalKeluar);
         }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
-     |  SAVE (Simpan Draft)
+     |  SAVE
      ═══════════════════════════════════════════════════════════════════════ */
 
     public function save(): void
     {
-        // Guard: tolak jika tidak punya akses edit
         if (! $this->canEdit) return;
 
         $date = Carbon::parse($this->selectedDate)->toDateString();
@@ -392,10 +502,6 @@ class ProduksiPakanLaporan extends Page
         DB::transaction(function () use ($date) {
 
             if (! $this->currentRecord) {
-                // ────────────────────────────────────────────────────────────
-                // FIRST SAVE: Record belum ada, buat sekarang
-                // Inilah satu-satunya tempat record dibuat ke DB.
-                // ────────────────────────────────────────────────────────────
                 $this->currentRecord = ProduksiPakan::create([
                     'tanggal_produksi' => $date,
                     'created_by'       => Auth::user()->name,
@@ -407,12 +513,11 @@ class ProduksiPakanLaporan extends Page
                         'id_produksi_pakan' => $this->currentRecord->id,
                         'id_barang'         => $data['barang_id'],
                         'stok_awal'         => $data['awal'],
-                        'keluar_pullet'     => $data['p']    ?? 0,
-                        'keluar_l1'         => $data['l1']   ?? 0,
-                        'keluar_l2'         => $data['l2']   ?? 0,
+                        'keluar_pullet'     => $data['p']     ?? 0,
+                        'keluar_l1'         => $data['l1']    ?? 0,
+                        'keluar_l2'         => $data['l2']    ?? 0,
                         'stok_akhir'        => $data['akhir'] ?? 0,
                     ]);
-                    // Simpan ID yang baru didapat agar update berikutnya bisa pakai WHERE id
                     $this->mentahState[$idx]['id'] = $record->id;
                 }
 
@@ -425,24 +530,20 @@ class ProduksiPakanLaporan extends Page
                         'keluar_pullet'     => $data['p']     ?? 0,
                         'keluar_l1'         => $data['l1']    ?? 0,
                         'keluar_l2'         => $data['l2']    ?? 0,
-                        'stok_akhir'        => $data['akhir']  ?? 0,
+                        'stok_akhir'        => $data['akhir'] ?? 0,
                     ]);
                     $this->campuranState[$idx]['id'] = $record->id;
                 }
 
-                // Tandai bahwa draft sudah tersimpan & user ini adalah creator
                 $this->isDraftSaved = true;
                 $this->isCreator    = true;
             } else {
-                // ────────────────────────────────────────────────────────────
-                // UPDATE: Record sudah ada, update baris yang berubah
-                // ────────────────────────────────────────────────────────────
                 foreach ($this->mentahState as $data) {
-                    if (! $data['id']) continue; // jaga-jaga jika ada baris tanpa ID
+                    if (! $data['id']) continue;
                     ProduksiPakanMentah::where('id', $data['id'])->update([
-                        'keluar_pullet' => $data['p']    ?? 0,
-                        'keluar_l1'     => $data['l1']   ?? 0,
-                        'keluar_l2'     => $data['l2']   ?? 0,
+                        'keluar_pullet' => $data['p']     ?? 0,
+                        'keluar_l1'     => $data['l1']    ?? 0,
+                        'keluar_l2'     => $data['l2']    ?? 0,
                         'stok_akhir'    => $data['akhir'] ?? 0,
                     ]);
                 }
@@ -454,7 +555,7 @@ class ProduksiPakanLaporan extends Page
                         'keluar_pullet' => $data['p']     ?? 0,
                         'keluar_l1'     => $data['l1']    ?? 0,
                         'keluar_l2'     => $data['l2']    ?? 0,
-                        'stok_akhir'    => $data['akhir']  ?? 0,
+                        'stok_akhir'    => $data['akhir'] ?? 0,
                     ]);
                 }
 
@@ -462,9 +563,10 @@ class ProduksiPakanLaporan extends Page
             }
         });
 
-        // Recompute permission setelah state berubah
-        $this->computePermissions();
+        // Data sudah aman di DB → hapus session draft, tidak diperlukan lagi
+        $this->clearSession();
 
+        $this->computePermissions();
         Notification::make()->title('Data Disimpan')->success()->send();
     }
 
@@ -474,11 +576,9 @@ class ProduksiPakanLaporan extends Page
 
     public function validateData(): void
     {
-        // Guard: hanya lanjut jika tombol memang ditampilkan
         if (! $this->showValidateButton) return;
 
-        // Simpan dulu sebelum mengunci
-        $this->save();
+        $this->save(); // save() sudah otomatis clearSession() di dalamnya
 
         $this->currentRecord->update([
             'validated_by' => Auth::user()->name,
