@@ -132,7 +132,7 @@ class ReturnPenjualansTable
 
                         // ! CALL SERVICE
                         $status = $data['status_return'];
-                        if ($status === 'SELESAI') {
+                        if (in_array($status, ['DITERIMA', 'SELESAI'])) {
                             app(StokPenyesuaianService::class)
                                 ->selesai($record->id);
                         }
@@ -168,7 +168,7 @@ class ReturnPenjualansTable
                     ->action(function ($record) {
                         // ! CALL SERVICE
                         $status = $record->status_return;
-                        if ($status === 'SELESAI') {
+                        if (in_array($status, ['DITERIMA', 'SELESAI'])) {
                             app(StokPenyesuaianService::class)
                                 ->validasi_batal_dari_selesai($record->id);
                         }
