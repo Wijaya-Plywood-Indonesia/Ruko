@@ -109,7 +109,7 @@
     {{-- ══════════════════════════════════════════════════════════════ --}}
     {{-- FORM INPUT UTAMA                                               --}}
     {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="w-full mx-auto no-transition"
+    <div class="fi-page-content max-w-7xl mx-auto no-transition"
         x-data="{
             tgl:          @entangle('tgl'),
             jurnal:       @entangle('jurnal'),
