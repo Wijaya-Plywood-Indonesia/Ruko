@@ -347,13 +347,13 @@
                                     {{ number_format($item['awal']) }}
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.p" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.p_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l1" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l1_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l2" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l2_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-4 py-2.5 text-center">
                                     <span class="inline-block rounded-md bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
@@ -376,7 +376,6 @@
 
         {{-- ── 3b. TABEL HASIL CAMPURAN ────────────────────────────────────── --}}
         <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-
             <header class="fi-section-header flex items-center gap-3 overflow-hidden px-6 py-4">
                 <div class="grid flex-1 gap-1">
                     <h3 class="text-base font-semibold leading-6 text-gray-950 dark:text-white">
@@ -438,6 +437,98 @@
                             <tr>
                                 <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                                     Tidak ada data pakan campuran.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ── 3c. TABEL PENGGUNAAN KARUNG (AYAM) ────────────────────────────────── --}}
+        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden mt-6">
+            <header class="fi-section-header flex items-center gap-3 overflow-hidden px-6 py-4">
+                <div class="grid flex-1 gap-1">
+                    <h3 class="text-base font-semibold leading-6 text-gray-950 dark:text-white">
+                        Penggunaan Karung
+                    </h3>
+                </div>
+            </header>
+
+            <div class="fi-section-content border-t border-gray-200 dark:border-white/10">
+                <div class="pp-table-wrapper pp-table">
+                    <table>
+                        <thead class="bg-gray-50 dark:bg-white/5">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Barang</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
+                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Pullet</th>
+                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 1</th>
+                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 2</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Sisa Akhir</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-white/5">
+                            @forelse($karungState as $idx => $item)
+                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
+                                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase">
+                                    {{ $item['nama'] }}
+                                    @if(($item['konversi_sak'] ?? 1) > 1)
+                                    <span class="block text-[10px] text-gray-400 font-normal italic">Isi: {{ $item['konversi_sak'] }} Pcs/Sak</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400 font-mono">
+                                    {{ number_format((float) $item['awal']) }}
+                                </td>
+
+                                {{-- Input Pullet --}}
+                                <td class="px-2 py-1.5">
+                                    <div class="flex flex-col items-center">
+                                        @if(($item['konversi_sak'] ?? 1) > 1)
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.p_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
+                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['p'], 0) }} Pcs</span>
+                                        @else
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.p" @disabled(!$canEdit) class="cell-input" placeholder="0">
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Input Layer 1 --}}
+                                <td class="px-2 py-1.5">
+                                    <div class="flex flex-col items-center">
+                                        @if(($item['konversi_sak'] ?? 1) > 1)
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l1_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
+                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['l1'], 0) }} Pcs</span>
+                                        @else
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l1" @disabled(!$canEdit) class="cell-input" placeholder="0">
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Input Layer 2 --}}
+                                <td class="px-2 py-1.5">
+                                    <div class="flex flex-col items-center">
+                                        @if(($item['konversi_sak'] ?? 1) > 1)
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l2_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
+                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['l2'], 0) }} Pcs</span>
+                                        @else
+                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l2" @disabled(!$canEdit) class="cell-input" placeholder="0">
+                                        @endif
+                                    </div>
+                                </td>
+
+                                {{-- Sisa Akhir --}}
+                                <td class="px-4 py-2.5 text-center">
+                                    <span class="inline-block rounded-md bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+                                        {{ number_format((float) $item['akhir'], 2) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                                    Tidak ada data karung (ayam).
                                 </td>
                             </tr>
                             @endforelse
