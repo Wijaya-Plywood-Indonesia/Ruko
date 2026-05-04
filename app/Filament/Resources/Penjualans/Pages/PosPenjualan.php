@@ -45,6 +45,8 @@ class PosPenjualan extends Page
     public int $bayar = 0;
     public ?int $rekening_perusahaan_id = null;
     public $rekeningPerusahaan = [];
+    public ?RekeningPerusahaan $selectedBank = null;
+    public string $kode_member = '';
 
     /* ================= PENGIRIMAN ================= */
     public string $metode_pengiriman = 'DIBAWA_SENDIRI';
@@ -283,6 +285,31 @@ class PosPenjualan extends Page
             ->get();
     }
 
+    public function updatedKodeMember(): void
+    {
+        if (strlen($this->kode_member) < 2) {
+            $this->customerResults = [];
+            return;
+        }
+
+        // Exact match for auto-fill
+        $pembeli = Pembeli::where('nik', $this->kode_member)->first();
+        if ($pembeli) {
+            $this->selectCustomer($pembeli->id);
+            Notification::make()->title('Member Ditemukan')->success()->send();
+            $this->customerResults = [];
+            return;
+        }
+
+        // Fuzzy search for recommendations
+        $this->customerResults = Pembeli::query()
+            ->where('nama', 'like', "%{$this->kode_member}%")
+            ->orWhere('telepon', 'like', "%{$this->kode_member}%")
+            ->orWhere('nik', 'like', "%{$this->kode_member}%")
+            ->limit(5)
+            ->get();
+    }
+
     public function selectCustomer(int $id): void
     {
         $pembeli = Pembeli::findOrFail($id);
@@ -290,6 +317,7 @@ class PosPenjualan extends Page
         $this->nama_customer = $pembeli->nama;
         $this->alamat = $pembeli->alamat;
         $this->telepon = $pembeli->telepon;
+        $this->kode_member = $pembeli->nik ?? ''; // Set kode_member to NIK when selected
         $this->customerResults = [];
         $this->searchCustomer = '';
     }
@@ -302,6 +330,16 @@ class PosPenjualan extends Page
         } else {
             $this->rekeningPerusahaan = [];
             $this->rekening_perusahaan_id = null;
+            $this->selectedBank = null;
+        }
+    }
+
+    public function updatedRekeningPerusahaanId(): void
+    {
+        if ($this->rekening_perusahaan_id) {
+            $this->selectedBank = RekeningPerusahaan::find($this->rekening_perusahaan_id);
+        } else {
+            $this->selectedBank = null;
         }
     }
 
@@ -453,7 +491,7 @@ class PosPenjualan extends Page
 
     public function resetPos(): void
     {
-        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran']);
+        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran', 'kode_member', 'selectedBank']);
         $this->no_nota = $this->generateNoNota();
     }
 
