@@ -1,810 +1,292 @@
 <x-filament::page>
-    {{-- =========================================================
-        POS CASHIER STYLE (KHUSUS PAGE INI)
-        ========================================================= --}}
-    <style>
-        option {
-            background: #010101;
-            color: #fafafa;
-            
-        }
-        /* ===============================
-           GLOBAL POS LAYOUT
-           =============================== */
-        .pos-wrapper {
-            font-family: ui-sans-serif, system-ui, -apple-system;
-            /* background: #f9fafb; */
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 16px;
-        }
+    @vite(['resources/css/app.css'])
 
-        .pos-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
+    <div class="pos-pro-dashboard flex flex-col gap-4 lg:gap-6" x-data="{ search: @entangle('search') }">
+        
 
-        /* ===============================
-           INPUT & SELECT
-           =============================== */
-        .pos-input,
-        .pos-select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            /* background: #fff; */
-            font-size: 14px;
-        }
-
-        .pos-input:focus,
-        .pos-select:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-        }
-
-        /* ===============================
-           SEARCH DROPDOWN
-           =============================== */
-        .pos-search-box {
-            width: 300px;
-            /* background: #fff; */
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            overflow: hidden;
-            margin-top: 4px;
-        }
-
-        .pos-search-item {
-            padding: 10px;
-            cursor: pointer;
-            border-bottom: 1px solid #d1d5db;
-        }
-
-
-        .pos-search-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            margin-top: 4px;
-            max-height: 250px;
-            overflow-y: auto;
-            z-index: 50;
-        }
-
-
-        .pos-search-item:hover {
-            border-radius: 8px;
-            outline: none;
-            border: 1px solid #2563eb;
-            /* border-color: #2563eb; */
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-        }
-
-
-        /* ===============================
-           DIVIDER
-           =============================== */
-        .pos-divider {
-            border-top: 1px dashed #d1d5db;
-            margin: 24px 0;
-        }
-
-        /* ===============================
-           TABLE (CART)
-           =============================== */
-        .pos-table {
-            width: 100%;
-            border-collapse: collapse;
-            /* background: #fff; */
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .pos-table th {
-            background: #111827;
-            color: #fff;
-            font-weight: 600;
-            padding: 10px;
-            font-size: 13px;
-        }
-
-        .pos-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 14px;
-        }
-
-        .pos-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* ===============================
-   QTY BUTTON
-   =============================== */
-        .qty-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 16px;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
-        }
-
-        /* ➖ MINUS */
-        .qty-btn.minus {
-            /* background: #fee2e2; merah muda/ */
-            color: #b91c1c;
-        }
-
-        .qty-btn.minus:hover {
-            background: #fecaca;
-        }
-
-        /* ➕ PLUS */
-        .qty-btn.plus {
-            /* background: #dcfce7; hijau muda */
-            color: #166534;
-        }
-
-        .qty-btn.plus:hover {
-            background: #bbf7d0;
-        }
-
-        /* Disabled state (opsional) */
-        .qty-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        /* ===============================
-           BUTTON
-           =============================== */
-        .btn-danger {
-            background: #cf2323;
-            color: white;
-            border: none;
-            padding: 6px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-danger:hover {
-            background: #ef4444;
-        }
-
-        .btn-primary {
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .btn-primary:hover {
-            background: #1d4ed8;
-        }
-
-        /* ===============================
-           TOTAL
-           =============================== */
-        .pos-total {
-            font-size: 20px;
-            font-weight: 700;
-            /* color: #111827; */
-        }
-
-        .pos-kembalian {
-            font-size: 16px;
-            font-weight: 600;
-        }
-        /* ===============================
-   INPUT HARGA JUAL (POS)
-   =============================== */
-        .pos-input-price {
-            width: 100px;
-            padding: 6px 8px;
-
-            border: 1px solid #d1d5db; /* abu lembut */
-            border-radius: 6px;
-
-            /* background-color: #f9fafb; beda dari bg tabel */
-            /* color: #111827; */
-
-            font-weight: 600;
-            text-align: right;
-
-            outline: none;
-        }
-
-        /* Fokus / aktif */
-        .pos-input-price:focus {
-            border-color: #2563eb;
-            /* background-color: #ffffff; */
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-
-        /* Mobile: lebih besar & mudah disentuh */
-        @media (max-width: 640px) {
-            .pos-input-price {
-                width: 120px;
-                padding: 10px;
-                font-size: 16px; /* penting: mencegah zoom iOS */
-            }
-        }
-        /* ===============================
-   RESPONSIVE SWITCH
-   =============================== */
-        .pos-cart-mobile {
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .pos-table-desktop {
-                display: none;
-            }
-
-            .pos-cart-mobile {
-                display: block;
-            }
-        }
-
-        /* ===============================
-   MOBILE CARD STYLE
-   =============================== */
-        .pos-cart-card {
-            /* background: #ffffff; */
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .card-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 6px 0;
-            font-size: 14px;
-        }
-
-        .card-row.total {
-            border-top: 1px dashed #e5e7eb;
-            padding-top: 6px;
-            margin-top: 8px;
-        }
-
-        .qty-control {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .qty-control input {
-            width: 60px;
-            text-align: center;
-        }
-
-        .qty-control button {
-            padding: 6px 10px;
-            font-size: 16px;
-        }
-        .grid-span-full {
-            grid-column: 1 / -1; /* dari kolom 1 sampai terakhir */
-        }
-
-        .bank-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-    </style>
-
-        {{-- =========================================================
-            WRAPPER
-            ========================================================= --}}
-        <div class="pos-wrapper">
-            <div style="display: flex; width: 100%; justify-content: space-between;">
-                <h2 class="pos-title">Point of Sale</h2>
-                <div style="margin-top: 12px; font-size: 14px">
-                    <strong>Kasir:</strong> {{ auth()->user()->name }}
+        {{-- MAIN INFO BAR --}}
+        <div class="flex flex-wrap items-center justify-between bg-white dark:bg-gray-900 px-4 py-3 lg:px-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm gap-x-6 gap-y-3">
+            <div class="flex items-center gap-6">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Nota</span>
+                    <span class="text-xs lg:text-sm font-black text-primary-600 font-mono">{{ $no_nota }}</span>
+                </div>
+                <div class="h-6 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Kasir</span>
+                    <span class="text-xs lg:text-sm font-bold text-gray-700 dark:text-gray-200">{{ auth()->user()->name }}</span>
+                </div>
+                <div class="h-6 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Waktu</span>
+                    <span class="text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-400">{{ \Carbon\Carbon::parse($tanggal)->format('d/m/Y H:i') }}</span>
                 </div>
             </div>
+            <div class="hidden lg:flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 px-4 py-2 rounded-xl border border-primary-100 dark:border-primary-800">
+                <x-heroicon-o-building-storefront class="w-4 h-4 text-primary-600" />
+                <span class="text-xs font-black text-primary-700 dark:text-primary-400 uppercase tracking-wider">{{ $namaToko }}</span>
+            </div>
+        </div>
 
-        <div class="pos-divider"></div>
-
-        {{-- ===================== TANGGAL PENJUALAN ===================== --}}
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Tanggal Penjualan
-        </h6>
-
-        <input 
-            type="datetime-local" 
-            wire:model.defer="tanggal" 
-            class="pos-input" 
-            style="max-width: 300px;" 
-        />
-        <div class="pos-divider"></div>
-        {{-- ===================== NOMOR NOTA ===================== --}}
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Nomor Nota
-        </h6>
-
-        <input 
-            type="text" 
-            wire:model.live="no_nota" 
-            class="pos-input" 
-            style="max-width: 300px;" 
-        />
-        <input 
-            type="text" 
-            wire:model.live="keterangan_nota" 
-            placeholder="keterangan nota"
-            class="pos-input" 
-            style="max-width: 300px;" 
-        />
-        <div class="pos-divider"></div>
-
-
-
-        {{-- ===================== CUSTOMER ===================== --}}
-
-        {{-- MEMBER / REGULAR --}}
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Jenis Pelanggan
-        </h6>
-        <select wire:model.live="is_member" class="pos-select">
-            <option value="0">Regular</option>
-            <option value="1">Member</option>
-        </select>
-        <div class="pos-divider"></div>
-        {{-- ===================== TITLE ===================== --}}
-
-        {{-- ===================== SEARCH ===================== --}}
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Masukkan Barang
-        </h6>
-
-        <div class="pos-search-wrapper" style="position: relative; max-width: 300px">
-            <input
-                type="text"
-                wire:model.live.debounce.300ms="search"
-                placeholder="Cari barang / barcode"
-                class="pos-input w-full"
-                wire:focus="openDropdown"
-                wire:keydown.escape="closeDropdown"
-            />
-
-            @if ($showDropdown && $searchResults->isNotEmpty())
-                <div class="pos-search-dropdown">
-                    @foreach ($searchResults as $barang)
-                            <div
-                                x-data
-                                :style="$store.theme !== 'dark' 
-                                ? 'background-color: #fafafa; color: #09090B;' 
-                                : 'background-color: #09090B; color: #fafafa;'"
-                                wire:click="selectBarang({{ $barang->id }})"
-                                class="pos-search-item"
-                            >
-                                <strong>{{ $barang->nama_barang }}</strong><br>
-                                <small>Rp {{ number_format($barang->harga_jual) }}</small><br>
-                               <small>
-    Stock:
-    {{ ($barang->stok_aktual ?? 0) > 0 ? number_format((float) $barang->stok_aktual, 2) : 'Kosong' }}
-</small>
+        <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+            
+            {{-- LEFT SECTION: OPERATIONAL --}}
+            <div class="w-full lg:w-[68%] flex flex-col gap-4 lg:gap-6 order-2 lg:order-1">
+                
+                {{-- SEARCH CARD --}}
+                <div class="bg-white dark:bg-gray-900 p-4 lg:p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                <x-heroicon-o-magnifying-glass class="w-5 h-5" />
                             </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
+                            <input 
+                                type="text"
+                                wire:model.live.debounce.300ms="search"
+                                placeholder="Cari barang / barcode... (/)"
+                                id="pos-search-input"
+                                class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl pl-12 pr-4 py-3 lg:py-4 text-sm font-medium focus:ring-2 focus:ring-primary-500/20"
+                                @keydown.slash.window.prevent="document.getElementById('pos-search-input').focus()"
+                                wire:focus="openDropdown"
+                            />
 
+                            @if($showDropdown)
+                                <div class="absolute inset-x-0 mt-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
+                                    @foreach($searchResults as $barang)
+                                        <div wire:click="selectBarang({{ $barang->id }})" class="p-4 hover:bg-primary-50 dark:hover:bg-primary-900/10 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-800 last:border-0">
+                                            <div>
+                                                <div class="font-bold text-sm text-gray-900 dark:text-white">{{ $barang->nama_barang }}</div>
+                                                <div class="text-[10px] text-gray-400">{{ $barang->barcode }}</div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-black text-sm text-primary-600">Rp{{ number_format($barang->harga_jual) }}</div>
+                                                <div class="text-[9px] font-bold text-gray-400 uppercase">Stok: {{ number_format($barang->stok_aktual, 2) }}</div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
 
-        <div class="pos-divider"></div>
-
-        <div class="pos-table-desktop">
-            <table class="pos-table">
-                {{-- ===================== CART ===================== --}}
-                <table class="pos-table">
-                    <thead>
-                        <tr>
-                            <th>Qty</th>
-                            <th>Barang</th>
-                            <th>Satuan</th>
-                            <th>Harga</th>
-                            <th>Harga Jual</th>
-                            <th>Potongan</th>
-                            <th>Total Potongan</th>
-                            <th>Subtotal</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($cart as $id => $item)
-                        <tr>
-                            <td align="center">
-                                <button
-                                    wire:click="decrementQty({{ $id }})"
-                                    class="qty-btn minus"
-                                >
-                                    −
-                                </button>
-
-                                <input
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    class="pos-input"
-                                    style="
-                                        width: 70px;
-                                        text-align: center;
-                                        margin: 0 6px;
-                                        padding: 4px;
-                                    "
-                                    wire:model.lazy="cart.{{ $id }}.qty"
-                                    wire:change="updateQty({{ $id }})"
-                                />
-
-                                <button
-                                    wire:click="incrementQty({{ $id }})"
-                                    class="qty-btn plus"
-                                >
-                                    +
-                                </button>
-                            </td>
-                            <td>{{ $item["nama_barang"] }}</td>
-                            <td align="center">{{ $item["satuan"] }}</td>
-                            <td>
-                                Rp. {{ number_format($item["harga_awal"]) }}
-                            </td>
-
-                            <td class="price-cell">
-                                Rp.
-                                <input
-                                    type="number"
-                                    inputmode="numeric"
-                                    class="pos-input-price"
-                                    wire:model.lazy="cart.{{ $id }}.harga_jual"
-                                    wire:change="updateHargaJual({{ $id }})"
-                                />
-                            </td>
-                            <!-- potongan -->
-                            <!-- POTONGAN PER PCS -->
-                            <td class="price-cell">
-                                Rp.
-                                <input
-                                    type="number"
-                                    min="0"
-                                    inputmode="numeric"
-                                    class="pos-input-price"
-                                    wire:model.lazy="cart.{{ $id }}.potongan"
-                                    wire:change="updatePotongan({{ $id }})"
-                                />
-                            </td>
-                            <!-- TOTAL POTONGAN -->
-                            <td class="price-cell text-red-600 font-semibold">
-                                Rp.
-                                {{
-                                    number_format(
-                                        $cart[$id]["total_potongan"] ?? 0
-                                    )
-                                }}
-                            </td>
-
-                            <td align="right">
-                                Rp. {{ number_format($item["subtotal"]) }}
-                            </td>
-                            <td align="center">
-                                <button
-                                    wire:click="removeFromCart({{ $id }})"
-                                    class="btn-danger"
-                                    {{-- style="background: #b91c1c" --}}
-                                >
-                                    ❌
-                                </button>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" align="center">Keranjang kosong</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </table>
-        </div>
-        <div class="pos-cart-mobile">
-            @forelse ($cart as $id => $item)
-            <div class="pos-cart-card">
-                {{-- HEADER --}}
-                <div class="card-header">
-                    <strong>{{ $item["nama_barang"] }}</strong>
-                    <button
-                        wire:click="removeFromCart({{ $id }})"
-                        class="btn-danger"
-                    >
-                        ❌
-                    </button>
-                </div>
-
-                {{-- QTY --}}
-                <div class="card-row">
-                    <span>Qty</span>
-                    <div class="qty-control">
-                        <button wire:click="decrementQty({{ $id }})">−</button>
-                        <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            wire:model.lazy="cart.{{ $id }}.qty"
-                            wire:change="updateQty({{ $id }})"
-                        />
-                        <button wire:click="incrementQty({{ $id }})">+</button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tipe Pelanggan</label>
+                                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                                    <button wire:click="$set('is_member', 0)" class="py-2 rounded-lg text-[10px] font-black uppercase transition-all {{ !$is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-400' }}">Umum</button>
+                                    <button wire:click="$set('is_member', 1)" class="py-2 rounded-lg text-[10px] font-black uppercase transition-all {{ $is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-400' }}">Member</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Identitas</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" wire:model.live="nama_customer" placeholder="Nama..." class="w-full min-w-0 bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-xs font-bold focus:ring-2 focus:ring-primary-500/20" />
+                                    <input type="text" wire:model.live="alamat" placeholder="Alamat..." class="w-full min-w-0 bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-xs font-bold focus:ring-2 focus:ring-primary-500/20" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {{-- HARGA AWAL --}}
-                <div class="card-row">
-                    <span>Harga</span>
-                    <span>Rp {{ number_format($item["harga_awal"]) }}</span>
-                </div>
+                {{-- CART TABLE / CARDS --}}
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center bg-gray-50/30 dark:bg-gray-800/30">
+                        <h3 class="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">Item Belanja</h3>
+                        <span class="text-[10px] font-black text-primary-600 bg-primary-50 dark:bg-primary-900/40 px-3 py-1 rounded-full uppercase">{{ count($cart) }} Items</span>
+                    </div>
+                    
+                    <div>
+                        {{-- Desktop Table --}}
+                        <div class="hidden md:block min-w-full">
+                            <table class="w-full text-left table-fixed border-collapse">
+                                <thead class="bg-white dark:bg-gray-900 sticky top-0 z-10">
+                                    <tr class="text-[10px] uppercase font-black text-gray-400 border-b border-gray-50 dark:border-gray-800">
+                                        <th class="w-[35%] px-6 py-4">Barang</th>
+                                        <th class="w-[15%] px-4 py-4 text-center">Qty</th>
+                                        <th class="w-[15%] px-4 py-4 text-right">Harga</th>
+                                        <th class="w-[15%] px-4 py-4 text-right text-red-400">Pot.</th>
+                                        <th class="w-[15%] px-4 py-4 text-right">Subtotal</th>
+                                        <th class="w-[5%] px-6 py-4"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+                                    @foreach($cart as $id => $item)
+                                        <tr class="hover:bg-primary-50/20 dark:hover:bg-primary-900/10">
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $item['nama_barang'] }}</div>
+                                                <div class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{{ $item['satuan'] }} • Rp{{ number_format($item['harga_awal']) }}</div>
+                                            </td>
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg p-1 border border-gray-100 dark:border-gray-700">
+                                                    <button wire:click="decrementQty({{ $id }})" class="w-6 h-6 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3 h-3" /></button>
+                                                    <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-10 text-center border-none bg-transparent p-0 text-xs font-black" />
+                                                    <button wire:click="incrementQty({{ $id }})" class="w-6 h-6 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-4 text-right">
+                                                <input type="number" wire:model.lazy="cart.{{ $id }}.harga_jual" wire:change="updateHargaJual({{ $id }})" class="w-full text-right bg-transparent border-b border-gray-100 dark:border-gray-700 p-0 text-xs font-black" />
+                                            </td>
+                                            <td class="px-4 py-4 text-right">
+                                                <input type="number" wire:model.lazy="cart.{{ $id }}.potongan" wire:change="updatePotongan({{ $id }})" class="w-full text-right bg-transparent border-b border-red-100 dark:border-red-900 p-0 text-xs font-black text-red-500" />
+                                            </td>
+                                            <td class="px-4 py-4 text-right font-black text-sm text-gray-900 dark:text-white">Rp{{ number_format($item['subtotal']) }}</td>
+                                            <td class="px-6 py-4 text-right"><button wire:click="removeFromCart({{ $id }})" class="text-gray-300 hover:text-red-500"><x-heroicon-o-trash class="w-4 h-4" /></button></td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
 
-                {{-- HARGA JUAL --}}
-                <div class="card-row">
-                    <span>Harga Jual</span>
-                    <input
-                        type="number"
-                        inputmode="numeric"
-                        class="pos-input-price"
-                        wire:model.lazy="cart.{{ $id }}.harga_jual"
-                        wire:change="updateHargaJual({{ $id }})"
-                    />
-                </div>
-
-                {{-- POTONGAN PER PCS --}}
-                <div class="card-row">
-                    <span>Potongan / pcs</span>
-                    <input
-                        type="number"
-                        min="0"
-                        inputmode="numeric"
-                        class="pos-input-price"
-                        wire:model.lazy="cart.{{ $id }}.potongan"
-                        wire:change="updatePotongan({{ $id }})"
-                    />
-                </div>
-
-                {{-- TOTAL POTONGAN --}}
-                <div class="card-row text-red-600">
-                    <span>Total Potongan</span>
-                    <strong>
-                        Rp {{ number_format($item["total_potongan"] ?? 0) }}
-                    </strong>
-                </div>
-
-                {{-- SUBTOTAL --}}
-                <div class="card-row total">
-                    <span>Subtotal</span>
-                    <strong>Rp {{ number_format($item["subtotal"]) }}</strong>
+                        {{-- Mobile Cards --}}
+                        <div class="md:hidden divide-y divide-gray-50 dark:divide-gray-800">
+                            @forelse($cart as $id => $item)
+                                <div class="p-4 space-y-3">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="font-bold text-sm text-gray-900 dark:text-white">{{ $item['nama_barang'] }}</div>
+                                            <div class="text-[10px] text-gray-400 uppercase">{{ $item['satuan'] }} • H. Awal: Rp{{ number_format($item['harga_awal']) }}</div>
+                                        </div>
+                                        <button wire:click="removeFromCart({{ $id }})" class="text-red-300"><x-heroicon-o-trash class="w-4 h-4" /></button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="space-y-1">
+                                            <label class="text-[9px] font-black text-gray-400 uppercase">Qty</label>
+                                            <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-lg p-1">
+                                                <button wire:click="decrementQty({{ $id }})" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
+                                                <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-full text-center border-none bg-transparent p-0 text-xs font-black" />
+                                                <button wire:click="incrementQty({{ $id }})" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-[9px] font-black text-gray-400 uppercase">H. Jual</label>
+                                            <input type="number" wire:model.lazy="cart.{{ $id }}.harga_jual" wire:change="updateHargaJual({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-lg py-2 px-3 text-xs font-black text-right" />
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-[9px] font-black text-red-400 uppercase">Diskon</label>
+                                            <input type="number" wire:model.lazy="cart.{{ $id }}.potongan" wire:change="updatePotongan({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-lg py-2 px-3 text-xs font-black text-right text-red-500" />
+                                        </div>
+                                        <div class="space-y-1 text-right">
+                                            <label class="text-[9px] font-black text-gray-400 uppercase">Subtotal</label>
+                                            <div class="py-2 font-black text-sm text-primary-600">Rp{{ number_format($item['subtotal']) }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="py-20 text-center opacity-20"><x-heroicon-o-shopping-bag class="w-12 h-12 mx-auto mb-2" /><span class="text-xs font-black uppercase">Kosong</span></div>
+                            @endforelse
+                        </div>
+                    </div>
                 </div>
             </div>
-            @empty
-            <div class="empty-cart">Keranjang kosong</div>
-            @endforelse
-        </div>
 
-        <div class="pos-divider"></div>
-        {{-- SEARCH CUSTOMER (MEMBER ONLY) --}}
-        @if ($is_member === 1)
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Temukan Member
-        </h6>
+            {{-- RIGHT SECTION: CHECKOUT --}}
+            <div id="checkout-section" class="w-full lg:w-[32%] order-1 lg:order-2 lg:sticky lg:top-8 lg:self-start">
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl flex flex-col overflow-hidden">
+                    <div class="p-6 lg:p-8 bg-gray-900 dark:bg-black text-white relative overflow-hidden shrink-0">
+                        <div class="relative z-10">
+                            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500 block mb-2">Grand Total</span>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-xl font-bold opacity-40">Rp</span>
+                                <span class="text-4xl lg:text-5xl font-black tracking-tighter leading-none">{{ number_format($this->total) }}</span>
+                            </div>
+                        </div>
+                        <div class="absolute -right-10 -bottom-10 opacity-5"><x-heroicon-o-banknotes class="w-40 h-40" /></div>
+                    </div>
 
-        <input
-            wire:model.live="searchCustomer"
-            class="pos-input"
-            placeholder="Cari pelanggan (nama / NIK / telepon)"
-        />
+                    <div class="p-5 space-y-6">
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Metode Pembayaran</label>
+                            <div class="grid grid-cols-2 gap-1 p-1 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                                <button wire:click="$set('metode_pembayaran', 'TUNAI')" class="py-2 rounded-lg text-[10px] font-black uppercase transition-all {{ $metode_pembayaran === 'TUNAI' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-400' }}">Tunai</button>
+                                <button wire:click="$set('metode_pembayaran', 'TRANSFER')" class="py-2 rounded-lg text-[10px] font-black uppercase transition-all {{ $metode_pembayaran === 'TRANSFER' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-400' }}">Transfer</button>
+                            </div>
+                            @if($metode_pembayaran === 'TRANSFER')
+                                <div class="relative">
+                                    <select wire:model.live="rekening_perusahaan_id" class="w-full appearance-none bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 pr-8 text-xs font-bold focus:ring-2 focus:ring-primary-500/20 cursor-pointer">
+                                        <option value="">Pilih Bank...</option>
+                                        @foreach($rekeningPerusahaan as $rek)
+                                            <option value="{{ $rek->id }}">{{ $rek->nama_bank }} - {{ $rek->no_rekening }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                                        <x-heroicon-o-chevron-down class="w-3.5 h-3.5" />
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
 
-        <div class="pos-divider"></div>
+                        <div class="space-y-3 bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <div class="flex justify-between items-center">
+                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Nominal Bayar</label>
+                                <div class="flex gap-1">
+                                    <button wire:click="setBayar('pas')" class="px-2 py-0.5 bg-gray-50 dark:bg-gray-800 text-[9px] font-black rounded border border-gray-200 dark:border-gray-700 hover:bg-primary-600 hover:text-white uppercase transition-all">Pas</button>
+                                    <button wire:click="setBayar(100000)" class="px-2 py-0.5 bg-gray-50 dark:bg-gray-800 text-[9px] font-black rounded border border-gray-200 dark:border-gray-700 hover:bg-primary-600 hover:text-white uppercase transition-all">100k</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 border-b-2 border-primary-500 pb-2">
+                                <span class="text-2xl font-black text-primary-600">Rp</span>
+                                <input type="number" wire:model.lazy="bayar" class="w-full bg-transparent border-none p-0 text-3xl lg:text-4xl font-black focus:ring-0 tracking-tighter" placeholder="0" />
+                            </div>
+                            <div class="pt-2 flex justify-between items-center">
+                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ $this->bayar < $this->total ? 'Kurang' : 'Kembali' }}</span>
+                                <span class="text-xl lg:text-2xl font-black {{ $this->bayar < $this->total ? 'text-red-500' : 'text-green-500' }}">Rp{{ number_format(abs($this->bayar - $this->total)) }}</span>
+                            </div>
+                        </div>
 
-        @if (!empty($customerResults))
-        <div class="pos-search-box">
-            @foreach ($customerResults as $cust)
-            <div
-                class="pos-search-item"
-                wire:click="selectCustomer({{ $cust->id }})"
-            >
-                <strong>{{ $cust->nama }}</strong
-                ><br />
-                <small>
-                    {{ $cust->telepon }} • ----{{ substr($cust->nik, -4) }}
-                </small>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pengiriman</label>
+                            <div class="relative">
+                                <select wire:model.live="metode_pengiriman" class="w-full appearance-none bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 pr-8 text-xs font-bold focus:ring-2 focus:ring-primary-500/20 cursor-pointer">
+                                    <option value="DIBAWA_SENDIRI">Dibawa Sendiri</option>
+                                    <option value="DIKIRIM">Dikirim Kurir</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                                    <x-heroicon-o-chevron-down class="w-3.5 h-3.5" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catatan</label>
+                            <textarea wire:model.live="keterangan_nota" rows="2" placeholder="Catatan nota..." class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-primary-500/20"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="p-4 lg:p-5 border-t border-gray-100 dark:border-gray-800">
+                        <div class="flex gap-2">
+                            <button 
+                                wire:click="simpanPenjualan" 
+                                class="flex-grow py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-black text-sm border border-white/30 shadow-sm active:scale-[0.97] transition-all"
+                                @keydown.window.f8.prevent="$wire.simpanPenjualan()"
+                            >
+                                Simpan
+                            </button>
+                            <button wire:click="resetPos" class="py-3 px-5 text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors border border-gray-200 dark:border-gray-700 rounded-xl hover:border-red-200">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            @endforeach
         </div>
-        @endif @endif
-        {{-- ===================== DATA PELANGGAN ===================== --}}
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Data Pelanggan
-        </h6>
-
-        <div
-            style="
-                display: grid;
-                grid-template-columns: 1fr 2fr 1fr;
-                gap: 8px;
-                max-width: 600px;
-            "
-        >
-            <input
-                wire:model.live="nama_customer"
-                class="pos-input"
-                placeholder="Nama customer"
-            />
-
-            <input
-                wire:model.live="alamat"
-                class="pos-input"
-                placeholder="Alamat"
-            />
-
-            <select wire:model.live="metode_pembayaran" class="pos-select">
-                <option value="TUNAI">TUNAI</option>
-                <option value="TRANSFER">TRANSFER</option>
-            </select>
-
-            {{-- TRANSFER ONLY --}}
-            @if ($metode_pembayaran === 'TRANSFER')
-            <div class="grid-span-full">
-                <select
-                    wire:model.live="rekening_perusahaan_id"
-                    class="pos-select"
-                >
-                    <option value="">Pilih Rekening Perusahaan</option>
-
-                    @foreach ($rekeningPerusahaan as $rek)
-                    <option value="{{ $rek->id }}">
-                        {{ $rek->nama_bank }}
-                        • {{ substr($rek->no_rekening, -4) }} •
-                        {{ $rek->atas_nama }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-
-            <input
-                wire:model.live="keterangan_pembayaran"
-                class="pos-input grid-span-full"
-                placeholder="Keterangan Pembayaran"
-            />
-
-        </div>
-
-        {{-- ===================== Pengiriman ===================== --}}
-
-        <div class="pos-divider"></div>
-        <h6 style="margin-bottom: 8px; font-weight: 700;">
-            Metode Pengiriman
-        </h6>
-
-        {{-- METODE PENGIRIMAN --}}
-        <select
-            wire:model.live="metode_pengiriman"
-            class="pos-select"
-            style="max-width: 300px; margin-bottom: 12px"
-        >
-            <option value="DIBAWA_SENDIRI">Dibawa Sendiri</option>
-            <option value="DIKIRIM">Dikirim oleh Kami</option>
-        </select>
-
-        {{-- DETAIL PENGIRIMAN --}}
-        @if ($metode_pengiriman === 'DIKIRIM')
-        <div
-            style="
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-                max-width: 600px;
-            "
-        >
-            <input
-                wire:model.live="kendaraan"
-                class="pos-input"
-                placeholder="Kendaraan"
-            />
-
-            <input
-                wire:model.live="plat_kendaraan"
-                class="pos-input"
-                placeholder="Plat Kendaraan"
-            />
-
-            <input
-                wire:model.live="nama_sopir"
-                class="pos-input"
-                placeholder="Nama Sopir"
-            />
-        </div>
-        @endif
-
-        {{-- ===================== TOTAL ===================== --}}
-        <div class="pos-divider"></div>
-        <h3 class="pos-total">Total Pembayaran: Rp {{ number_format($this->total) }}</h3>
-        
-        <h6 style="margin-bottom: 8px; font-weight: 400;">
-            Nominal yang disetorkan
-        </h6>
-
-<div style="max-width: 300px; margin-top: 8px">
-    <input
-        type="number"
-        wire:model.lazy="bayar"
-        class="pos-input"
-        inputmode="numeric"
-        placeholder="Bayar"
-        min="0"
-    />
-
-    @php
-        $bayar = (float) ($this->bayar ?? 0);
-        $total = (float) ($this->total ?? 0);
-        $selisih = $bayar - $total;
-
-        $color = $selisih < 0 ? 'color:red;' : '';
-    @endphp
-
-    <p
-        class="pos-kembalian"
-        style="{{ $color }} margin-top:4px; margin-bottom:4px;"
-    >
-        {{ $selisih < 0 ? 'Kurang' : 'Kembalian' }}:
-        Rp {{ number_format(abs($selisih)) }}
-    </p>
-</div>
-
-        <button wire:click="simpanPenjualan" style="margin-top: 6px;" class="btn-primary">
-            Simpan Penjualan
-        </button>
     </div>
 
-    {{-- =========================================================
-        OFFLINE SAFE (LOCAL STORAGE)
-        ========================================================= --}}
-    <script>
-        document.addEventListener('livewire:update', () => {
-            localStorage.setItem(
-                'pos_cart',
-                JSON.stringify(@json($cart))
-            );
-        });
+    <style>
+        .pos-pro-dashboard { font-family: 'Inter', sans-serif; }
+        /* Fix Filament parent overflow that breaks sticky */
+        .fi-main, .fi-main-ctn { overflow: visible !important; }
+        .fi-page { overflow: visible !important; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input:focus, select:focus, textarea:focus { outline: none; }
+        .overflow-y-auto::-webkit-scrollbar { width: 3px; }
+        .overflow-y-auto::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        @media (max-width: 1024px) { .pos-pro-dashboard { height: auto; overflow: visible; } }
+    </style>
 
-        window.addEventListener('load', () => {
+    <script>
+        document.addEventListener('livewire:initialized', () => {
             const cart = localStorage.getItem('pos_cart');
-            if (cart) {
-                Livewire.dispatch('restoreCart', {
-                    cart: JSON.parse(cart)
-                });
-            }
+            if (cart) { @this.dispatch('restoreCart', { cart: JSON.parse(cart) }); }
+            @this.on('cartUpdated', () => { localStorage.setItem('pos_cart', JSON.stringify(@this.cart)); });
         });
     </script>
 </x-filament::page>
