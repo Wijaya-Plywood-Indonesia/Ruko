@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class ProduksiPakan extends Model
 {
     protected $fillable = [
-        'id_komposisi',
         'tanggal_produksi',
         'keterangan',
         'created_by',
@@ -18,21 +17,14 @@ class ProduksiPakan extends Model
         'tanggal_produksi' => 'date',
     ];
 
-
-    public function komposisi()
+    // Relasi ke yang lainnya
+    public function pakanMentahs()
     {
-        return $this->belongsTo(Komposisi::class, 'id_komposisi');
+        return $this->hasMany(ProduksiPakanMentah::class, 'id_produksi_pakan');
     }
 
-    // Rincian bahan aktual yang digunakan
-    public function produksiPakanBahan()
+    public function pakanCampurans()
     {
-        return $this->hasMany(ProduksiPakanBahan::class, 'id_produksi_pakan');
-    }
-
-    // Hasil akhir produksi (auto-generate saat status = selesai)
-    public function produksiPakanHasil()
-    {
-        return $this->hasOne(ProduksiPakanHasil::class, 'id_produksi_pakan');
+        return $this->hasMany(ProduksiPakanCampuran::class, 'id_produksi_pakan');
     }
 }
