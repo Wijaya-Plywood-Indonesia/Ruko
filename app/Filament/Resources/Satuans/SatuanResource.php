@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Satuans;
 use App\Filament\Resources\Satuans\Pages\CreateSatuan;
 use App\Filament\Resources\Satuans\Pages\EditSatuan;
 use App\Filament\Resources\Satuans\Pages\ListSatuans;
+use App\Filament\Resources\Satuans\RelationManagers\SatuanKonversiRelationManager;
 use App\Filament\Resources\Satuans\Schemas\SatuanForm;
 use App\Filament\Resources\Satuans\Tables\SatuansTable;
 use App\Models\Satuan;
@@ -38,7 +39,7 @@ class SatuanResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SatuanKonversiRelationManager::class
         ];
     }
 
