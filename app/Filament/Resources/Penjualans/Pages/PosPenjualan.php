@@ -14,24 +14,22 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-
+use Livewire\Attributes\On;
 
 class PosPenjualan extends Page
 {
     protected static string $resource = PenjualanResource::class;
     protected string $view = 'filament.resources.penjualans.pages.pos-penjualan';
 
-    /* ================= identitas Toko ================= */
+    /* ================= IDENTITAS TOKO ================= */
     public ?int $toko_id = null;
     public ?string $kodeToko = null;
-    public $daftarToko = [];
+    public ?string $namaToko = null;
 
     /* ================= STATE ================= */
-
     public string $search = '';
     public Collection $searchResults;
     public array $cart = [];
-
     public int $is_member = 0;
 
     /* ================= CUSTOMER ================= */
@@ -45,7 +43,6 @@ class PosPenjualan extends Page
     /* ================= PEMBAYARAN ================= */
     public string $metode_pembayaran = 'TUNAI';
     public int $bayar = 0;
-
     public ?int $rekening_perusahaan_id = null;
     public $rekeningPerusahaan = [];
 
@@ -59,40 +56,31 @@ class PosPenjualan extends Page
     public ?string $keterangan_pembayaran = null;
     public ?string $keterangan_nota = null;
 
-    /* ================= MOUNT ================= */
     public function mount(): void
     {
         $this->searchResults = collect();
         $user = auth()->user();
-
-        // Ambil toko dari tabel list_akun
         $tokoUser = $user->tokoUtama()->first();
 
         if ($tokoUser) {
             $this->toko_id = $tokoUser->id_toko;
             $this->kodeToko = $tokoUser->toko->kode_toko;
+            $this->namaToko = $tokoUser->toko->nama_toko;
             $this->no_nota = $this->generateNoNota();
         }
 
-        $this->tanggal = now();
-        // dd($this->tanggal);
+        $this->tanggal = now()->format('Y-m-d\TH:i');
     }
-
 
     public function generateNoNota()
     {
-        // Jika belum pilih toko → aman fallback
         if (!$this->toko_id) {
             return 'XXX-000001';
         }
 
-        // Ambil data toko
         $toko = IdentitasToko::find($this->toko_id);
-
-        // Jika tidak ada kode_toko → fallback
         $prefix = ($toko?->kode_toko ?? 'XXX') . '-';
 
-        // Ambil nota terakhir untuk toko ini saja
         $last = Penjualan::where('no_nota', 'LIKE', $prefix . '%')
             ->orderBy('id', 'DESC')
             ->first();
@@ -106,10 +94,12 @@ class PosPenjualan extends Page
 
         return $prefix . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
     }
+
     public function updatedTokoId()
     {
         $this->no_nota = $this->generateNoNota();
     }
+
     /* ================= SEARCH BARANG ================= */
     public bool $showDropdown = false;
 
@@ -120,14 +110,13 @@ class PosPenjualan extends Page
             return;
         }
 
-        $toko = $this->toko_id;
-
-        $t = (new StokBarangToko)->getTable(); // otomatis ambil 'stok_barang_toko'
+        $tokoId = $this->toko_id;
+        $t = (new StokBarangToko)->getTable();
 
         $this->searchResults = Barang::query()
-            ->leftJoin($t, function ($q) use ($t, $toko) {
+            ->leftJoin($t, function ($q) use ($t, $tokoId) {
                 $q->on("$t.barang_id", '=', 'barangs.id')
-                    ->where("$t.toko_id", $toko);
+                    ->where("$t.toko_id", $tokoId);
             })
             ->select(
                 'barangs.*',
@@ -137,8 +126,10 @@ class PosPenjualan extends Page
                 $query->where('barangs.nama_barang', 'like', "%{$this->search}%")
                     ->orWhere('barangs.barcode', 'like', "%{$this->search}%");
             })
-            ->limit(8)
+            ->limit(10)
             ->get();
+        
+        $this->showDropdown = true;
     }
 
     public function openDropdown(): void
@@ -154,8 +145,7 @@ class PosPenjualan extends Page
     public function selectBarang(int $id): void
     {
         $barang = Barang::find($id);
-        if (!$barang)
-            return;
+        if (!$barang) return;
 
         $stokToko = StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
@@ -164,10 +154,9 @@ class PosPenjualan extends Page
         $stok = $stokToko?->stok ?? 0;
 
         if ($stok < 0.01) {
-            $namaToko = IdentitasToko::find($this->toko_id)?->nama_toko ?? 'Toko';
             Notification::make()
                 ->title('Stok barang habis')
-                ->body("Barang {$barang->nama_barang} habis di {$namaToko}")
+                ->body("Barang {$barang->nama_barang} habis.")
                 ->danger()
                 ->send();
             return;
@@ -203,34 +192,27 @@ class PosPenjualan extends Page
     }
 
     /* ================= CART ================= */
-    // public function updateQty(int $id): void
     public function updateQty(int $id): void
     {
-        if (!isset($this->cart[$id])) {
-            return;
-        }
+        if (!isset($this->cart[$id])) return;
 
         $stock = (float) (StokBarangToko::where('barang_id', $id)
             ->where('toko_id', $this->toko_id)
             ->value('stok') ?? 0);
 
-        // $stock = Barang::find($id)?->stok_toko?->stok ?? 0;
         $qty = max(0.01, (float) $this->cart[$id]['qty']);
 
         if ($qty > $stock) {
             Notification::make()
                 ->title('Stok Maksimum Tercapai')
-                ->body("Jumlah maksimal untuk barang ini adalah {$stock}.")
+                ->body("Jumlah maksimal adalah {$stock}.")
                 ->warning()
                 ->send();
-
             $qty = $stock;
         }
 
         $this->cart[$id]['qty'] = $qty;
-        $this->cart[$id]['total_potongan'] =
-            $this->cart[$id]['potongan'] * $qty;
-
+        $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $qty;
         $this->updateSubtotal($id);
     }
 
@@ -242,12 +224,8 @@ class PosPenjualan extends Page
 
     public function decrementQty(int $id): void
     {
-        if ((float) $this->cart[$id]['qty'] <= 0.01) {
-            Notification::make()
-                ->title('Minimal Jumlah Barang')
-                ->body('Minimal jumlah barang adalah 0.01.')
-                ->danger()
-                ->send();
+        if ((float) $this->cart[$id]['qty'] <= 1) {
+            $this->removeFromCart($id);
             return;
         }
 
@@ -262,29 +240,31 @@ class PosPenjualan extends Page
 
     public function updatePotongan(int $id): void
     {
-        if (!isset($this->cart[$id])) {
-            return;
-        }
+        if (!isset($this->cart[$id])) return;
 
         $potongan = max(0, (float) $this->cart[$id]['potongan']);
         $qty = max(0.01, (float) $this->cart[$id]['qty']);
 
         $this->cart[$id]['potongan'] = $potongan;
         $this->cart[$id]['total_potongan'] = $potongan * $qty;
+        $this->updateSubtotal($id);
+    }
 
+    public function updateHargaJual(int $id): void
+    {
+        if (!isset($this->cart[$id])) return;
+
+        $harga = max(0, (int) ($this->cart[$id]['harga_jual'] ?? 0));
+        $this->cart[$id]['harga_jual'] = $harga;
         $this->updateSubtotal($id);
     }
 
     protected function updateSubtotal(int $id): void
     {
-        if (!isset($this->cart[$id])) {
-            return;
-        }
+        if (!isset($this->cart[$id])) return;
 
         $item = $this->cart[$id];
-
-        $this->cart[$id]['subtotal'] =
-            ($item['harga_jual'] * $item['qty']) - ($item['total_potongan'] ?? 0);
+        $this->cart[$id]['subtotal'] = ($item['harga_jual'] * $item['qty']) - ($item['total_potongan'] ?? 0);
     }
 
     /* ================= CUSTOMER SEARCH ================= */
@@ -306,12 +286,10 @@ class PosPenjualan extends Page
     public function selectCustomer(int $id): void
     {
         $pembeli = Pembeli::findOrFail($id);
-
         $this->pembeli_id = $pembeli->id;
         $this->nama_customer = $pembeli->nama;
         $this->alamat = $pembeli->alamat;
         $this->telepon = $pembeli->telepon;
-
         $this->customerResults = [];
         $this->searchCustomer = '';
     }
@@ -324,6 +302,15 @@ class PosPenjualan extends Page
         } else {
             $this->rekeningPerusahaan = [];
             $this->rekening_perusahaan_id = null;
+        }
+    }
+
+    public function setBayar($amount): void
+    {
+        if ($amount === 'pas') {
+            $this->bayar = $this->total;
+        } else {
+            $this->bayar = (int) $amount;
         }
     }
 
@@ -341,17 +328,25 @@ class PosPenjualan extends Page
     /* ================= MEMBER ================= */
     public function updatedIsMember($value): void
     {
-        $this->is_member = (bool) $value;
+        $this->is_member = (int) $value;
+
+        // Apply/Remove retroactive discount for items already in cart
+        foreach ($this->cart as $id => $item) {
+            if ($this->is_member) {
+                // If switching to member, add 5000 discount
+                $this->cart[$id]['potongan'] += 5000;
+            } else {
+                // If switching to regular, subtract 5000 discount but not below 0
+                $this->cart[$id]['potongan'] = max(0, $this->cart[$id]['potongan'] - 5000);
+            }
+            
+            // Sync total_potongan and subtotal
+            $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $this->cart[$id]['qty'];
+            $this->updateSubtotal($id);
+        }
 
         if (!$this->is_member) {
-            $this->reset([
-                'searchCustomer',
-                'customerResults',
-                'pembeli_id',
-                'nama_customer',
-                'alamat',
-                'telepon',
-            ]);
+            $this->reset(['searchCustomer', 'customerResults', 'pembeli_id', 'nama_customer', 'alamat', 'telepon']);
         }
     }
 
@@ -359,179 +354,112 @@ class PosPenjualan extends Page
     public function updatedMetodePengiriman(): void
     {
         if ($this->metode_pengiriman === 'DIBAWA_SENDIRI') {
-            $this->kendaraan = null;
-            $this->plat_kendaraan = null;
-            $this->nama_sopir = null;
+            $this->reset(['kendaraan', 'plat_kendaraan', 'nama_sopir']);
         }
-    }
-    public function updateHargaJual(int $id): void
-    {
-        if (!isset($this->cart[$id])) {
-            return;
-        }
-
-        $harga = (int) ($this->cart[$id]['harga_jual'] ?? 0);
-
-        // minimal 0 biar aman
-        $harga = max(0, $harga);
-
-        $this->cart[$id]['harga_jual'] = $harga;
-
-        // hitung ulang subtotal
-        $this->updateSubtotal($id);
     }
 
     /* ================= SIMPAN ================= */
     public function simpanPenjualan(): void
     {
         if (empty($this->cart)) {
-            Notification::make()
-                ->title('Keranjang Kosong')
-                ->body('Silahkan isi keranjang terlebih dahulu')
-                ->danger()
-                ->send();
+            Notification::make()->title('Keranjang Kosong')->danger()->send();
             return;
         }
 
-        if ($this->bayar < $this->total || $this->total <= 0) {
-            Notification::make()
-                ->title('Pembayaran Kurang')
-                ->body('Nominal pembayaran kurang.')
-                ->danger()
-                ->send();
+        if ($this->bayar < $this->total) {
+            Notification::make()->title('Pembayaran Kurang')->danger()->send();
             return;
         }
 
-        DB::transaction(function () {
+        try {
+            DB::transaction(function () {
+                $pembeli = $this->pembeli_id
+                    ? Pembeli::find($this->pembeli_id)
+                    : Pembeli::firstOrCreate(
+                        ['nama' => $this->nama_customer],
+                        ['alamat' => $this->alamat, 'telepon' => $this->telepon]
+                    );
 
-            $pembeli = $this->pembeli_id
-                ? Pembeli::find($this->pembeli_id)
-                : Pembeli::firstOrCreate(
-                    ['nama' => $this->nama_customer],
-                    ['alamat' => $this->alamat, 'telepon' => $this->telepon]
-                );
+                $rekening = $this->metode_pembayaran === 'TRANSFER'
+                    ? RekeningPerusahaan::find($this->rekening_perusahaan_id)
+                    : null;
 
-            $rekening = $this->metode_pembayaran === 'TRANSFER'
-                ? RekeningPerusahaan::find($this->rekening_perusahaan_id)
-                : null;
-
-            $penjualan = Penjualan::create([
-                'no_nota' => $this->no_nota,
-                'tanggal' => $this->tanggal, //! Disini ubah coy
-                'pembeli_id' => $pembeli->id,
-                'rekening_perusahaan_id' => $rekening?->id,
-                'nama_customer' => $this->nama_customer,
-                'alamat' => $this->alamat,
-                'is_member' => (bool) $this->is_member,
-                'metode_pembayaran' => $this->metode_pembayaran,
-                'keterangan' => $this->keterangan_nota,
-                'keterangan_pembayaran' => $this->keterangan_pembayaran,
-                'bank' => $rekening?->nama_bank,
-                'no_rekening' => $rekening?->no_rekening,
-                'kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->kendaraan : null,
-                'plat_kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->plat_kendaraan : null,
-                'nama_sopir' => $this->metode_pengiriman === 'DIKIRIM' ? $this->nama_sopir : null,
-                'total' => $this->total,
-                'bayar' => $this->bayar,
-                'kembalian' => $this->kembalian,
-                'user_id' => auth()->id(),
-                'toko_id' => $this->toko_id,   // <—— TAMBAHKAN INI
-            ]);
-
-            // foreach ($this->cart as $item) {
-
-            //     // Ambil stok per toko
-            //     // $stokToko = StokBarangToko::firstOrCreate(
-            //     //     [
-            //     //         'barang_id' => $item['barang_id'],
-            //     //         'toko_id' => $this->toko_id,
-            //     //     ],
-            //     //     [
-            //     //         'stok' => 0, // jika belum ada record
-            //     //     ]
-            //     // );
-            // // ! SERVICE KURANGI STOCK
-            //     // $stock = StokBarangToko::find($item['barang_id'])?->stok ?? 0;
-
-            //     // StokBarangToko::where('id', $item['barang_id'])
-            //     //     ->update(['stok' => $stock - $item['qty']]);
-
-            //     // Cek stok cukup atau tidak
-            //     if ($stokToko->stok < $item['qty']) {
-            //         throw new \Exception("Stok barang '{$item['nama_barang']}' tidak mencukupi.");
-            //     }
-
-            //     // Kurangi stok menggunakan helper model
-            //     $stokToko->kurang($item['qty']);
-
-            //     // Simpan detail penjualan
-            //     DetailPenjualan::create([
-            //         'penjualan_id' => $penjualan->id,
-            //         'barang_id' => $item['barang_id'],
-            //         'nama_barang' => $item['nama_barang'],
-            //         'satuan' => $item['satuan'],
-            //         'qty' => $item['qty'],
-            //         'harga_awal' => $item['harga_awal'],
-            //         'harga_jual' => $item['harga_jual'],
-            //         'potongan' => $item['potongan'],
-            //         'subtotal' => $item['subtotal'],
-            //     ]);
-            // }
-            foreach ($this->cart as $item) {
-                $stokToko = StokBarangToko::where('barang_id', $item['barang_id'])
-                    ->where('toko_id', $this->toko_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$stokToko || $stokToko->stok < $item['qty']) {
-                    Notification::make()
-                        ->title('Simpan Penjualan Gagal')
-                        ->body("Stok {$item['nama_barang']} tidak mencukupi.")
-                        ->danger()
-                        ->send();
-
-                    return;
-                }
-
-                //! Kurangi stok
-                // $stokToko->decrement('stok', $item['qty']);
-
-                DetailPenjualan::create([
-                    'penjualan_id' => $penjualan->id,
-                    'barang_id' => $item['barang_id'],
-                    'nama_barang' => $item['nama_barang'],
-                    'satuan' => $item['satuan'],
-                    'qty' => $item['qty'],
-                    'harga_awal' => $item['harga_awal'],
-                    'harga_jual' => $item['harga_jual'],
-                    'potongan' => $item['potongan'],
-                    'subtotal' => $item['subtotal'],
+                $penjualan = Penjualan::create([
+                    'no_nota' => $this->no_nota,
+                    'tanggal' => $this->tanggal,
+                    'pembeli_id' => $pembeli->id,
+                    'rekening_perusahaan_id' => $rekening?->id,
+                    'nama_customer' => $this->nama_customer,
+                    'alamat' => $this->alamat,
+                    'is_member' => (bool) $this->is_member,
+                    'metode_pembayaran' => $this->metode_pembayaran,
+                    'keterangan' => $this->keterangan_nota,
+                    'keterangan_pembayaran' => $this->keterangan_pembayaran,
+                    'bank' => $rekening?->nama_bank,
+                    'no_rekening' => $rekening?->no_rekening,
+                    'kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->kendaraan : null,
+                    'plat_kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->plat_kendaraan : null,
+                    'nama_sopir' => $this->metode_pengiriman === 'DIKIRIM' ? $this->nama_sopir : null,
+                    'total' => $this->total,
+                    'bayar' => $this->bayar,
+                    'kembalian' => $this->kembalian,
+                    'user_id' => auth()->id(),
+                    'toko_id' => $this->toko_id,
                 ]);
-            }
 
-        });
+                foreach ($this->cart as $item) {
+                    $stokToko = StokBarangToko::where('barang_id', $item['barang_id'])
+                        ->where('toko_id', $this->toko_id)
+                        ->lockForUpdate()
+                        ->first();
 
-        $kembalian = $this->kembalian;
-        $this->resetPos();
+                    if (!$stokToko || $stokToko->stok < $item['qty']) {
+                        throw new \Exception("Stok {$item['nama_barang']} tidak mencukupi.");
+                    }
 
-        Notification::make()
-            ->title('Transaksi Berhasil')
-            ->body("Kembalian: Rp {$kembalian}")
-            ->success()
-            ->send();
+                    $stokToko->kurang($item['qty']);
+
+                    DetailPenjualan::create([
+                        'penjualan_id' => $penjualan->id,
+                        'barang_id' => $item['barang_id'],
+                        'nama_barang' => $item['nama_barang'],
+                        'satuan' => $item['satuan'],
+                        'qty' => $item['qty'],
+                        'harga_awal' => $item['harga_awal'],
+                        'harga_jual' => $item['harga_jual'],
+                        'potongan' => $item['potongan'],
+                        'subtotal' => $item['subtotal'],
+                    ]);
+                }
+            });
+
+            $kembalian = $this->kembalian;
+            $this->resetPos();
+
+            Notification::make()
+                ->title('Transaksi Berhasil')
+                ->body("Kembalian: Rp " . number_format($kembalian))
+                ->success()
+                ->send();
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Transaksi Gagal')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function resetPos(): void
     {
-        $this->cart = [];
-        $this->bayar = 0;
-        $this->metode_pembayaran = 'TUNAI';
-        $this->rekening_perusahaan_id = null;
-        $this->rekeningPerusahaan = [];
-        $this->nama_customer = '';
-        $this->alamat = '';
-        $this->telepon = '';
-        $this->pembeli_id = null;
+        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran']);
         $this->no_nota = $this->generateNoNota();
+    }
+
+    #[On('restoreCart')]
+    public function restoreCart($cart): void
+    {
+        $this->cart = $cart;
     }
 }

@@ -9,9 +9,9 @@ use Illuminate\Support\Collection;
 
 class ChartOfAccounts extends Page
 {
-    protected static ?string $navigationLabel = 'Chart of Accounts';
+    protected static ?string $navigationLabel = 'Chart of Accounts'; 
     protected static ?string $title = 'Chart of Accounts';
-    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
+    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi Telur';
     protected static ?int $navigationSort = 10;
 
     public function getView(): string
