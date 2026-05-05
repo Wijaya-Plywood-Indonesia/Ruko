@@ -238,11 +238,12 @@
                     <div class="p-4 lg:p-5 space-y-4">
                         <div class="space-y-2">
                             <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide block ml-1">Metode Pembayaran</label>
-                            <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="grid grid-cols-3 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <button wire:click="$set('metode_pembayaran', 'TUNAI')" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $metode_pembayaran === 'TUNAI' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500' }}">Tunai</button>
                                 <button wire:click="$set('metode_pembayaran', 'TRANSFER')" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $metode_pembayaran === 'TRANSFER' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500' }}">Transfer</button>
+                                <button wire:click="$set('metode_pembayaran', 'TUNAI & TRANSFER')" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $metode_pembayaran === 'TUNAI & TRANSFER' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500' }}">Tunai & Transfer</button>
                             </div>
-                            @if($metode_pembayaran === 'TRANSFER')
+                            @if($metode_pembayaran === 'TRANSFER' || $metode_pembayaran === 'TUNAI & TRANSFER')
                                 <div class="space-y-2">
                                     <div class="relative">
                                         <select wire:model.live="rekening_perusahaan_id" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/10 cursor-pointer">
@@ -272,35 +273,83 @@
                              x-data="{ 
                                 total: @entangle('total'),
                                 bayar: @entangle('bayar'),
+                                bayar_tunai: @entangle('bayar_tunai'),
+                                bayar_transfer: @entangle('bayar_transfer'),
+                                metode: @entangle('metode_pembayaran'),
                                 format(val) { 
                                     if (val === null || val === undefined || val === '' || val == 0) return '0';
                                     let cleaned = val.toString().replace(/\D/g, '');
                                     return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                 },
+                                get currentTotalBayar() {
+                                    if (this.metode === 'TUNAI & TRANSFER') {
+                                        return (parseInt(this.bayar_tunai) || 0) + (parseInt(this.bayar_transfer) || 0);
+                                    }
+                                    return parseInt(this.bayar) || 0;
+                                },
                                 get diff() {
-                                    return Math.abs((this.bayar || 0) - this.total);
+                                    return Math.abs(this.currentTotalBayar - this.total);
                                 },
                                 get isKurang() {
-                                    return (this.bayar || 0) < this.total;
+                                    return this.currentTotalBayar < this.total;
                                 }
                              }">
-                            <div class="flex justify-between items-center">
-                                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
-                            </div>
-                            <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
-                                <span class="text-lg font-bold text-primary-600">Rp</span>
-                                <input 
-                                    type="text" 
-                                    :value="format(bayar)"
-                                    @input="
-                                        let raw = $event.target.value.replace(/\D/g, '');
-                                        bayar = raw ? parseInt(raw) : 0;
-                                        $el.value = format(bayar);
-                                    "
-                                    class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight" 
-                                    placeholder="0" 
-                                />
-                            </div>
+                            
+                            @if($metode_pembayaran === 'TUNAI & TRANSFER')
+                                <div class="grid grid-cols-2 gap-3 mb-2">
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Tunai (Cash)</label>
+                                        <div class="flex items-center gap-1 border-b border-primary-500 pb-0.5">
+                                            <span class="text-xs font-bold text-primary-600">Rp</span>
+                                            <input 
+                                                type="text" 
+                                                :value="format(bayar_tunai)"
+                                                @input="
+                                                    let raw = $event.target.value.replace(/\D/g, '');
+                                                    bayar_tunai = raw ? parseInt(raw) : 0;
+                                                    $el.value = format(bayar_tunai);
+                                                "
+                                                class="w-full bg-transparent border-none p-0 text-lg font-black focus:ring-0 tracking-tight dark:text-white text-gray-900" 
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Transfer</label>
+                                        <div class="flex items-center gap-1 border-b border-primary-500 pb-0.5">
+                                            <span class="text-xs font-bold text-primary-600">Rp</span>
+                                            <input 
+                                                type="text" 
+                                                :value="format(bayar_transfer)"
+                                                @input="
+                                                    let raw = $event.target.value.replace(/\D/g, '');
+                                                    bayar_transfer = raw ? parseInt(raw) : 0;
+                                                    $el.value = format(bayar_transfer);
+                                                "
+                                                class="w-full bg-transparent border-none p-0 text-lg font-black focus:ring-0 tracking-tight dark:text-white text-gray-900" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="flex justify-between items-center">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
+                                </div>
+                                <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
+                                    <span class="text-lg font-bold text-primary-600">Rp</span>
+                                    <input 
+                                        type="text" 
+                                        :value="format(bayar)"
+                                        @input="
+                                            let raw = $event.target.value.replace(/\D/g, '');
+                                            bayar = raw ? parseInt(raw) : 0;
+                                            $el.value = format(bayar);
+                                        "
+                                        class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight" 
+                                        placeholder="0" 
+                                    />
+                                </div>
+                            @endif
+
                             <div class="pt-0.5 flex justify-between items-center">
                                 <span class="text-[9px] font-bold text-gray-400 uppercase ml-1" x-text="isKurang ? 'Kurang' : 'Kembali'"></span>
                                 <span class="text-base lg:text-lg font-bold" 

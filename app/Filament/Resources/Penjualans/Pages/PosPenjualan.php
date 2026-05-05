@@ -44,6 +44,8 @@ class PosPenjualan extends Page
     /* ================= PEMBAYARAN ================= */
     public string $metode_pembayaran = 'TUNAI';
     public int $bayar = 0;
+    public int $bayar_tunai = 0;
+    public int $bayar_transfer = 0;
     public ?int $rekening_perusahaan_id = null;
     public $rekeningPerusahaan = [];
     public ?RekeningPerusahaan $selectedBank = null;
@@ -336,12 +338,18 @@ class PosPenjualan extends Page
     /* ================= PEMBAYARAN ================= */
     public function updatedMetodePembayaran(): void
     {
-        if ($this->metode_pembayaran === 'TRANSFER') {
+        if ($this->metode_pembayaran === 'TRANSFER' || $this->metode_pembayaran === 'TUNAI & TRANSFER') {
             $this->rekeningPerusahaan = RekeningPerusahaan::all();
         } else {
             $this->rekeningPerusahaan = [];
             $this->rekening_perusahaan_id = null;
             $this->selectedBank = null;
+        }
+
+        // Reset split values when changing method
+        if ($this->metode_pembayaran !== 'TUNAI & TRANSFER') {
+            $this->bayar_tunai = 0;
+            $this->bayar_transfer = 0;
         }
     }
 
@@ -366,7 +374,11 @@ class PosPenjualan extends Page
     /* ================= COMPUTED ================= */
     public function getKembalianProperty(): int
     {
-        return max(($this->bayar ?? 0) - $this->total, 0);
+        $totalBayar = ($this->metode_pembayaran === 'TUNAI & TRANSFER') 
+            ? ($this->bayar_tunai + $this->bayar_transfer) 
+            : ($this->bayar ?? 0);
+            
+        return max($totalBayar - $this->total, 0);
     }
 
     /* ================= MEMBER ================= */
@@ -411,8 +423,25 @@ class PosPenjualan extends Page
             return;
         }
 
-        if ($this->bayar < $this->total) {
-            Notification::make()->title('Pembayaran Kurang')->danger()->send();
+        $totalBayar = ($this->metode_pembayaran === 'TUNAI & TRANSFER') 
+            ? ($this->bayar_tunai + $this->bayar_transfer) 
+            : ($this->bayar ?? 0);
+
+        if ($totalBayar < $this->total || $this->total <= 0) {
+            Notification::make()
+                ->title('Pembayaran Kurang')
+                ->body('Nominal pembayaran kurang.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        if ($this->metode_pembayaran === 'TUNAI & TRANSFER' && ($this->bayar_transfer > 0) && !$this->rekening_perusahaan_id) {
+            Notification::make()
+                ->title('Rekening Belum Dipilih')
+                ->body('Silahkan pilih rekening perusahaan untuk pembayaran transfer.')
+                ->danger()
+                ->send();
             return;
         }
 
@@ -425,9 +454,13 @@ class PosPenjualan extends Page
                         ['alamat' => $this->alamat, 'telepon' => $this->telepon]
                     );
 
-                $rekening = $this->metode_pembayaran === 'TRANSFER'
+                $rekening = ($this->metode_pembayaran === 'TRANSFER' || $this->metode_pembayaran === 'TUNAI & TRANSFER')
                     ? RekeningPerusahaan::find($this->rekening_perusahaan_id)
                     : null;
+
+                $totalBayar = ($this->metode_pembayaran === 'TUNAI & TRANSFER') 
+                    ? ($this->bayar_tunai + $this->bayar_transfer) 
+                    : ($this->bayar ?? 0);
 
                 $penjualan = Penjualan::create([
                     'no_nota' => $this->no_nota,
@@ -446,7 +479,9 @@ class PosPenjualan extends Page
                     'plat_kendaraan' => $this->metode_pengiriman === 'DIKIRIM' ? $this->plat_kendaraan : null,
                     'nama_sopir' => $this->metode_pengiriman === 'DIKIRIM' ? $this->nama_sopir : null,
                     'total' => $this->total,
-                    'bayar' => $this->bayar,
+                    'bayar' => $totalBayar,
+                    'bayar_tunai' => ($this->metode_pembayaran === 'TUNAI & TRANSFER') ? $this->bayar_tunai : ($this->metode_pembayaran === 'TUNAI' ? $this->bayar : 0),
+                    'bayar_transfer' => ($this->metode_pembayaran === 'TUNAI & TRANSFER') ? $this->bayar_transfer : ($this->metode_pembayaran === 'TRANSFER' ? $this->bayar : 0),
                     'kembalian' => $this->kembalian,
                     'user_id' => auth()->id(),
                     'toko_id' => $this->toko_id,
@@ -498,7 +533,7 @@ class PosPenjualan extends Page
 
     public function resetPos(): void
     {
-        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran', 'kode_member', 'selectedBank', 'total']);
+        $this->reset(['cart', 'bayar', 'bayar_tunai', 'bayar_transfer', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran', 'kode_member', 'selectedBank', 'total']);
         $this->no_nota = $this->generateNoNota();
     }
 
