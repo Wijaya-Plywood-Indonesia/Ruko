@@ -592,15 +592,14 @@ class FormReturnPenjualan extends Page implements HasForms, HasInfolists, HasTab
                         ->action(fn() => $this->resetKeranjangOnly()),
 
                     Action::make('submitRetur')
-                        ->label('Simpan Return Pernjualan')
+                        ->label('Simpan Return Penjualan')
                         ->color('success')
                         ->icon('heroicon-m-check-circle')
                         ->requiresConfirmation()
                         ->action(fn() => $this->dispatch('trigger-submit-pengembalian')->to('temporary-return-cart')),
                 ])
-                    ->fullWidth()
                     ->extraAttributes([
-                        'class' => 'flex justify-end !flex-row w-full',
+                        'class' => 'flex flex-wrap items-center justify-end gap-3 w-full',
                     ])
             ]);
     }

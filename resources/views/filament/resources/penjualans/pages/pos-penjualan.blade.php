@@ -9,12 +9,12 @@
             <div class="flex flex-wrap items-center gap-6 w-full lg:w-auto">
                 <div class="flex items-center gap-2">
                     <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nota:</span>
-                    <input type="text" wire:model.live="no_nota" class="p-0 bg-transparent border-none text-sm font-black text-primary-600 font-mono focus:ring-0 w-32" />
+                    <input type="text" wire:model.live="no_nota" class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-sm font-black text-primary-600 font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 w-32 transition-all" />
                 </div>
                 <div class="h-8 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
                 <div class="flex items-center gap-2 flex-grow min-w-[200px]">
                     <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Catatan:</span>
-                    <input type="text" wire:model.live="keterangan_nota" placeholder="Tambahkan catatan nota..." class="p-0 bg-transparent border-none text-sm text-gray-600 dark:text-gray-400 focus:ring-0 w-full placeholder:text-gray-300 dark:placeholder:text-gray-700" />
+                    <input type="text" wire:model.live="keterangan_nota" placeholder="Tambahkan catatan nota..." class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-sm text-gray-600 dark:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 w-full placeholder:text-gray-300 dark:placeholder:text-gray-700 transition-all" />
                 </div>
                 <div class="h-8 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
                 <div class="flex items-center gap-2">
@@ -24,7 +24,7 @@
                 <div class="h-8 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
                 <div class="flex items-center gap-2">
                     <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Waktu:</span>
-                    <input type="datetime-local" wire:model.live="tanggal" class="p-0 bg-transparent border-none text-xs font-medium text-gray-600 dark:text-gray-300 focus:ring-0" />
+                    <input type="datetime-local" wire:model.live="tanggal" class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-xs font-medium text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all" />
                 </div>
             </div>
             <div class="hidden lg:flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-700">
@@ -147,8 +147,10 @@
                                     @foreach($cart as $id => $item)
                                         <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
                                             <td class="px-4 py-2">
-                                                <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">{{ $item['nama_barang'] }}</div>
-                                                <div class="text-[10px] text-gray-400 mt-0.5">{{ $item['satuan'] }} • Rp{{ number_format($item['harga_awal']) }}</div>
+                                                <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">
+                                                    {{ $item['nama_barang'] }} 
+                                                    <span class="text-[10px] text-gray-400 font-normal ml-1">• Rp{{ number_format($item['harga_awal']) }}</span>
+                                                </div>
                                             </td>
                                             <td class="px-4 py-2">
                                                 <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
@@ -266,29 +268,45 @@
                             @endif
                         </div>
 
-                        <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
+                             x-data="{ 
+                                total: @entangle('total'),
+                                bayar: @entangle('bayar'),
+                                format(val) { 
+                                    if (val === null || val === undefined || val === '' || val == 0) return '0';
+                                    let cleaned = val.toString().replace(/\D/g, '');
+                                    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                },
+                                get diff() {
+                                    return Math.abs((this.bayar || 0) - this.total);
+                                },
+                                get isKurang() {
+                                    return (this.bayar || 0) < this.total;
+                                }
+                             }">
                             <div class="flex justify-between items-center">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
                             </div>
-                            <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5" 
-                                 x-data="{ 
-                                    format(val) { 
-                                        if (!val) return '';
-                                        return val.toString().replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                                    }
-                                 }">
+                            <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
                                 <span class="text-lg font-bold text-primary-600">Rp</span>
                                 <input 
                                     type="text" 
-                                    :value="format($wire.bayar)"
-                                    @input="$wire.bayar = $event.target.value.replace(/\D/g, ''); $el.value = format($wire.bayar)"
+                                    :value="format(bayar)"
+                                    @input="
+                                        let raw = $event.target.value.replace(/\D/g, '');
+                                        bayar = raw ? parseInt(raw) : 0;
+                                        $el.value = format(bayar);
+                                    "
                                     class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight" 
                                     placeholder="0" 
                                 />
                             </div>
                             <div class="pt-0.5 flex justify-between items-center">
-                                <span class="text-[9px] font-bold text-gray-400 uppercase ml-1">{{ $this->bayar < $this->total ? 'Kurang' : 'Kembali' }}</span>
-                                <span class="text-base lg:text-lg font-bold {{ $this->bayar < $this->total ? 'text-red-500' : 'text-green-500' }}">{{ number_format(abs($this->bayar - $this->total)) }}</span>
+                                <span class="text-[9px] font-bold text-gray-400 uppercase ml-1" x-text="isKurang ? 'Kurang' : 'Kembali'"></span>
+                                <span class="text-base lg:text-lg font-bold" 
+                                      :class="isKurang ? 'text-red-500' : 'text-green-500'"
+                                      x-text="format(diff)">
+                                </span>
                             </div>
                         </div>
 
