@@ -35,16 +35,16 @@ class ProduksiPakanLaporan extends Page
     public ?ProduksiPakan $currentRecord = null;
     public array          $mentahState   = [];
     public array          $campuranState = [];
-    public array $karungState = [];
+    public array          $karungState   = [];
     public ?string        $keterangan    = '';
     public bool           $isLocked      = false;
 
     /* ─── Status ────────────────────────────────────────────────────────── */
-    public bool $isSuperAdmin      = false;
-    public bool $isCreator         = false;
-    public bool $isDraftSaved      = false;
-    public bool $canEdit           = true;
-    public bool $showSaveButton    = true;
+    public bool $isSuperAdmin       = false;
+    public bool $isCreator          = false;
+    public bool $isDraftSaved       = false;
+    public bool $canEdit            = true;
+    public bool $showSaveButton     = true;
     public bool $showValidateButton = false;
 
     protected bool $isRecalculating = false;
@@ -62,7 +62,7 @@ class ProduksiPakanLaporan extends Page
     {
         Log::info("[ProduksiPakan] $message", array_merge([
             'user' => Auth::user()->name,
-            'date' => $this->selectedDate
+            'date' => $this->selectedDate,
         ], $data));
     }
 
@@ -79,6 +79,10 @@ class ProduksiPakanLaporan extends Page
 
     public function updatedSelectedDate(): void
     {
+        if (!$this->selectedDate || !strtotime($this->selectedDate)) return;
+
+        Session::forget($this->sessionKey());
+
         $this->loadDataByDate();
     }
 
@@ -92,108 +96,124 @@ class ProduksiPakanLaporan extends Page
 
         $this->logInfo('Memuat data tanggal baru');
 
-        // Ambil record header produksi
         $this->currentRecord = ProduksiPakan::with([
             'pakanMentahs.barang.kategori',
             'pakanMentahs.barang.satuan',
             'pakanCampurans.barang.satuan',
         ])->whereDate('tanggal_produksi', $this->selectedDate)->first();
 
-        // JIKA DATA TIDAK DITEMUKAN (NULL)
         if (!$this->currentRecord) {
+            // ── Belum ada data di DB ──
             $this->logInfo('DB Kosong: Membangun state awal dari Stok Kandang');
             $this->isDraftSaved = false;
             $this->isLocked     = false;
+            $this->isCreator    = false;
             $this->keterangan   = '';
 
-            // Gunakan fungsi buildState untuk inisialisasi baris kosong/stok awal
             $this->buildStateFromBarang();
-
-            // Pulihkan dari session jika ada draft yang belum disimpan
             $this->restoreFromSession();
-        }
-        // JIKA DATA DITEMUKAN
-        else {
+        } else {
+            // ── Data ada di DB ──
             $this->logInfo('DB Terisi: Memulihkan data dari database');
             $this->isDraftSaved = true;
             $this->isLocked     = !empty($this->currentRecord->validated_by);
             $this->isCreator    = ($this->currentRecord->created_by === Auth::user()->name);
             $this->keterangan   = $this->currentRecord->keterangan ?? '';
 
-            // Ambil semua detail mentah (termasuk pakan & karung/ayam)
             $allMentahs = $this->currentRecord->pakanMentahs;
 
-            // Pisahkan Mentah Biasa (Bukan kategori ayam)
-            $this->mentahState = $allMentahs->filter(function ($i) {
-                return strtolower($i->barang?->kategori?->nama_kategori ?? '') !== 'ayam';
-            })->map(fn($item) => $this->mapMentahItemFromDb($item))->values()->toArray();
+            $this->mentahState = $allMentahs
+                ->filter(fn($i) => strtolower($i->barang?->kategori?->nama_kategori ?? '') !== 'ayam')
+                ->map(fn($item) => $this->mapMentahItemFromDb($item))
+                ->values()->toArray();
 
-            // Pisahkan Karung (Kategori ayam)
-            $this->karungState = $allMentahs->filter(function ($i) {
-                return strtolower($i->barang?->kategori?->nama_kategori ?? '') === 'ayam';
-            })->map(fn($item) => $this->mapMentahItemFromDb($item))->values()->toArray();
+            $this->karungState = $allMentahs
+                ->filter(fn($i) => strtolower($i->barang?->kategori?->nama_kategori ?? '') === 'ayam')
+                ->map(fn($item) => $this->mapMentahItemFromDb($item))
+                ->values()->toArray();
 
-            // Pakan Campuran
             $this->campuranState = $this->currentRecord->pakanCampurans
-                ->map(fn($item) => $this->mapCampuranItemFromDb($item))->toArray();
+                ->map(fn($item) => $this->mapCampuranItemFromDb($item))
+                ->toArray();
 
-            if ($this->canEdit) {
-                $this->restoreFromSession();
-            }
+            // JANGAN restore session saat data sudah ada di DB.
+            // Session hanya untuk draft yang belum disimpan.
         }
 
+        // recalculateAll hanya menghitung sisa akhir dari p/l1/l2 yang sudah ada,
+        // TIDAK menimpa nilai p/l1/l2 itu sendiri.
         $this->recalculateAll();
         $this->computePermissions();
     }
 
-    private function mapMentahItemFromDb($item)
+    /**
+     * Map baris mentah dari DB ke format state.
+     * Kunci: p/l1/l2 diambil langsung dari DB (sudah dalam satuan dasar kg/pcs).
+     * p_sak/l1_sak/l2_sak hanya untuk tampilan input sak — dihitung balik dari kg.
+     */
+    private function mapMentahItemFromDb($item): array
     {
+        $konversi = $this->getKonversiSak($item->id_barang);
+        $p  = (float) $item->keluar_pullet;
+        $l1 = (float) $item->keluar_l1;
+        $l2 = (float) $item->keluar_l2;
+
+        // Hitung balik ke sak untuk tampilan input
+        if ($konversi > 1) {
+            $pSak  = round($p  / $konversi, 4);
+            $l1Sak = round($l1 / $konversi, 4);
+            $l2Sak = round($l2 / $konversi, 4);
+        } else {
+            // Tidak ada konversi sak, input langsung pakai p/l1/l2
+            $pSak  = $p;
+            $l1Sak = $l1;
+            $l2Sak = $l2;
+        }
+
         return [
-            'id'            => $item->id,
-            'barang_id'     => $item->id_barang,
-            'nama'          => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
-            'awal'          => (float) $item->stok_awal,
-            'konversi_sak'  => $this->getKonversiSak($item->id_barang),
-            'p_sak'         => 0,
-            'l1_sak' => 0,
-            'l2_sak' => 0, // Reset helper input
-            'p'             => (float) $item->keluar_pullet,
-            'l1'            => (float) $item->keluar_l1,
-            'l2'            => (float) $item->keluar_l2,
-            'akhir'         => (float) $item->stok_akhir,
+            'id'           => $item->id,
+            'barang_id'    => $item->id_barang,
+            'nama'         => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
+            'awal'         => (float) $item->stok_awal,
+            'konversi_sak' => $konversi,
+            'p_sak'        => $pSak,
+            'l1_sak'       => $l1Sak,
+            'l2_sak'       => $l2Sak,
+            // p/l1/l2 = nilai final dalam satuan dasar (kg/pcs) — ini yang dipakai kalkulasi
+            'p'            => $p,
+            'l1'           => $l1,
+            'l2'           => $l2,
+            'akhir'        => (float) $item->stok_akhir,
         ];
     }
 
-    private function mapCampuranItemFromDb($item)
+    private function mapCampuranItemFromDb($item): array
     {
         return [
-            'id'            => $item->id,
-            'barang_id'     => $item->id_barang,
-            'nama'          => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
-            'awal'          => (float) $item->stok_awal,
-            'masuk'         => (float) $item->masuk,
-            'p'             => (float) $item->keluar_pullet,
-            'l1'            => (float) $item->keluar_l1,
-            'l2'            => (float) $item->keluar_l2,
-            'akhir'         => (float) $item->stok_akhir,
+            'id'        => $item->id,
+            'barang_id' => $item->id_barang,
+            'nama'      => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
+            'awal'      => (float) $item->stok_awal,
+            'masuk'     => (float) $item->masuk,
+            'p'         => (float) $item->keluar_pullet,
+            'l1'        => (float) $item->keluar_l1,
+            'l2'        => (float) $item->keluar_l2,
+            'akhir'     => (float) $item->stok_akhir,
         ];
     }
 
     private function buildStateFromBarang(): void
     {
-        // 1. Identifikasi Toko Kandang
         $kandangToko = IdentitasToko::whereRaw('LOWER(nama_toko) LIKE ?', ['%kandang%'])->first();
 
         $semuaBarang = Barang::with(['satuan', 'kategori'])
             ->whereHas('kategori', function ($query) {
-                // Kita bungkus dalam nested where agar logic OR tetap berada di dalam subquery EXISTS
                 $query->where(function ($q) {
                     $q->whereRaw('LOWER(nama_kategori) LIKE ?', ['%pakan%'])
                         ->orWhereRaw('LOWER(nama_kategori) LIKE ?', ['%ayam%']);
                 });
             })->get();
 
-        // 3. Ambil Stok Realtime Kandang
         $stokMap = [];
         if ($kandangToko) {
             $stokMap = StokBarangToko::where('toko_id', $kandangToko->id)
@@ -203,50 +223,50 @@ class ProduksiPakanLaporan extends Page
                 ->toArray();
         }
 
-        $this->mentahState = [];
+        $this->mentahState   = [];
         $this->campuranState = [];
-        $this->karungState = [];
+        $this->karungState   = [];
 
         foreach ($semuaBarang as $b) {
-            $namaUpper = strtoupper($b->nama_barang);
+            $namaUpper     = strtoupper($b->nama_barang);
             $kategoriLower = strtolower($b->kategori->nama_kategori ?? '');
-            // Klasifikasi sederhana: Barang jadi mengandung kata Pullet/Layer
-            $isCampuran = str_contains($namaUpper, 'PULLET') || str_contains($namaUpper, 'PULET') || str_contains($namaUpper, 'LAYER');
+            $isCampuran    = str_contains($namaUpper, 'PULLET')
+                || str_contains($namaUpper, 'PULET')
+                || str_contains($namaUpper, 'LAYER');
             $stokAwal = (float) ($stokMap[$b->id] ?? 0);
 
             $base = [
-                'id'            => null,
-                'barang_id'     => $b->id,
-                'nama'          => $b->nama_barang . ' (' . ($b->satuan?->nama_satuan ?? '-') . ')',
-                'awal'          => $stokAwal,
-                'p' => 0.0,
-                'l1' => 0.0,
-                'l2' => 0.0,
-                'akhir'         => $stokAwal,
+                'id'        => null,
+                'barang_id' => $b->id,
+                'nama'      => $b->nama_barang . ' (' . ($b->satuan?->nama_satuan ?? '-') . ')',
+                'awal'      => $stokAwal,
+                'p'         => 0.0,
+                'l1'        => 0.0,
+                'l2'        => 0.0,
+                'akhir'     => $stokAwal,
             ];
 
             if ($kategoriLower === 'ayam') {
-                // Masuk ke tabel Karung/Ayam
                 $this->karungState[] = array_merge($base, [
                     'konversi_sak' => $this->getKonversiSak($b->id),
-                    'p_sak' => 0,
-                    'l1_sak' => 0,
-                    'l2_sak' => 0
+                    'p_sak'        => 0,
+                    'l1_sak'       => 0,
+                    'l2_sak'       => 0,
                 ]);
             } elseif ($isCampuran) {
                 $this->campuranState[] = array_merge($base, ['masuk' => 0.0]);
             } else {
                 $this->mentahState[] = array_merge($base, [
                     'konversi_sak' => $this->getKonversiSak($b->id),
-                    'p_sak' => 0,
-                    'l1_sak' => 0,
-                    'l2_sak' => 0
+                    'p_sak'        => 0,
+                    'l1_sak'       => 0,
+                    'l2_sak'       => 0,
                 ]);
             }
         }
     }
 
-    private function getKonversiSak($barangId)
+    private function getKonversiSak($barangId): float
     {
         $satuanSak = Satuan::whereRaw('LOWER(nama_satuan) = ?', ['sak'])->first();
         if (!$satuanSak) return 1;
@@ -267,27 +287,59 @@ class ProduksiPakanLaporan extends Page
     {
         if (!$this->canEdit || $this->isRecalculating) return;
 
-        // Konversi sak → kg untuk mentahState
+        // ── CRITICAL FIX: Bail out jika yang berubah adalah selectedDate.
+        //
+        // Kenapa ini penting? Livewire memanggil updated() SEBELUM updatedSelectedDate().
+        // Urutan eksekusinya:
+        //   1. updated('selectedDate') → $this->selectedDate sudah = tanggal BARU
+        //   2. Tanpa guard ini, saveToSession() akan menulis STATE LAMA ke KEY TANGGAL BARU
+        //   3. updatedSelectedDate() → loadDataByDate() → restoreFromSession()
+        //   4. Session tanggal baru "kebetulan" ada isinya (data lama) → state tercemar
+        //
+        // Dengan return di sini, kita serahkan sepenuhnya ke updatedSelectedDate().
+        if ($propertyName === 'selectedDate') return;
+
+        // ── Fix Minor: keterangan tidak perlu trigger recalculate,
+        // cukup simpan ke session saja lalu selesai.
+        if ($propertyName === 'keterangan') {
+            $this->saveToSession();
+            return;
+        }
+
+        // ── Mentah: input sak → konversi ke kg ──
         if (preg_match('/^mentahState\.(\d+)\.(p|l1|l2)_sak$/', $propertyName, $m)) {
-            $idx      = $m[1];
-            $fieldSak = $m[2] . '_sak';
-            $fieldKg  = $m[2];
-            $faktor   = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
-            $this->mentahState[$idx][$fieldKg] = (float) $this->mentahState[$idx][$fieldSak] * $faktor;
+            $idx    = (int) $m[1];
+            $field  = $m[2];
+            $faktor = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
+            $this->mentahState[$idx][$field] = (float) ($this->mentahState[$idx][$field . '_sak'] ?? 0) * $faktor;
         }
 
-        // ← TAMBAH: Konversi sak → kg untuk karungState
+        // ── Mentah: input langsung (konversi = 1) → sync ke _sak ──
+        if (preg_match('/^mentahState\.(\d+)\.(p|l1|l2)$/', $propertyName, $m)) {
+            $idx    = (int) $m[1];
+            $field  = $m[2];
+            $faktor = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
+            if ($faktor <= 1) {
+                $this->mentahState[$idx][$field . '_sak'] = (float) ($this->mentahState[$idx][$field] ?? 0);
+            }
+        }
+
+        // ── Karung: input sak → konversi ke kg ──
         if (preg_match('/^karungState\.(\d+)\.(p|l1|l2)_sak$/', $propertyName, $m)) {
-            $idx      = $m[1];
-            $fieldSak = $m[2] . '_sak';
-            $fieldKg  = $m[2];
-            $faktor   = (float) ($this->karungState[$idx]['konversi_sak'] ?? 1);
-            $this->karungState[$idx][$fieldKg] = (float) $this->karungState[$idx][$fieldSak] * $faktor;
+            $idx    = (int) $m[1];
+            $field  = $m[2];
+            $faktor = (float) ($this->karungState[$idx]['konversi_sak'] ?? 1);
+            $this->karungState[$idx][$field] = (float) ($this->karungState[$idx][$field . '_sak'] ?? 0) * $faktor;
         }
 
-        // ← TAMBAH: Jika input karung langsung (tanpa konversi sak), tetap recalculate
+        // ── Karung: input langsung → sync ke _sak ──
         if (preg_match('/^karungState\.(\d+)\.(p|l1|l2)$/', $propertyName, $m)) {
-            // Tidak perlu konversi, langsung lanjut ke recalculate
+            $idx    = (int) $m[1];
+            $field  = $m[2];
+            $faktor = (float) ($this->karungState[$idx]['konversi_sak'] ?? 1);
+            if ($faktor <= 1) {
+                $this->karungState[$idx][$field . '_sak'] = (float) ($this->karungState[$idx][$field] ?? 0);
+            }
         }
 
         $this->isRecalculating = true;
@@ -296,63 +348,69 @@ class ProduksiPakanLaporan extends Page
         $this->isRecalculating = false;
     }
 
+    /**
+     * Hitung ulang sisa akhir (akhir) dari nilai p/l1/l2 yang SUDAH ADA di state.
+     *
+     * PENTING: fungsi ini TIDAK boleh menimpa nilai p/l1/l2 itu sendiri.
+     * Konversi sak → kg dilakukan di updated(), bukan di sini.
+     * Dengan begitu, saat loadDataByDate() mengisi p/l1/l2 dari DB lalu
+     * memanggil recalculateAll(), nilai dari DB tidak akan tertimpa.
+     */
     private function recalculateAll(): void
     {
-        $totalP = 0.0;
+        $totalP  = 0.0;
         $totalL1 = 0.0;
         $totalL2 = 0.0;
 
-        // 1. Hitung Bahan Mentah & Konversi ke Kg
+        // 1. Hitung sisa akhir mentah — baca p/l1/l2, JANGAN tulis ulang
         foreach ($this->mentahState as $idx => $item) {
             $p  = (float) ($item['p']  ?? 0);
             $l1 = (float) ($item['l1'] ?? 0);
             $l2 = (float) ($item['l2'] ?? 0);
 
-            $totalKeluar = $p + $l1 + $l2;
-            $this->mentahState[$idx]['akhir'] = max(0, (float)$item['awal'] - $totalKeluar);
+            $this->mentahState[$idx]['akhir'] = max(0, (float) $item['awal'] - ($p + $l1 + $l2));
 
-            $totalP += $p;
+            $totalP  += $p;
             $totalL1 += $l1;
             $totalL2 += $l2;
         }
 
+        // 2. Hitung sisa akhir karung — baca p/l1/l2, JANGAN tulis ulang
         foreach ($this->karungState as $idx => $item) {
-            $faktor = (float)($item['konversi_sak'] ?? 1);
+            $p  = (float) ($item['p']  ?? 0);
+            $l1 = (float) ($item['l1'] ?? 0);
+            $l2 = (float) ($item['l2'] ?? 0);
 
-            if ($faktor > 1) {
-                // Punya konversi sak: hitung kg dari input sak
-                $this->karungState[$idx]['p']  = (float)$item['p_sak']  * $faktor;
-                $this->karungState[$idx]['l1'] = (float)$item['l1_sak'] * $faktor;
-                $this->karungState[$idx]['l2'] = (float)$item['l2_sak'] * $faktor;
-            }
-            // Jika faktor = 1, p/l1/l2 sudah diinput langsung → JANGAN overwrite
-
-            $p_kg  = (float)$this->karungState[$idx]['p'];
-            $l1_kg = (float)$this->karungState[$idx]['l1'];
-            $l2_kg = (float)$this->karungState[$idx]['l2'];
-
-            $this->karungState[$idx]['akhir'] = max(0, (float)$item['awal'] - ($p_kg + $l1_kg + $l2_kg));
+            $this->karungState[$idx]['akhir'] = max(0, (float) $item['awal'] - ($p + $l1 + $l2));
         }
 
-        // 2. Distribusi ke Pakan Campuran (Kolom MASUK)
+        // 3. Distribusi masuk ke pakan campuran & hitung sisa akhirnya
         foreach ($this->campuranState as $idx => $item) {
-            $nama = strtoupper($item['nama']);
+            $nama  = strtoupper($item['nama']);
             $masuk = 0.0;
 
-            if (str_contains($nama, 'PULLET') || str_contains($nama, 'PULET')) $masuk = $totalP;
-            elseif (str_contains($nama, 'LAYER 1') || str_contains($nama, 'L1')) $masuk = $totalL1;
-            elseif (str_contains($nama, 'LAYER 2') || str_contains($nama, 'L2')) $masuk = $totalL2;
+            if (str_contains($nama, 'PULLET') || str_contains($nama, 'PULET')) {
+                $masuk = $totalP;
+            } elseif (str_contains($nama, 'LAYER 1') || str_contains($nama, 'L1')) {
+                $masuk = $totalL1;
+            } elseif (str_contains($nama, 'LAYER 2') || str_contains($nama, 'L2')) {
+                $masuk = $totalL2;
+            }
 
             $this->campuranState[$idx]['masuk'] = $masuk;
 
-            $keluar = (float)($item['p'] ?? 0) + (float)($item['l1'] ?? 0) + (float)($item['l2'] ?? 0);
+            $keluar = (float) ($item['p']  ?? 0)
+                + (float) ($item['l1'] ?? 0)
+                + (float) ($item['l2'] ?? 0);
 
-            // Perbaikan variabel: $totalMasuk didefinisikan agar tidak undefined
-            $totalTersedia = (float)$item['awal'] + $masuk;
-            $this->campuranState[$idx]['akhir'] = max(0, $totalTersedia - $keluar);
+            $this->campuranState[$idx]['akhir'] = max(0, (float) $item['awal'] + $masuk - $keluar);
         }
 
-        $this->logInfo('Rekalkulasi selesai', ['p' => $totalP, 'l1' => $totalL1]);
+        $this->logInfo('Rekalkulasi selesai', [
+            'totalP'  => $totalP,
+            'totalL1' => $totalL1,
+            'totalL2' => $totalL2,
+        ]);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -362,9 +420,9 @@ class ProduksiPakanLaporan extends Page
     private function saveToSession(): void
     {
         Session::put($this->sessionKey(), [
-            'mentah'    => collect($this->mentahState)->keyBy('barang_id')->toArray(),
-            'campuran'  => collect($this->campuranState)->keyBy('barang_id')->toArray(),
-            'karung'    => collect($this->karungState)->keyBy('barang_id')->toArray(), // ← TAMBAH INI
+            'mentah'     => collect($this->mentahState)->keyBy('barang_id')->toArray(),
+            'campuran'   => collect($this->campuranState)->keyBy('barang_id')->toArray(),
+            'karung'     => collect($this->karungState)->keyBy('barang_id')->toArray(),
             'keterangan' => $this->keterangan,
         ]);
     }
@@ -377,34 +435,33 @@ class ProduksiPakanLaporan extends Page
         foreach ($this->mentahState as $idx => $item) {
             $saved = $draft['mentah'][$item['barang_id']] ?? null;
             if ($saved) {
-                $this->mentahState[$idx]['p']     = $saved['p'];
-                $this->mentahState[$idx]['l1']    = $saved['l1'];
-                $this->mentahState[$idx]['l2']    = $saved['l2'];
-                $this->mentahState[$idx]['p_sak']  = $saved['p_sak']  ?? 0;
-                $this->mentahState[$idx]['l1_sak'] = $saved['l1_sak'] ?? 0;
-                $this->mentahState[$idx]['l2_sak'] = $saved['l2_sak'] ?? 0;
+                $this->mentahState[$idx]['p']      = (float) ($saved['p']      ?? 0);
+                $this->mentahState[$idx]['l1']     = (float) ($saved['l1']     ?? 0);
+                $this->mentahState[$idx]['l2']     = (float) ($saved['l2']     ?? 0);
+                $this->mentahState[$idx]['p_sak']  = (float) ($saved['p_sak']  ?? 0);
+                $this->mentahState[$idx]['l1_sak'] = (float) ($saved['l1_sak'] ?? 0);
+                $this->mentahState[$idx]['l2_sak'] = (float) ($saved['l2_sak'] ?? 0);
             }
         }
 
         foreach ($this->campuranState as $idx => $item) {
             $saved = $draft['campuran'][$item['barang_id']] ?? null;
             if ($saved) {
-                $this->campuranState[$idx]['p']  = $saved['p'];
-                $this->campuranState[$idx]['l1'] = $saved['l1'];
-                $this->campuranState[$idx]['l2'] = $saved['l2'];
+                $this->campuranState[$idx]['p']  = (float) ($saved['p']  ?? 0);
+                $this->campuranState[$idx]['l1'] = (float) ($saved['l1'] ?? 0);
+                $this->campuranState[$idx]['l2'] = (float) ($saved['l2'] ?? 0);
             }
         }
 
-        // ← TAMBAH BLOK INI
         foreach ($this->karungState as $idx => $item) {
             $saved = $draft['karung'][$item['barang_id']] ?? null;
             if ($saved) {
-                $this->karungState[$idx]['p_sak']  = $saved['p_sak']  ?? 0;
-                $this->karungState[$idx]['l1_sak'] = $saved['l1_sak'] ?? 0;
-                $this->karungState[$idx]['l2_sak'] = $saved['l2_sak'] ?? 0;
-                $this->karungState[$idx]['p']      = $saved['p']  ?? 0;
-                $this->karungState[$idx]['l1']     = $saved['l1'] ?? 0;
-                $this->karungState[$idx]['l2']     = $saved['l2'] ?? 0;
+                $this->karungState[$idx]['p_sak']  = (float) ($saved['p_sak']  ?? 0);
+                $this->karungState[$idx]['l1_sak'] = (float) ($saved['l1_sak'] ?? 0);
+                $this->karungState[$idx]['l2_sak'] = (float) ($saved['l2_sak'] ?? 0);
+                $this->karungState[$idx]['p']      = (float) ($saved['p']      ?? 0);
+                $this->karungState[$idx]['l1']     = (float) ($saved['l1']     ?? 0);
+                $this->karungState[$idx]['l2']     = (float) ($saved['l2']     ?? 0);
             }
         }
 
@@ -417,7 +474,6 @@ class ProduksiPakanLaporan extends Page
 
         try {
             DB::transaction(function () {
-                // 1. Upsert Header Produksi
                 if (!$this->currentRecord) {
                     $this->currentRecord = ProduksiPakan::create([
                         'tanggal_produksi' => $this->selectedDate,
@@ -428,34 +484,36 @@ class ProduksiPakanLaporan extends Page
                     $this->currentRecord->update(['keterangan' => $this->keterangan]);
                 }
 
-                // 2. Simpan Detail Mentah (Gabungan Bahan Baku & Karung)
-                // Pastikan menggunakan variabel hasil merge di bawah ini
                 $semuaInputMentah = array_merge($this->mentahState, $this->karungState);
 
                 foreach ($semuaInputMentah as $data) {
                     ProduksiPakanMentah::updateOrCreate(
-                        ['id_produksi_pakan' => $this->currentRecord->id, 'id_barang' => $data['barang_id']],
                         [
-                            // PENTING: Gunakan (float) dan ?? 0 untuk mencegah pengiriman string kosong ke DB
-                            'stok_awal'     => (float) ($data['awal'] ?? 0),
-                            'keluar_pullet' => (float) ($data['p'] ?? 0),
-                            'keluar_l1'     => (float) ($data['l1'] ?? 0),
-                            'keluar_l2'     => (float) ($data['l2'] ?? 0),
+                            'id_produksi_pakan' => $this->currentRecord->id,
+                            'id_barang'         => $data['barang_id'],
+                        ],
+                        [
+                            'stok_awal'     => (float) ($data['awal']  ?? 0),
+                            'keluar_pullet' => (float) ($data['p']     ?? 0),
+                            'keluar_l1'     => (float) ($data['l1']    ?? 0),
+                            'keluar_l2'     => (float) ($data['l2']    ?? 0),
                             'stok_akhir'    => (float) ($data['akhir'] ?? 0),
                         ]
                     );
                 }
 
-                // 3. Simpan Detail Campuran
                 foreach ($this->campuranState as $data) {
                     ProduksiPakanCampuran::updateOrCreate(
-                        ['id_produksi_pakan' => $this->currentRecord->id, 'id_barang' => $data['barang_id']],
                         [
-                            'stok_awal'     => (float) ($data['awal'] ?? 0),
+                            'id_produksi_pakan' => $this->currentRecord->id,
+                            'id_barang'         => $data['barang_id'],
+                        ],
+                        [
+                            'stok_awal'     => (float) ($data['awal']  ?? 0),
                             'masuk'         => (float) ($data['masuk'] ?? 0),
-                            'keluar_pullet' => (float) ($data['p'] ?? 0),
-                            'keluar_l1'     => (float) ($data['l1'] ?? 0),
-                            'keluar_l2'     => (float) ($data['l2'] ?? 0),
+                            'keluar_pullet' => (float) ($data['p']     ?? 0),
+                            'keluar_l1'     => (float) ($data['l1']    ?? 0),
+                            'keluar_l2'     => (float) ($data['l2']    ?? 0),
                             'stok_akhir'    => (float) ($data['akhir'] ?? 0),
                         ]
                     );
@@ -463,8 +521,12 @@ class ProduksiPakanLaporan extends Page
             });
 
             $this->logInfo('Berhasil simpan ke database');
+
+            // Hapus session SEBELUM reload agar loadDataByDate() baca dari DB
             Session::forget($this->sessionKey());
+
             $this->loadDataByDate();
+
             Notification::make()->title('Data Berhasil Disimpan')->success()->send();
         } catch (\Exception $e) {
             Log::error("[ProduksiPakan] Gagal simpan: " . $e->getMessage());
@@ -476,27 +538,60 @@ class ProduksiPakanLaporan extends Page
     {
         if (!$this->showValidateButton) return;
         $this->save();
-        $this->currentRecord->update(['validated_by' => Auth::user()->name, 'validated_at' => now()]);
+        $this->currentRecord->update([
+            'validated_by' => Auth::user()->name,
+            'validated_at' => now(),
+        ]);
         $this->loadDataByDate();
         Notification::make()->title('Laporan Divalidasi & Terkunci')->success()->send();
     }
 
     private function computePermissions(): void
     {
+        // ── Super Admin: selalu bisa edit & validasi apapun kondisinya ──
+        // Tidak ada batasan untuk super admin, termasuk data yang sudah terkunci.
         if ($this->isSuperAdmin) {
-            $this->canEdit = true;
-            $this->showSaveButton = true;
+            $this->canEdit            = true;
+            $this->showSaveButton     = true;
             $this->showValidateButton = !$this->isLocked && $this->currentRecord !== null;
             return;
         }
-        if ($this->isLocked || ($this->isDraftSaved && $this->isCreator)) {
-            $this->canEdit = false;
-            $this->showSaveButton = false;
+
+        // ── Data sudah divalidasi (terkunci permanen) ──
+        // Tidak ada user biasa yang bisa mengubah apapun setelah ini.
+        if ($this->isLocked) {
+            $this->canEdit            = false;
+            $this->showSaveButton     = false;
             $this->showValidateButton = false;
             return;
         }
-        $this->canEdit = true;
-        $this->showSaveButton = true;
-        $this->showValidateButton = $this->isDraftSaved && !$this->isCreator;
+
+        // ── Data sudah disimpan sebagai draft (status: menunggu validasi) ──
+        // Di sinilah inti perubahan:
+        //   - Creator (yang menginput) → TIDAK bisa edit lagi.
+        //     Alasannya: data sudah "diserahkan" ke validator, tidak etis
+        //     jika creator bisa diam-diam mengubah data tanpa sepengetahuan validator.
+        //   - Non-creator (validator) → bisa edit & bisa klik tombol validasi.
+        //     Validator perlu bisa koreksi jika ada kesalahan sebelum mengunci.
+        if ($this->isDraftSaved) {
+            if ($this->isCreator) {
+                // Creator hanya bisa lihat, tidak bisa ubah apapun
+                $this->canEdit            = false;
+                $this->showSaveButton     = false;
+                $this->showValidateButton = false;
+            } else {
+                // Validator bisa edit dan kunci data
+                $this->canEdit            = true;
+                $this->showSaveButton     = true;
+                $this->showValidateButton = true;
+            }
+            return;
+        }
+
+        // ── Belum ada data tersimpan (canvas kosong / baru diisi) ──
+        // Siapapun yang membuka halaman ini bisa mengisi dan menyimpan.
+        $this->canEdit            = true;
+        $this->showSaveButton     = true;
+        $this->showValidateButton = false; // belum bisa validasi sebelum disimpan
     }
 }
