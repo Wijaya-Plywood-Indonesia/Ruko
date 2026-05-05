@@ -248,7 +248,7 @@
                                         <select wire:model.live="rekening_perusahaan_id" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/10 cursor-pointer">
                                             <option value="">Pilih Bank...</option>
                                             @foreach($rekeningPerusahaan as $rek)
-                                                <option value="{{ $rek->id }}">{{ $rek->nama_bank }} - {{ $rek->no_rekening }}</option>
+                                                <option value="{{ $rek->id }}">{{ $rek->atas_nama }} | {{ $rek->nama_bank }} | {{ $rek->no_rekening }}</option>
                                             @endforeach
                                         </select>
                                     </div>
