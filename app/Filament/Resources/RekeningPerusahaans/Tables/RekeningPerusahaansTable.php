@@ -15,7 +15,6 @@ class RekeningPerusahaansTable
     {
         return $table
             ->columns([
-                //
                 TextColumn::make('pemilik_rekening')
                     ->label('Pemilik')
                     ->searchable()
@@ -34,14 +33,25 @@ class RekeningPerusahaansTable
                     ->label('Atas Nama')
                     ->searchable(),
 
+                // ── Kolom akun jurnal ─────────────────────────────────────────
+                TextColumn::make('subAnakAkun.kode_sub_anak_akun')
+                    ->label('Kode Akun')
+                    ->badge()
+                    ->color('warning')
+                    ->placeholder('Belum diset')
+                    ->searchable(),
+
+                TextColumn::make('subAnakAkun.nama_sub_anak_akun')
+                    ->label('Nama Akun Jurnal')
+                    ->placeholder('—')
+                    ->searchable(),
+
                 TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y')
                     ->sortable(),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
