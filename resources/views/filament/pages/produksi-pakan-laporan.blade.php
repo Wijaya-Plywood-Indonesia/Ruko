@@ -56,149 +56,35 @@
             border-collapse: collapse;
         }
 
-        /* ── Flatpickr custom styling ── */
-        .pp-flatpickr {
+        /* Native date input styling */
+        .pp-date-input {
             display: block;
-            width: 100%;
-            min-width: 10rem;
             border-radius: 0.5rem;
             border: none;
             background-color: white;
-            padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+            padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
             line-height: 1.25rem;
             color: rgb(17 24 39);
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            ring-width: 1px;
             box-shadow: inset 0 0 0 1px rgb(209 213 219);
             cursor: pointer;
+            min-width: 10rem;
         }
 
-        .pp-flatpickr-wrap {
-            position: relative;
-            display: inline-block;
-        }
-
-        .pp-flatpickr-wrap .pp-cal-icon {
-            position: absolute;
-            left: 0.625rem;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: rgb(156 163 175);
-            width: 1rem;
-            height: 1rem;
-        }
-
-        .pp-flatpickr:focus {
+        .pp-date-input:focus {
             outline: none;
             box-shadow: 0 0 0 2px rgb(var(--primary-600)), inset 0 0 0 1px rgb(var(--primary-600));
         }
 
-        /* Dark mode override untuk Flatpickr calendar popup */
-        .dark .flatpickr-calendar {
-            background: rgb(31 41 55);
-            border-color: rgb(55 65 81);
-            box-shadow: 0 4px 24px 0 rgb(0 0 0 / 0.5);
-            color: rgb(243 244 246);
-        }
-
-        .dark .flatpickr-calendar.arrowTop::before,
-        .dark .flatpickr-calendar.arrowTop::after {
-            border-bottom-color: rgb(31 41 55);
-        }
-
-        .dark .flatpickr-calendar.arrowBottom::before,
-        .dark .flatpickr-calendar.arrowBottom::after {
-            border-top-color: rgb(31 41 55);
-        }
-
-        .dark .flatpickr-months {
-            background: rgb(17 24 39);
-            border-radius: 0.5rem 0.5rem 0 0;
-        }
-
-        .dark .flatpickr-months .flatpickr-month,
-        .dark .flatpickr-current-month,
-        .dark .flatpickr-current-month .cur-month,
-        .dark .flatpickr-current-month input.cur-year {
-            color: rgb(243 244 246);
-            fill: rgb(243 244 246);
-        }
-
-        .dark .flatpickr-months .flatpickr-prev-month,
-        .dark .flatpickr-months .flatpickr-next-month {
-            color: rgb(156 163 175);
-            fill: rgb(156 163 175);
-        }
-
-        .dark .flatpickr-months .flatpickr-prev-month:hover,
-        .dark .flatpickr-months .flatpickr-next-month:hover {
-            color: rgb(243 244 246);
-            fill: rgb(243 244 246);
-        }
-
-        .dark .flatpickr-weekdays,
-        .dark span.flatpickr-weekday {
-            background: rgb(17 24 39);
-            color: rgb(107 114 128);
-        }
-
-        .dark .flatpickr-day {
-            color: rgb(209 213 219);
-        }
-
-        .dark .flatpickr-day:hover,
-        .dark .flatpickr-day:focus {
-            background: rgb(55 65 81);
-            border-color: rgb(55 65 81);
-            color: rgb(243 244 246);
-        }
-
-        .dark .flatpickr-day.selected,
-        .dark .flatpickr-day.selected:hover {
-            background: rgb(var(--primary-600));
-            border-color: rgb(var(--primary-600));
-            color: white;
-        }
-
-        .dark .flatpickr-day.today {
-            border-color: rgb(var(--primary-500));
-            color: rgb(var(--primary-400));
-        }
-
-        .dark .flatpickr-day.today:hover {
-            background: rgb(var(--primary-600));
-            border-color: rgb(var(--primary-600));
-            color: white;
-        }
-
-        .dark .flatpickr-day.flatpickr-disabled,
-        .dark .flatpickr-day.prevMonthDay,
-        .dark .flatpickr-day.nextMonthDay {
-            color: rgb(75 85 99);
-        }
-
-        .dark .numInputWrapper:hover {
-            background: rgb(55 65 81);
-        }
-
-        .dark .numInputWrapper span {
-            border-color: rgb(55 65 81);
-        }
-
-        .dark .numInputWrapper span svg path {
-            fill: rgb(156 163 175);
-        }
-
-        .dark .pp-flatpickr {
+        .dark .pp-date-input {
             background-color: rgb(255 255 255 / 0.05);
             color: white;
             box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+            color-scheme: dark;
         }
 
-        .dark .pp-flatpickr-wrap .pp-cal-icon {
-            color: rgb(107 114 128);
+        .dark .pp-date-input:focus {
+            box-shadow: 0 0 0 2px rgb(var(--primary-500)), inset 0 0 0 1px rgb(var(--primary-500));
         }
     </style>
 
@@ -213,19 +99,11 @@
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Pilih Tanggal Laporan
                         </label>
-                        {{-- Input hidden untuk Livewire wire:model; Flatpickr sync nilai ke sini --}}
-                        <input type="hidden" wire:model.live="selectedDate" id="pp-selected-date" value="{{ $selectedDate }}" />
-                        <div class="pp-flatpickr-wrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="pp-cal-icon">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                            </svg>
-                            <input
-                                type="text"
-                                id="pp-datepicker"
-                                readonly
-                                placeholder="Pilih tanggal..."
-                                class="pp-flatpickr" />
-                        </div>
+                        <input
+                            type="date"
+                            wire:model.live="selectedDate"
+                            max="{{ now()->toDateString() }}"
+                            class="pp-date-input" />
                     </div>
 
                     @if($currentRecord)
@@ -538,7 +416,7 @@
             </div>
         </div>
 
-        {{-- ── 3c. KETERANGAN & AUDIT ──────────────────────────────────────── --}}
+        {{-- ── 3d. KETERANGAN & AUDIT ──────────────────────────────────────── --}}
         <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
 
             <header class="fi-section-header flex items-center gap-3 overflow-hidden px-6 py-4">
@@ -603,72 +481,5 @@
     </div>
 
     <x-filament-actions::modals />
-
-
-    {{-- ── Flatpickr CDN ── --}}
-    @push('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-    @endpush
-
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initPpDatepicker();
-        });
-
-        document.addEventListener('livewire:navigated', function() {
-            initPpDatepicker();
-        });
-
-        function initPpDatepicker() {
-            const hiddenInput = document.getElementById('pp-selected-date');
-            const visibleInput = document.getElementById('pp-datepicker');
-
-            if (!visibleInput || !hiddenInput) return;
-
-            // Destroy instance lama jika ada (saat Livewire re-render)
-            if (visibleInput._flatpickr) {
-                visibleInput._flatpickr.destroy();
-            }
-
-            const today = new Date();
-            const initialDate = hiddenInput.value || today.toISOString().split('T')[0];
-
-            flatpickr(visibleInput, {
-                locale: 'id',
-                dateFormat: 'd F Y', // tampilan: 04 Mei 2026
-                altInput: false,
-                defaultDate: initialDate,
-                maxDate: today,
-                disableMobile: true, // tetap pakai Flatpickr di mobile
-                onChange: function(selectedDates, dateStr, instance) {
-                    if (!selectedDates.length) return;
-
-                    // Format ke Y-m-d untuk Livewire
-                    const d = selectedDates[0];
-                    const ymd = d.getFullYear() + '-' +
-                        String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                        String(d.getDate()).padStart(2, '0');
-
-                    // Update hidden input dan dispatch ke Livewire
-                    hiddenInput.value = ymd;
-                    hiddenInput.dispatchEvent(new Event('input', {
-                        bubbles: true
-                    }));
-                },
-            });
-        }
-
-        // Re-init setelah setiap Livewire update (jaga-jaga jika DOM di-morph)
-        document.addEventListener('livewire:updated', function() {
-            const visibleInput = document.getElementById('pp-datepicker');
-            if (visibleInput && !visibleInput._flatpickr) {
-                initPpDatepicker();
-            }
-        });
-    </script>
-    @endpush
 
 </x-filament-panels::page>
