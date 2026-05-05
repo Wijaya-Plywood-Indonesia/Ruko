@@ -311,17 +311,34 @@
                         </div>
 
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Pengiriman</label>
-                            <select wire:model.live="metode_pengiriman" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 cursor-pointer transition-all dark:text-white">
-                                <option value="DIBAWA_SENDIRI">Dibawa Sendiri</option>
-                                <option value="DIKIRIM">Dikirim Kurir</option>
-                            </select>
+                            <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Catatan Pembayaran</label>
+                            <textarea wire:model.live="keterangan_pembayaran" rows="2" placeholder="Catatan pembayaran..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white dark:placeholder-gray-600"></textarea>
                         </div>
 
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Catatan</label>
-                            <textarea wire:model.live="keterangan_nota" rows="2" placeholder="Catatan..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white dark:placeholder-gray-600"></textarea>
+                            <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Pengiriman</label>
+                            <select wire:model.live="metode_pengiriman" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 cursor-pointer transition-all dark:text-white">
+                                <option value="DIBAWA_SENDIRI">Dibawa Sendiri</option>
+                                <option value="DIKIRIM">Dikirim oleh Kami</option>
+                            </select>
                         </div>
+
+                        @if($metode_pengiriman === 'DIKIRIM')
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Kendaraan</label>
+                                    <input type="text" wire:model.live="kendaraan" placeholder="Kendaraan..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Plat Kendaraan</label>
+                                    <input type="text" wire:model.live="plat_kendaraan" placeholder="Plat..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Nama Sopir</label>
+                                <input type="text" wire:model.live="nama_sopir" placeholder="Nama Sopir..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                            </div>
+                        @endif
                     </div>
 
                     <div class="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/20">
