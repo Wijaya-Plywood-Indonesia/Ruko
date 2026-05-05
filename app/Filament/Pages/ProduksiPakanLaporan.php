@@ -548,6 +548,8 @@ class ProduksiPakanLaporan extends Page
 
     private function computePermissions(): void
     {
+        // ── Super Admin: selalu bisa edit & validasi apapun kondisinya ──
+        // Tidak ada batasan untuk super admin, termasuk data yang sudah terkunci.
         if ($this->isSuperAdmin) {
             $this->canEdit            = true;
             $this->showSaveButton     = true;
@@ -555,6 +557,8 @@ class ProduksiPakanLaporan extends Page
             return;
         }
 
+        // ── Data sudah divalidasi (terkunci permanen) ──
+        // Tidak ada user biasa yang bisa mengubah apapun setelah ini.
         if ($this->isLocked) {
             $this->canEdit            = false;
             $this->showSaveButton     = false;
@@ -562,9 +566,32 @@ class ProduksiPakanLaporan extends Page
             return;
         }
 
-        $this->canEdit        = true;
-        $this->showSaveButton = true;
-        // Tombol validasi hanya muncul jika data sudah disimpan DAN user bukan creator
-        $this->showValidateButton = $this->isDraftSaved && !$this->isCreator;
+        // ── Data sudah disimpan sebagai draft (status: menunggu validasi) ──
+        // Di sinilah inti perubahan:
+        //   - Creator (yang menginput) → TIDAK bisa edit lagi.
+        //     Alasannya: data sudah "diserahkan" ke validator, tidak etis
+        //     jika creator bisa diam-diam mengubah data tanpa sepengetahuan validator.
+        //   - Non-creator (validator) → bisa edit & bisa klik tombol validasi.
+        //     Validator perlu bisa koreksi jika ada kesalahan sebelum mengunci.
+        if ($this->isDraftSaved) {
+            if ($this->isCreator) {
+                // Creator hanya bisa lihat, tidak bisa ubah apapun
+                $this->canEdit            = false;
+                $this->showSaveButton     = false;
+                $this->showValidateButton = false;
+            } else {
+                // Validator bisa edit dan kunci data
+                $this->canEdit            = true;
+                $this->showSaveButton     = true;
+                $this->showValidateButton = true;
+            }
+            return;
+        }
+
+        // ── Belum ada data tersimpan (canvas kosong / baru diisi) ──
+        // Siapapun yang membuka halaman ini bisa mengisi dan menyimpan.
+        $this->canEdit            = true;
+        $this->showSaveButton     = true;
+        $this->showValidateButton = false; // belum bisa validasi sebelum disimpan
     }
 }
