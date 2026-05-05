@@ -31,6 +31,7 @@ class PosPenjualan extends Page
     public Collection $searchResults;
     public array $cart = [];
     public int $is_member = 0;
+    public int $total = 0;
 
     /* ================= CUSTOMER ================= */
     public string $searchCustomer = '';
@@ -188,9 +189,15 @@ class PosPenjualan extends Page
         }
 
         $this->updateSubtotal($id);
+        $this->calculateTotal();
         $this->search = '';
         $this->searchResults = collect();
         $this->showDropdown = false;
+    }
+
+    protected function calculateTotal(): void
+    {
+        $this->total = collect($this->cart)->sum(fn($i) => $i['subtotal'] ?? 0);
     }
 
     /* ================= CART ================= */
@@ -216,6 +223,7 @@ class PosPenjualan extends Page
         $this->cart[$id]['qty'] = $qty;
         $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $qty;
         $this->updateSubtotal($id);
+        $this->calculateTotal();
     }
 
     public function incrementQty(int $id): void
@@ -238,6 +246,7 @@ class PosPenjualan extends Page
     public function removeFromCart(int $id): void
     {
         unset($this->cart[$id]);
+        $this->calculateTotal();
     }
 
     public function updatePotongan(int $id): void
@@ -250,6 +259,7 @@ class PosPenjualan extends Page
         $this->cart[$id]['potongan'] = $potongan;
         $this->cart[$id]['total_potongan'] = $potongan * $qty;
         $this->updateSubtotal($id);
+        $this->calculateTotal();
     }
 
     public function updateHargaJual(int $id): void
@@ -259,6 +269,7 @@ class PosPenjualan extends Page
         $harga = max(0, (int) ($this->cart[$id]['harga_jual'] ?? 0));
         $this->cart[$id]['harga_jual'] = $harga;
         $this->updateSubtotal($id);
+        $this->calculateTotal();
     }
 
     protected function updateSubtotal(int $id): void
@@ -353,11 +364,6 @@ class PosPenjualan extends Page
     }
 
     /* ================= COMPUTED ================= */
-    public function getTotalProperty(): int
-    {
-        return collect($this->cart)->sum(fn($i) => $i['subtotal'] ?? 0);
-    }
-
     public function getKembalianProperty(): int
     {
         return max(($this->bayar ?? 0) - $this->total, 0);
@@ -382,6 +388,7 @@ class PosPenjualan extends Page
             $this->cart[$id]['total_potongan'] = $this->cart[$id]['potongan'] * $this->cart[$id]['qty'];
             $this->updateSubtotal($id);
         }
+        $this->calculateTotal();
 
         if (!$this->is_member) {
             $this->reset(['searchCustomer', 'customerResults', 'pembeli_id', 'nama_customer', 'alamat', 'telepon']);
@@ -491,7 +498,7 @@ class PosPenjualan extends Page
 
     public function resetPos(): void
     {
-        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran', 'kode_member', 'selectedBank']);
+        $this->reset(['cart', 'bayar', 'metode_pembayaran', 'rekening_perusahaan_id', 'rekeningPerusahaan', 'nama_customer', 'alamat', 'telepon', 'pembeli_id', 'keterangan_nota', 'keterangan_pembayaran', 'kode_member', 'selectedBank', 'total']);
         $this->no_nota = $this->generateNoNota();
     }
 
@@ -499,5 +506,6 @@ class PosPenjualan extends Page
     public function restoreCart($cart): void
     {
         $this->cart = $cart;
+        $this->calculateTotal();
     }
 }
