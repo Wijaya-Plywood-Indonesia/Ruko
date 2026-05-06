@@ -27,13 +27,17 @@ class Penjualan extends Model
         'status_transaksi',
         'keterangan',
         'keterangan_pembayaran',
-        'toko_id', // ⬅️ tambahkan ini
+        'toko_id',
+        'bayar_tunai',
+        'bayar_transfer',
     ];
 
     protected $casts = [
         'tanggal' => 'datetime',
         'total' => 'decimal:2',
         'bayar' => 'decimal:2',
+        'bayar_tunai' => 'decimal:2',
+        'bayar_transfer' => 'decimal:2',
         'kembalian' => 'decimal:2',
         'is_member' => 'boolean',
         'user_id' => 'integer',
