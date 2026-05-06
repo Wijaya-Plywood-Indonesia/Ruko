@@ -124,43 +124,49 @@ class JurnalPenjualanTelurService
 
             $noJurnal = $this->nextNomorJurnal();
 
-            // ── Resolve kode kas berdasarkan metode pembayaran ────────────────
-            $kodeKas = $this->resolveKodeKas($penjualan);
+            // ── Resolve baris kas (tunai, transfer, atau split) ───────────────
+            $barisKas = $this->resolveBarisKas($penjualan, $totalTelur);
 
-            // ─── D : Kas (tunai/bank sesuai metode pembayaran) ───────────────
+            // ─── D : Kas (satu atau dua baris jika split) ────────────────────
             if ($totalTelur > 0) {
-                $akunKas = $this->resolveAkun($kodeKas);
                 $ketJual = $this->ket('Penjualan Telur', $nota, $customer);
 
-                $hKas = $this->buatHeader([
-                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
-                    'tgl_transaksi'      => $tgl,
-                    'jenis_transaksi'    => 'bk',
-                    'modul_asal'         => 'penjualan_telur',
-                    'jurnal'             => $noJurnal,
-                    'no_akun'            => $akunKas['kode'],
-                    'nama_akun'          => $akunKas['nama'],
-                    'map'                => 'd',
-                    'keterangan'         => $ketJual,
-                    'no_dokumen'         => $nota,
-                    'dibuat_oleh'        => $userId,
-                ]);
+                foreach ($barisKas as $kas) {
+                    // Nominal per baris kas = proporsional dari total telur
+                    $nominalKas = round($kas['nominal'], 2);
 
-                $urut = 1;
-                foreach ($itemTelur as $d) {
-                    $this->buatItem($hKas->id, [
-                        'urut'         => $urut++,
-                        'jenis_pihak'  => 'pelanggan',
-                        'nama_pihak'   => $customer,
-                        'nama_barang'  => $d->nama_barang,
-                        'no_dokumen'   => $nota,
-                        'no_referensi' => (string) $d->id,
-                        'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
-                        'banyak'       => $d->qty,
-                        'harga'        => $d->harga_jual,
-                        'created_by'   => $userId,
-                        'updated_by'   => $userId,
+                    $hKas = $this->buatHeader([
+                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                        'tgl_transaksi'      => $tgl,
+                        'jenis_transaksi'    => 'bk',
+                        'modul_asal'         => 'penjualan_telur',
+                        'jurnal'             => $noJurnal,
+                        'no_akun'            => $kas['kode'],
+                        'nama_akun'          => $kas['nama'],
+                        'map'                => 'd',
+                        'keterangan'         => $ketJual,
+                        'no_dokumen'         => $nota,
+                        'dibuat_oleh'        => $userId,
                     ]);
+
+                    // Items: proporsional sesuai bayar_tunai / bayar_transfer
+                    $urut = 1;
+                    foreach ($itemTelur as $d) {
+                        $this->buatItem($hKas->id, [
+                            'urut'         => $urut++,
+                            'jenis_pihak'  => 'pelanggan',
+                            'nama_pihak'   => $customer,
+                            'nama_barang'  => $d->nama_barang,
+                            'no_dokumen'   => $nota,
+                            'no_referensi' => (string) $d->id,
+                            'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
+                            'banyak'       => $d->qty,
+                            // harga proporsional sesuai porsi pembayaran ini
+                            'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
+                            'created_by'   => $userId,
+                            'updated_by'   => $userId,
+                        ]);
+                    }
                 }
 
                 // ─── K : Pendapatan per jenis telur ──────────────────────────
@@ -350,39 +356,68 @@ class JurnalPenjualanTelurService
     }
 
     // ══════════════════════════════════════════════════════════════
-    // RESOLVE KAS dari metode_pembayaran + RekeningPerusahaan
+    // RESOLVE KAS — support tunai, transfer, dan split
     // ══════════════════════════════════════════════════════════════
 
     /**
-     * Tentukan kode akun kas/bank berdasarkan metode pembayaran:
-     * - tunai   → KODE_KAS (1121-00)
-     * - transfer → ambil dari RekeningPerusahaan.subAnakAkun.kode_sub_anak_akun
-     *              fallback ke KODE_KAS jika belum di-mapping
+     * Kembalikan array baris kas yang perlu dibuat:
+     * [
+     *   ['kode' => '1121-00', 'nama' => 'Kas Tunai Mut', 'proporsi' => 0.4],
+     *   ['kode' => '1212-00', 'nama' => 'Bank PT INTAN', 'proporsi' => 0.6],
+     * ]
+     * proporsi dipakai untuk hitung total_nilai per baris kas.
      */
-    private function resolveKodeKas(Penjualan $penjualan): string
+    private function resolveBarisKas(Penjualan $penjualan, float $totalNilai): array
     {
-        $metode = strtolower($penjualan->metode_pembayaran ?? 'tunai');
+        $bayarTunai    = (float) ($penjualan->bayar_tunai    ?? 0);
+        $bayarTransfer = (float) ($penjualan->bayar_transfer ?? 0);
+        $total         = $bayarTunai + $bayarTransfer;
 
-        if ($metode !== 'transfer') {
-            return self::KODE_KAS;
+        // Fallback: jika kolom baru belum terisi, pakai metode_pembayaran lama
+        if ($total <= 0) {
+            $metode = strtolower($penjualan->metode_pembayaran ?? 'tunai');
+            $bayarTunai    = $metode !== 'transfer' ? $totalNilai : 0;
+            $bayarTransfer = $metode === 'transfer'  ? $totalNilai : 0;
+            $total         = $totalNilai;
         }
 
-        // Transfer — ambil dari relasi rekening → subAnakAkun
-        $kodeBank = $penjualan->rekeningPerusahaan
-            ?->subAnakAkun
-            ?->kode_sub_anak_akun;
+        $baris = [];
 
-        if ($kodeBank) {
-            return $kodeBank;
+        // ── Baris tunai ──────────────────────────────────────────────────────
+        if ($bayarTunai > 0) {
+            $akun    = $this->resolveAkun(self::KODE_KAS);
+            $baris[] = [
+                'kode'     => $akun['kode'],
+                'nama'     => $akun['nama'],
+                'proporsi' => $bayarTunai / $total,
+                'nominal'  => $bayarTunai,
+            ];
         }
 
-        // Fallback + log warning
-        Log::warning(
-            "[JurnalPenjualanTelur] Rekening transfer {$penjualan->no_rekening} " .
-            "belum di-mapping ke akun jurnal. Fallback ke kas tunai {$penjualan->no_nota}."
-        );
+        // ── Baris transfer ───────────────────────────────────────────────────
+        if ($bayarTransfer > 0) {
+            $kodeBank = $penjualan->rekeningPerusahaan
+                ?->subAnakAkun
+                ?->kode_sub_anak_akun;
 
-        return self::KODE_KAS;
+            if (!$kodeBank) {
+                Log::warning(
+                    "[JurnalPenjualanTelur] Rekening transfer {$penjualan->no_rekening} " .
+                    "belum di-mapping ke akun jurnal. Fallback ke kas tunai. Nota: {$penjualan->no_nota}."
+                );
+                $kodeBank = self::KODE_KAS;
+            }
+
+            $akun    = $this->resolveAkun($kodeBank);
+            $baris[] = [
+                'kode'     => $akun['kode'],
+                'nama'     => $akun['nama'],
+                'proporsi' => $bayarTransfer / $total,
+                'nominal'  => $bayarTransfer,
+            ];
+        }
+
+        return $baris;
     }
 
     // ══════════════════════════════════════════════════════════════
