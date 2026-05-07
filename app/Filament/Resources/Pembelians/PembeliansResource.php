@@ -48,7 +48,7 @@ class PembeliansResource extends Resource
     {
         return [
             'index' => ListPembelians::route('/'),
-            'create' => CreatePembelians::route('/create'),
+            'create' => Pages\Pembelian::route('/create'),
             'view' => ViewPembelians::route('/{record}'),
             'edit' => EditPembelians::route('/{record}/edit'),
         ];
