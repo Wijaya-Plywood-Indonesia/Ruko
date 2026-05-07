@@ -7,6 +7,7 @@ use App\Filament\Resources\AkunGroups\Pages\EditAkunGroup;
 use App\Filament\Resources\AkunGroups\Pages\ListAkunGroups;
 use App\Filament\Resources\AkunGroups\Pages\ViewAkunGroup;
 use App\Filament\Resources\AkunGroups\RelationManagers\AnakAkunsRelationManager;
+use App\Filament\Resources\AkunGroups\RelationManagers\SubAnakAkunsRelationManager;
 use App\Filament\Resources\AkunGroups\Schemas\AkunGroupForm;
 use App\Filament\Resources\AkunGroups\Schemas\AkunGroupInfolist;
 use App\Filament\Resources\AkunGroups\Tables\AkunGroupsTable;
@@ -47,7 +48,8 @@ class AkunGroupResource extends Resource
     {
         return [
                 //
-            AnakAkunsRelationManager::class,
+            // AnakAkunsRelationManager::class,
+            SubAnakAkunsRelationManager::class,
         ];
     }
 
