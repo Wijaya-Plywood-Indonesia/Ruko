@@ -16,6 +16,7 @@ class SupliersTable
     {
         return $table
             ->columns([
+                //Ini tabel untuk  menampilkan data suplier
                 TextColumn::make('nama')
                     ->label('Nama Supplier')
                     ->searchable()
