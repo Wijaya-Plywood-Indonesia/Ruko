@@ -4,11 +4,14 @@ namespace App\Filament\Resources\AkunGroups\RelationManagers;
 
 use App\Models\SubAnakAkun;
 use Filament\Actions\AttachAction;
+use Filament\Actions\BulkAction as ActionsBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\BulkAction;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 class SubAnakAkunsRelationManager extends RelationManager
@@ -22,26 +25,15 @@ class SubAnakAkunsRelationManager extends RelationManager
 
     protected static ?string $title = 'Daftar Sub Akun (Neraca)';
 
-    /*
-    |--------------------------------------------------------------------------
-    | Leaf Only — hanya tampil di group yang tidak punya children
-    |--------------------------------------------------------------------------
-    */
-
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
         return $ownerRecord->isLeaf();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Table
-    |--------------------------------------------------------------------------
-    */
-
     public function table(Table $table): Table
     {
         return $table
+        ->selectable()
             ->recordTitleAttribute('nama_sub_anak_akun')
             ->columns([
                 TextColumn::make('kode_sub_anak_akun')
@@ -81,7 +73,6 @@ class SubAnakAkunsRelationManager extends RelationManager
                         'nama_sub_anak_akun',
                     ])
                     ->recordSelectOptionsQuery(
-                        // Hanya tampilkan sub akun yang belum terdaftar di group manapun
                         fn($query) => $query
                             ->where('status', 'aktif')
                             ->whereDoesntHave('akunGroups')
@@ -93,8 +84,23 @@ class SubAnakAkunsRelationManager extends RelationManager
                     ->label('Lepas'),
             ])
             ->bulkActions([
-                DetachBulkAction::make()
-                    ->label('Lepas Semua Dipilih'),
-            ]);
+    ActionsBulkAction::make('detachSelected')
+        ->label('Lepas Semua Dipilih')
+        ->icon('heroicon-o-link-slash')
+        ->requiresConfirmation()
+        ->modalHeading('Lepas Sub Akun Terpilih')
+        ->modalDescription('Apakah Anda yakin ingin melepas semua sub akun yang dipilih?')
+        ->modalSubmitActionLabel('Ya, Lepas')
+        ->deselectRecordsAfterCompletion()
+        ->action(function (Collection $records) {
+
+            $ids = $records->pluck('id');
+
+            $this->ownerRecord
+                ->subAnakAkuns()
+                ->detach($ids);
+
+        }),
+]);
     }
 }

@@ -30,14 +30,16 @@ class SubAnakAkun extends Model
     }
 
     public function akunGroups()
-    {
-        return $this->belongsToMany(
-            AkunGroup::class,
-            'akun_group_sub_anak_akun',  // nama tabel pivot
-            'sub_anak_akun_id',          // FK ke SubAnakAkun di pivot
-            'akun_group_id'              // FK ke AkunGroup di pivot
-        )->withTimestamps();
-    }
+{
+    return $this->belongsToMany(
+        AkunGroup::class,
+        'akun_group_sub_anak_akun',
+        'sub_anak_akun_id',
+        'akun_group_id'
+    )
+    ->withPivot('id')
+    ->withTimestamps();
+}
 
     public function creator()
     {
