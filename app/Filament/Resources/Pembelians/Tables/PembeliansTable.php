@@ -38,7 +38,12 @@ class PembeliansTable
 
                 TextColumn::make('grand_total')
                     ->label('Grand Total')
-                    ->money('IDR', locale: 'id_ID')
+                    ->formatStateUsing(function ($state) {
+                        return 'Rp ' . number_format($state, 0, ',', '.');
+                    })
+                    ->badge()
+                    ->color('info')
+                    ->searchable()
                     ->sortable(),
 
                 // Status menggunakan logic badge seperti POS

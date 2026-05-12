@@ -144,28 +144,27 @@ class PembeliansInfolist
                 Section::make('Nominal')
                     ->schema([
                         TextEntry::make('sub_total')
-                            ->label('Sub Total')
-                            ->money('IDR'),
+                            ->label('Sub Total'),
 
                         TextEntry::make('total_diskon')
-                            ->label('Diskon')
-                            ->money('IDR'),
+                            ->label('Diskon'),
 
                         TextEntry::make('total_ppn')
-                            ->label('PPN')
-                            ->money('IDR'),
+                            ->label('PPN'),
 
                         TextEntry::make('ongkir')
-                            ->label('Ongkir')
-                            ->money('IDR'),
+                            ->label('Ongkir'),
 
                         TextEntry::make('biaya_lain')
-                            ->label('Biaya Lain')
-                            ->money('IDR'),
+                            ->label('Biaya Lain'),
 
                         TextEntry::make('grand_total')
                             ->label('Grand Total')
-                            ->money('IDR'),
+                            ->badge()
+                            ->color('info')
+                            ->formatStateUsing(function ($state) {
+                                return 'Rp ' . number_format($state, 0, ',', '.');
+                            }),
                     ])
                     ->columns(3),
 

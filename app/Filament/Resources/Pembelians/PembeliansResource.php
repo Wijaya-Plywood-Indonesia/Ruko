@@ -7,6 +7,7 @@ use App\Filament\Resources\Pembelians\Pages\EditPembelians;
 use App\Filament\Resources\Pembelians\Pages\ListPembelians;
 use App\Filament\Resources\Pembelians\Pages\ViewPembelians;
 use App\Filament\Resources\Pembelians\RelationManagers\DetailPembeliansRelationManager;
+use App\Filament\Resources\Pembelians\RelationManagers\MetodePembayaransRelationManager;
 use App\Filament\Resources\Pembelians\Schemas\PembeliansForm;
 use App\Filament\Resources\Pembelians\Schemas\PembeliansInfolist;
 use App\Filament\Resources\Pembelians\Tables\PembeliansTable;
@@ -41,7 +42,8 @@ class PembeliansResource extends Resource
     public static function getRelations(): array
     {
         return [
-            DetailPembeliansRelationManager::class
+            DetailPembeliansRelationManager::class,
+            MetodePembayaransRelationManager::class
         ];
     }
 
