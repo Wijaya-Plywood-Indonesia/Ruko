@@ -25,39 +25,45 @@ class Pembelian extends Page
     protected static ?string $title = '';
 
     // =====================================
-    // 1. STATE / VARIABEL: HEADER PEMBELIAN
+    // 1. STATE: HEADER PEMBELIAN
     // =====================================
     public $nomor_nota;
     public $created_by;
     public $created_by_name;
     public $tanggal;
 
-    public $supplier_id = '';
+    public $supplier_id      = '';
     public $supplier_name;
     public $supplier_phone;
     public $supplier_address;
-    public $is_new_supplier = false;
+    public $is_new_supplier  = false;
 
-    public $status = ModelsPembelian::STATUS_DRAFT;
     public $catatan;
     public $foto_nota = [];
 
     // =====================================
-    // 2. STATE / VARIABEL: DETAIL BARANG
+    // 2. STATE: DETAIL BARANG (KERANJANG)
     // =====================================
     public $items = [];
 
     // =====================================
-    // 3. STATE / VARIABEL: NOMINAL GLOBAL
+    // 3. STATE: SEARCH BAR GAYA POS
     // =====================================
-    public $sub_total = 0;
+    public string $search        = '';
+    public array  $searchResults = [];
+    public bool   $showDropdown  = false;
+
+    // =====================================
+    // 4. STATE: NOMINAL GLOBAL
+    // =====================================
+    public $sub_total    = 0;
     public $total_diskon = null;
     public $total_ppn    = null;
     public $ongkir       = null;
     public $biaya_lain   = null;
 
     // =====================================
-    // 4. STATE / VARIABEL: PEMBAYARAN KASIR
+    // 5. STATE: PEMBAYARAN
     // =====================================
     public $payment_method    = PembelianMetodePembayaran::METODE_TUNAI;
     public $payment_amount    = null;
@@ -65,6 +71,9 @@ class Pembelian extends Page
     public $payment_reference = '';
     public $payment_catatan   = '';
 
+    // =====================================
+    // MOUNT
+    // =====================================
     public function mount(): void
     {
         $this->created_by      = auth()->id();
@@ -72,11 +81,150 @@ class Pembelian extends Page
         $this->tanggal         = now()->format('Y-m-d');
         $this->tanggal_bayar   = now()->format('Y-m-d');
 
-        $this->addItem();
+        // Tidak perlu addItem() — tabel mulai kosong,
+        // barang masuk lewat search bar di atas
     }
 
     // =====================================
-    // HANDLER SUPPLIER
+    // HANDLER: SEARCH BAR (GAYA POS)
+    // =====================================
+
+    /**
+     * Dipanggil otomatis Livewire setiap $search berubah.
+     *
+     * Logika:
+     *   - Kosong / kurang dari 1 karakter → tutup dropdown
+     *   - Sebaliknya → query DB dengan LIKE, limit 10 hasil
+     *
+     * Kenapa limit(10)?
+     *   Supaya dropdown tidak jadi scroll panjang yang membingungkan.
+     *   Kasir dilatih untuk mengetik lebih spesifik kalau tidak ketemu.
+     */
+    public function updatedSearch(): void
+    {
+        $keyword = trim($this->search);
+
+        if (strlen($keyword) < 1) {
+            $this->searchResults = [];
+            $this->openDropdown();
+            return;
+        }
+
+        $this->searchResults = Barang::with('satuan')
+            ->where('nama_barang', 'like', "%{$keyword}%")
+            ->orWhere('kode_barang', 'like', "%{$keyword}%")
+            ->orderBy('nama_barang')
+            ->limit(10)
+            ->get()
+            ->map(fn($b) => [
+                'id'          => $b->id,
+                'kode_barang' => $b->kode_barang,
+                'nama_barang' => $b->nama_barang,
+                'harga_beli'  => floatval($b->harga_beli ?? 0),
+                'satuan'      => is_object($b->satuan)
+                    ? ($b->satuan->nama_satuan ?? $b->satuan->keterangan ?? 'Unit')
+                    : ($b->satuan ?? 'Unit'),
+            ])
+            ->toArray();
+
+        $this->showDropdown = !empty($this->searchResults);
+    }
+
+    /** Buka dropdown saat input difokus (jika sudah ada keyword) */
+    public function openDropdown(): void
+    {
+        $this->showDropdown = true;
+
+        // Jika search bar kosong, kita muat daftar barang default (misal 10 barang teratas)
+        if (empty(trim($this->search))) {
+            $this->searchResults = Barang::with('satuan')
+                ->orderBy('nama_barang', 'asc') // atau berdasarkan yang paling sering dibeli
+                ->limit(10)
+                ->get()
+                ->map(fn($b) => [
+                    'id'          => $b->id,
+                    'kode_barang' => $b->kode_barang,
+                    'nama_barang' => $b->nama_barang,
+                    'harga_beli'  => floatval($b->harga_beli ?? 0),
+                    'satuan'      => is_object($b->satuan)
+                        ? ($b->satuan->nama_satuan ?? 'Unit')
+                        : ($b->satuan ?? 'Unit'),
+                ])
+                ->toArray();
+        }
+    }
+
+    /** Tutup dropdown — dipanggil dari @click.outside di Blade */
+    public function closeDropdown(): void
+    {
+        $this->showDropdown  = false;
+        $this->searchResults = [];
+    }
+
+    /**
+     * Dipanggil saat user klik salah satu hasil pencarian.
+     *
+     * Aturan:
+     *   1. Kalau barang sudah ada di keranjang → tambah qty (tidak duplikat baris)
+     *   2. Kalau belum ada → push baris baru ke $items
+     *   3. Setelah selesai → bersihkan search + tutup dropdown
+     *
+     * @param int $barangId  ID dari tabel barang
+     */
+    public function selectBarang(int $barangId): void
+    {
+        $barang = Barang::with('satuan')->find($barangId);
+        if (!$barang) return;
+
+        $satuan = is_object($barang->satuan)
+            ? ($barang->satuan->nama_satuan ?? $barang->satuan->keterangan ?? 'Unit')
+            : ($barang->satuan ?? 'Unit');
+
+        $harga = floatval($barang->harga_beli ?? 0);
+
+        // ── Cek apakah barang sudah ada di keranjang ──
+        foreach ($this->items as $index => $item) {
+            if ((int) ($item['barang_id'] ?? 0) === $barangId) {
+
+                $qty        = floatval($this->items[$index]['qty'] ?? 0) + 1;
+                $hargaItem  = floatval($this->items[$index]['harga_beli'] ?? 0);
+                $diskon     = floatval($this->items[$index]['diskon'] ?? 0);
+
+                $subtotalLama = floatval($this->items[$index]['subtotal'] ?? 0);
+                $subtotalBaru = max(0.0, ($qty * $hargaItem) - $diskon);
+
+                $this->items[$index]['qty']      = $qty;
+                $this->items[$index]['subtotal'] = $subtotalBaru;
+                $this->sub_total = max(0.0, $this->sub_total - $subtotalLama + $subtotalBaru);
+
+                $this->search       = '';
+                $this->showDropdown = false;
+                return;
+            }
+        }
+
+        // ── Barang belum ada → tambah baris baru ──
+        $subtotal = $harga; // qty awal = 1, diskon = 0
+
+        $this->items[] = [
+            'barang_id'   => $barang->id,
+            'kode_barang' => $barang->kode_barang,
+            'nama_barang' => $barang->nama_barang,
+            'satuan'      => $satuan,
+            'qty'         => 1,
+            'harga_beli'  => $harga,
+            'diskon'      => 0,
+            'subtotal'    => $subtotal,
+            'catatan'     => '',
+        ];
+
+        $this->sub_total    += $subtotal;
+        $this->search        = '';
+        $this->showDropdown  = false;
+    }
+
+    // =====================================
+    // HANDLER: SUPPLIER
     // =====================================
     public function updatedSupplierId($value): void
     {
@@ -91,9 +239,13 @@ class Pembelian extends Page
     }
 
     // =====================================
-    // HANDLER BARANG (ITEMS / KERANJANG)
+    // HANDLER: KERANJANG (ITEMS)
     // =====================================
 
+    /**
+     * Masih dipertahankan untuk fallback tombol "Tambah Baris Manual"
+     * (opsional, bisa dihapus kalau tidak dipakai)
+     */
     public function addItem(): void
     {
         $this->items[] = [
@@ -111,9 +263,8 @@ class Pembelian extends Page
 
     public function removeItem(int $index): void
     {
-        if (count($this->items) <= 1) return;
+        if (count($this->items) <= 0) return;
 
-        // Kurangi sub_total dengan subtotal baris yang dihapus
         $this->sub_total = max(0, $this->sub_total - floatval($this->items[$index]['subtotal'] ?? 0));
 
         unset($this->items[$index]);
@@ -122,7 +273,10 @@ class Pembelian extends Page
 
     /**
      * Dipanggil otomatis Livewire saat data dalam $items berubah.
-     * PERBAIKAN: update sub_total hanya dengan selisih (tidak loop ulang semua item).
+     *
+     * Bayangkan seperti "watcher" — setiap kali user mengedit qty,
+     * harga, atau diskon di baris tertentu, method ini dipanggil
+     * dengan parameter $key = "0.qty" / "1.harga_beli", dst.
      */
     public function updatedItems($value, $key): void
     {
@@ -131,14 +285,14 @@ class Pembelian extends Page
 
         [$index, $field] = [$parts[0], $parts[1]];
 
-        // Saat barang dipilih dari dropdown
+        // Jika barang dipilih manual (baris kosong), isi data otomatis
         if ($field === 'barang_id' && !empty($value)) {
             $barang = Barang::with('satuan')->find($value);
             if ($barang) {
                 $this->items[$index]['kode_barang'] = $barang->kode_barang;
                 $this->items[$index]['nama_barang'] = $barang->nama_barang;
                 $this->items[$index]['satuan']      = is_object($barang->satuan)
-                    ? ($barang->satuan->nama ?? $barang->satuan->keterangan ?? 'Unit')
+                    ? ($barang->satuan->nama_satuan ?? $barang->satuan->keterangan ?? 'Unit')
                     : ($barang->satuan ?? 'Unit');
                 $this->items[$index]['harga_beli']  = $barang->harga_beli;
             }
@@ -149,55 +303,47 @@ class Pembelian extends Page
         $diskon = $this->parseNumber($this->items[$index]['diskon']      ?? 0);
 
         $subtotalLama = floatval($this->items[$index]['subtotal'] ?? 0);
-
-        // PERBAIKAN: max(0,...) agar subtotal tidak pernah negatif
         $subtotalBaru = max(0.0, ($qty * $harga) - $diskon);
 
         $this->items[$index]['subtotal'] = $subtotalBaru;
-
-        // PERBAIKAN: update sub_total hanya dengan selisih, bukan loop ulang
         $this->sub_total = max(0.0, $this->sub_total - $subtotalLama + $subtotalBaru);
     }
 
-    /**
-     * Fungsi ini tetap tersedia sebagai fallback / rekonsiliasi manual.
-     * Misalnya dipanggil setelah import data atau operasi bulk.
-     */
     public function recalculateSubTotal(): void
     {
-        $this->sub_total = array_reduce(
-            $this->items,
-            fn($carry, $item) => $carry + floatval($item['subtotal'] ?? 0),
-            0.0
-        );
+        $total = 0.0;
+
+        foreach ($this->items as $index => $item) {
+            // Hitung ulang dari qty & harga — jangan percaya nilai subtotal yang lama
+            // karena bisa stale kalau Alpine belum sempat sync ke server
+            $qty      = $this->parseNumber($item['qty'] ?? 0);
+            $harga    = $this->parseNumber($item['harga_beli'] ?? 0);
+            $diskon   = $this->parseNumber($item['diskon'] ?? 0);
+            $subtotal = max(0.0, ($qty * $harga) - $diskon);
+
+            // Update subtotal per baris juga, biar konsisten
+            $this->items[$index]['subtotal'] = $subtotal;
+            $total += $subtotal;
+        }
+
+        $this->sub_total = $total;
     }
 
     // =====================================
-    // KALKULASI GRAND TOTAL
+    // GRAND TOTAL
     // =====================================
-
-    /**
-     * PERBAIKAN: Pakai #[Computed] agar Livewire cache hasil kalkulasi
-     * per siklus render — tidak dihitung ulang tiap dipanggil di Blade.
-     * Di Blade gunakan: $this->grandTotal  (bukan getGrandTotalProperty())
-     */
     #[Computed]
     public function grandTotal(): float
     {
-        return max(
-            0.0,
-            floatval($this->sub_total)
-                - $this->parseNumber($this->total_diskon)
-                + $this->parseNumber($this->total_ppn)
-                + $this->parseNumber($this->ongkir)
-                + $this->parseNumber($this->biaya_lain)
+        return (new ModelsPembelian)->hitungGrandTotal(
+            subTotal: (float) $this->sub_total,
+            totalDiskon: $this->parseNumber($this->total_diskon),
+            totalPpn: $this->parseNumber($this->total_ppn),
+            ongkir: $this->parseNumber($this->ongkir),
+            biayaLain: $this->parseNumber($this->biaya_lain),
         );
     }
 
-    /**
-     * Alias agar kode lama yang memanggil getGrandTotalProperty() tetap jalan
-     * tanpa perlu refactor Blade sekarang.
-     */
     public function getGrandTotalProperty(): float
     {
         return $this->grandTotal();
@@ -212,17 +358,6 @@ class Pembelian extends Page
     // =====================================
     // HELPER: PARSE NUMBER
     // =====================================
-
-    /**
-     * Membersihkan format angka ribuan Indonesia (titik) & desimal (koma)
-     * sehingga PHP bisa menghitungnya secara matematis.
-     *
-     * Contoh input yang ditangani:
-     *   "1.500.000"   → 1500000.0
-     *   "1.500,50"    → 1500.5
-     *   "1500000"     → 1500000.0
-     *   ""  / null    → 0.0
-     */
     private function parseNumber(mixed $value): float
     {
         if (is_null($value) || $value === '') return 0.0;
@@ -230,91 +365,83 @@ class Pembelian extends Page
 
         $str = (string) $value;
 
-        // Deteksi apakah koma adalah desimal atau ribuan
         $lastComma = strrpos($str, ',');
         $lastDot   = strrpos($str, '.');
 
         if ($lastComma !== false && $lastDot !== false) {
-            // Keduanya ada → yang terakhir adalah desimal
             if ($lastComma > $lastDot) {
-                // Format: 1.500,50  → hapus titik, ganti koma jadi titik
                 $str = str_replace('.', '', $str);
                 $str = str_replace(',', '.', $str);
             } else {
-                // Format: 1,500.50  → hapus koma saja
                 $str = str_replace(',', '', $str);
             }
         } elseif ($lastComma !== false) {
-            // Hanya koma → cek apakah desimal atau ribuan
             $afterComma = substr($str, $lastComma + 1);
             if (strlen($afterComma) === 3 && !str_contains(substr($str, 0, $lastComma), '.')) {
-                // Kemungkinan ribuan: "1,500" → hapus koma
                 $str = str_replace(',', '', $str);
             } else {
-                // Desimal: "1500,50" → ganti koma jadi titik
                 $str = str_replace(',', '.', $str);
             }
         } elseif ($lastDot !== false) {
-            // Hanya titik → cek apakah desimal atau ribuan
             $afterDot = substr($str, $lastDot + 1);
             if (strlen($afterDot) === 3 && substr_count($str, '.') === 1 && !str_contains($str, ',')) {
-                // Ambigu: "1.500" bisa ribuan atau desimal.
-                // Karena konteks Indonesia → anggap ribuan, hapus titik.
                 $str = str_replace('.', '', $str);
             }
-            // Jika "1.5" (bukan 3 digit) → biarkan, sudah format desimal valid
         }
 
         return (float) ($str ?: 0);
     }
 
     // =====================================
-    // FUNGSI SIMPAN TRANSAKSI
+    // SIMPAN TRANSAKSI
     // =====================================
     public function simpan(): void
     {
+        $this->recalculateSubTotal();
+
+        $paths = [];
+        foreach ($this->foto_nota as $foto) {
+            $paths[] = $foto->store('pembelian', 'public');
+        }
+
         $this->validate([
-            'nomor_nota'           => 'required',
-            'tanggal'              => 'required|date',
-            'supplier_id'          => 'required_without:is_new_supplier',
-            'supplier_name'        => 'required_if:is_new_supplier,true',
-            'items.*.barang_id'    => 'required',
-            'items.*.qty'          => 'required|numeric|min:0.01',
-            'items.*.harga_beli'   => 'required|numeric|min:0',
+            'nomor_nota'         => 'required',
+            'tanggal'            => 'required|date',
+            'supplier_id'        => 'required_without:is_new_supplier',
+            'supplier_name'      => 'required_if:is_new_supplier,true',
+            'items'              => 'required|array|min:1',
+            'items.*.barang_id'  => 'required',
+            'items.*.qty'        => 'required|numeric|min:0.01',
+            'items.*.harga_beli' => 'required|numeric|min:0',
         ]);
 
         DB::beginTransaction();
 
         try {
-            // 1. Simpan Supplier Baru (jika mode input manual)
             $final_supplier_id = $this->supplier_id;
             if ($this->is_new_supplier) {
                 $newSupplier = Supplier::create([
-                    'nama'       => $this->supplier_name,
-                    'telepon'    => $this->supplier_phone,
-                    'alamat'     => $this->supplier_address,
-                    'created_by' => $this->created_by,
+                    'nama'    => $this->supplier_name,
+                    'telepon' => $this->supplier_phone,
+                    'alamat'  => $this->supplier_address,
                 ]);
                 $final_supplier_id = $newSupplier->id;
             }
 
-            // 2. Upload Foto
             $paths = [];
             foreach ($this->foto_nota as $foto) {
                 $paths[] = $foto->store('pembelian', 'public');
             }
 
-            // 3. Tentukan Status Berdasarkan Pembayaran
             $grand   = $this->grandTotal();
             $dibayar = $this->parseNumber($this->payment_amount);
 
             $this->status = match (true) {
-                $grand > 0 && $dibayar >= $grand => ModelsPembelian::STATUS_LUNAS,
+                $grand > 0 && $dibayar >= $grand  => ModelsPembelian::STATUS_LUNAS,
                 $dibayar > 0 && $dibayar < $grand => ModelsPembelian::STATUS_CICILAN,
-                default => ModelsPembelian::STATUS_HUTANG,
+                default                            => ModelsPembelian::STATUS_HUTANG,
             };
 
-            // 4. Simpan Header Pembelian
             $pembelian = ModelsPembelian::create([
                 'nomor_nota'       => $this->nomor_nota,
                 'created_by'       => $this->created_by,
@@ -334,7 +461,6 @@ class Pembelian extends Page
                 'grand_total'      => $grand,
             ]);
 
-            // 5. Simpan Detail Barang
             $detailData = [];
             foreach ($this->items as $item) {
                 if (empty($item['barang_id'])) continue;
@@ -354,12 +480,10 @@ class Pembelian extends Page
                 ];
             }
 
-            // PERBAIKAN: insert sekaligus lebih cepat dari loop create()
             if (!empty($detailData)) {
                 DetailPembelian::insert($detailData);
             }
 
-            // 6. Simpan Pembayaran
             if ($dibayar > 0) {
                 PembelianMetodePembayaran::create([
                     'pembelian_id'     => $pembelian->id,
