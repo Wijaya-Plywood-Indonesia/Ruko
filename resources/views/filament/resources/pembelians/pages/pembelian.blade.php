@@ -1,7 +1,4 @@
 <x-filament-panels::page>
-    @push('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    @endpush
 
     <div class="min-h-full pb-10 transition-colors duration-300">
 
@@ -88,11 +85,17 @@
 
                     {{-- CARD 1: INFORMASI PEMBELIAN (HEADER) --}}
                     <div class="bg-white dark:bg-[#1a1d24] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                        <div class="bg-gray-50 dark:bg-[#20242c] p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800">
+                        <div class="bg-gray-50 dark:bg-[#20242c] p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center flex-wrap gap-2">
                             <h2 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                                 <x-heroicon-o-information-circle class="w-6 h-6 text-primary-500" />
                                 Informasi Nota Pembelian
                             </h2>
+
+                            {{-- PERBAIKAN: Info Pembuat dalam bentuk teks Badge --}}
+                            <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-sm font-black text-gray-400 mr-1">Dibuat oleh:</span>
+                                <span class="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase">{{ $created_by_name }}</span>
+                            </div>
                         </div>
 
                         <div class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6">
@@ -109,22 +112,12 @@
                                 <label class="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg font-semibold text-gray-700 dark:text-gray-300">
                                     <x-heroicon-o-calendar class="w-5 h-5 text-primary-500" /> Tanggal <span class="text-danger-500 font-bold">*</span>
                                 </label>
-                                <div wire:ignore
-                                    x-data="{
-                                    init() {
-                                        flatpickr(this.$refs.picker, {
-                                            locale: 'id', altInput: true, altFormat: 'd F Y', dateFormat: 'Y-m-d', defaultDate: $wire.tanggal,
-                                            onChange: (selectedDates, dateStr) => { $wire.tanggal = dateStr; }
-                                        });
-                                    }
-                                 }">
-                                    <input x-ref="picker" type="text" placeholder="Pilih Tanggal..."
-                                        class="w-full p-3 sm:p-4 text-base sm:text-lg font-bold bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-700 focus:ring-4 focus:ring-primary-500/30 focus:border-primary-500 dark:text-white transition-all outline-none cursor-pointer rounded-xl" />
-                                </div>
+                                <input type="date" wire:model="tanggal" required
+                                    class="w-full p-3 sm:p-4 text-base sm:text-lg font-bold bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-700 focus:ring-4 focus:ring-primary-500/30 focus:border-primary-500 dark:text-white transition-all outline-none rounded-xl" />
                             </div>
 
                             {{-- Supplier --}}
-                            <div class="col-span-1 md:col-span-2 flex flex-col gap-1.5 sm:gap-2 relative"
+                            <div class="col-span-1 md:col-span-2 flex flex-col gap-1.5 sm:gap-2 relative" wire:ignore
                                 x-data="{
                                 isOpen: false,
                                 search: '',
@@ -242,124 +235,198 @@
                         </div>
                     </div>
 
-                    {{-- CARD 2: DAFTAR BARANG --}}
-                    <div class="bg-white dark:bg-[#1a1d24] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                        <div class="bg-primary-50 dark:bg-[#20242c] p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-                            <h2 class="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                                <x-heroicon-o-shopping-cart class="w-5 h-5 text-primary-500" /> Daftar Barang (Keranjang)
-                            </h2>
-                        </div>
+                    <div class="space-y-6">
+                        {{-- ================================================================ --}}
+                        {{-- SEARCH CARD: Bagian Pencarian Barang Global --}}
+                        {{-- ================================================================ --}}
+                        {{-- Tambah x-data + @click.outside untuk fix bug #4 --}}
+                        <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm"
+                            x-data
+                            @click.outside="$wire.closeDropdown()">
 
-                        <div class="p-4 sm:p-6 flex flex-col gap-4">
-                            @error('items.*.barang_id') <div class="bg-rose-100 text-rose-700 p-3 rounded-lg font-bold border border-rose-300">{{ $message }}</div> @enderror
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                                    <x-heroicon-o-magnifying-glass class="w-5 h-5" />
+                                </div>
+                                <input
+                                    type="text"
+                                    wire:model.live.debounce.300ms="search"
+                                    wire:focus="openDropdown"
+                                    placeholder="Cari barang untuk dibeli / barcode... (/)"
+                                    id="pembelian-search-input"
+                                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700
+                   rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-4 focus:ring-primary-500/10
+                   transition-all outline-none font-medium dark:text-white"
+                                    @keydown.slash.window.prevent="document.getElementById('pembelian-search-input').focus()" />
 
-                            @foreach($items as $index => $item)
-                            <div class="relative p-4 sm:p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 flex flex-col gap-4 group">
+                                @if($showDropdown && !empty($searchResults))
+                                <div class="absolute inset-x-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200
+                    dark:border-gray-700 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto p-1">
 
-                                @if(count($items) > 1)
-                                <button type="button" wire:click="removeItem({{ $index }})" class="absolute -top-3 -right-3 bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-400 p-2 rounded-full border-2 border-rose-200 dark:border-rose-700 hover:bg-rose-500 hover:text-white transition-colors z-10">
-                                    <x-heroicon-o-trash class="w-5 h-5" stroke-width="2" />
-                                </button>
-                                @endif
-
-                                <div class="grid grid-cols-1 gap-5">
-                                    <div class="relative"
-                                        x-data="{
-                                        isOpen: false,
-                                        search: '{{ $item['nama_barang'] ?? '' }}',
-                                        allItems: @js(\App\Models\Barang::with('satuan')->get()->map(fn($b) => [
-                                            'id'     => $b->id,
-                                            'kode'   => $b->kode_barang,
-                                            'nama'   => $b->nama_barang,
-                                            'satuan' => is_object($b->satuan) ? ($b->satuan->nama ?? $b->satuan->keterangan ?? 'Unit') : ($b->satuan ?? 'Unit'),
-                                        ]))
-                                     }" @click.away="isOpen = false">
-
-                                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cari Barang</label>
-                                        <div class="relative flex items-center">
-                                            <input type="text" x-model="search" @focus="isOpen = true" placeholder="Ketik nama atau kode barang..."
-                                                class="w-full p-3 font-bold bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl dark:text-white outline-none focus:border-primary-500 transition-all shadow-sm" />
-                                            <x-heroicon-o-magnifying-glass class="absolute right-4 text-gray-400 w-5 h-5" />
-                                        </div>
-
-                                        <div x-show="isOpen" x-transition class="absolute top-[75px] z-[60] w-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 shadow-2xl max-h-56 overflow-y-auto rounded-xl custom-scroll mt-1">
-                                            <template x-for="b in allItems.filter(i => i.nama.toLowerCase().includes(search.toLowerCase()) || i.kode.toLowerCase().includes(search.toLowerCase()))" :key="b.id">
-                                                <button type="button"
-                                                    @click="$wire.set('items.{{ $index }}.barang_id', b.id); $wire.set('items.{{ $index }}.qty', 1); search = b.nama; isOpen = false"
-                                                    class="w-full text-left px-4 py-3 hover:bg-primary-50 dark:hover:bg-primary-900/40 border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors">
-                                                    <div class="font-bold dark:text-white text-sm" x-text="b.nama"></div>
-                                                    <div class="flex justify-between text-[10px] text-gray-500 font-medium">
-                                                        <span x-text="'KODE: ' + b.kode"></span>
-                                                        <span class="text-primary-600 font-bold" x-text="'Rp ' + b.harga.toLocaleString('id-ID')"></span>
-                                                    </div>
-                                                </button>
-                                            </template>
-                                        </div>
-
-                                        @if(!empty($item['kode_barang']))
-                                        <span class="text-[10px] font-bold text-primary-500 mt-1 uppercase pl-1 block">Kode: {{ $item['kode_barang'] }}</span>
-                                        @endif
-                                    </div>
-
-                                    <div class="xl:col-span-9 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    @foreach($searchResults as $barang)
+                                    {{-- ✅ Fix bug #1 — pakai array notation --}}
+                                    <button type="button"
+                                        wire:click="selectBarang({{ $barang['id'] }})"
+                                        class="w-full text-left px-4 py-3 hover:bg-primary-50 dark:hover:bg-primary-900/20
+                       cursor-pointer flex justify-between items-center rounded-lg transition-colors
+                       border-b border-gray-50 dark:border-gray-800 last:border-0">
                                         <div>
-                                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Jumlah (Qty)</label>
-                                            {{-- debounce 300ms sudah cukup, tidak perlu 500ms --}}
-                                            <input type="number" step="any" min="0"
-                                                wire:model.live.debounce.300ms="items.{{ $index }}.qty"
-                                                class="w-full p-3 font-bold text-center bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:text-white outline-none focus:border-primary-500" />
-                                        </div>
-
-                                        <div>
-                                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Satuan</label>
-                                            <input type="text" wire:model="items.{{ $index }}.satuan" placeholder="Pcs / Kg..."
-                                                class="w-full p-3 font-bold text-center bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:text-white outline-none focus:border-primary-500 uppercase" />
-                                        </div>
-
-                                        {{-- Diskon Item --}}
-                                        <div x-data="{
-                                            formatted: '',
-                                            formatNum(v) { return v ? parseInt(v.toString().replace(/\D/g, '') || 0).toLocaleString('id-ID') : ''; }
-                                         }"
-                                            x-init="
-                                            formatted = formatNum($wire.items[{{ $index }}].diskon);
-                                            $watch('$wire.items[{{ $index }}].diskon', v => formatted = formatNum(v))
-                                         ">
-                                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Diskon Item (-)</label>
-                                            <div class="relative">
-                                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-rose-400 text-xs">Rp</span>
-                                                <input type="text" inputmode="numeric" placeholder="0"
-                                                    x-bind:value="formatted"
-                                                    x-on:input="
-                                                    let u = $event.target.value.replace(/\D/g, '');
-                                                    $wire.items[{{ $index }}].diskon = u ? u : null;
-                                                    formatted = formatNum($wire.items[{{ $index }}].diskon);
-                                                    $event.target.value = formatted;
-                                                "
-                                                    class="w-full p-3 pl-8 font-bold text-right bg-white dark:bg-gray-900 border-2 border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 rounded-lg outline-none focus:border-rose-500" />
+                                            <div class="font-bold text-sm text-gray-900 dark:text-white">
+                                                {{ $barang['nama_barang'] }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                                                {{ $barang['kode_barang'] }}
                                             </div>
                                         </div>
-                                    </div>
+                                        <div class="text-right">
+                                            <div class="font-black text-sm text-primary-600">
+                                                Rp{{ number_format($barang['harga_beli']) }}
+                                            </div>
+                                            <div class="text-[9px] font-bold text-gray-400 uppercase">
+                                                {{ $barang['satuan'] }}
+                                            </div>
+                                        </div>
+                                    </button>
+                                    @endforeach
                                 </div>
-
-                                <div class="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center border-t border-gray-200 dark:border-gray-700 pt-3 mt-1">
-                                    <input type="text" wire:model="items.{{ $index }}.catatan" placeholder="Catatan opsional untuk barang ini..."
-                                        class="w-full sm:w-1/2 p-2 text-sm font-medium bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white outline-none focus:border-primary-500" />
-
-                                    @if(!empty($item['barang_id']))
-                                    <div class="w-full sm:w-auto flex justify-between sm:justify-end items-center gap-3 bg-success-50 dark:bg-success-900/20 px-4 py-2 rounded-lg border border-success-200 dark:border-success-800/50">
-                                        <span class="text-sm font-bold text-success-700 dark:text-success-400">Subtotal Item:</span>
-                                        <span class="text-lg font-black text-success-700 dark:text-success-400">Rp {{ number_format($item['subtotal'] ?? 0, 0, ',', '.') }}</span>
-                                    </div>
-                                    @endif
-                                </div>
+                                @endif
                             </div>
-                            @endforeach
+                        </div>
 
-                            <button type="button" wire:click="addItem"
-                                class="w-full py-4 border-2 border-dashed border-primary-400 dark:border-primary-700 rounded-xl font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center justify-center gap-2 transition-colors">
-                                <x-heroicon-o-plus class="w-6 h-6" stroke-width="3" /> TAMBAH BARANG LAIN
-                            </button>
+                        {{-- ================================================================ --}}
+                        {{-- CART CARD: Daftar Barang yang Akan Dibeli --}}
+                        {{-- ================================================================ --}}
+                        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+
+                            {{-- Header Keranjang --}}
+                            <div class="px-5 py-4 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center bg-gray-50/30 dark:bg-gray-800/30">
+                                <h3 class="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-2">
+                                    <x-heroicon-o-shopping-cart class="w-4 h-4 text-primary-500" /> Item Pembelian
+                                </h3>
+                                <span class="text-[10px] font-black text-primary-600 bg-primary-50 dark:bg-primary-900/40 px-3 py-1 rounded-full uppercase">
+                                    {{ count($items) }} Item
+                                </span>
+                            </div>
+
+                            {{-- Desktop Table View --}}
+                            <div class="hidden md:block">
+                                <table class="w-full text-left table-fixed border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                                            <th class="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest w-[35%]">Barang</th>
+                                            <th class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-[15%]">Qty</th>
+                                            <th class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-[12%]">Satuan</th>
+                                            <th class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right w-[18%]">Harga Beli</th>
+                                            <th class="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right w-[20%]">Subtotal</th>
+                                            <th class="px-6 py-3 w-[5%]"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        @forelse($items as $index => $item)
+                                        <tr x-data="{
+                            qty: {{ floatval($item['qty'] ?? 1) }},
+                            harga: {{ floatval($item['harga_beli'] ?? 0) }},
+                            get subtotal() { return Math.round(this.qty * this.harga); },
+                            updateVal() {
+                                $wire.set('items.{{ $index }}.qty', this.qty, false);
+                                $wire.set('items.{{ $index }}.harga_beli', this.harga, false);
+                                $wire.set('items.{{ $index }}.subtotal', this.subtotal, false);
+                            },
+                            fmt(n) { return Math.round(n).toLocaleString('id-ID'); }
+                        }" class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group">
+
+                                            {{-- Info Barang --}}
+                                            <td class="px-6 py-4">
+                                                <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight mb-1">{{ $item['nama_barang'] }}</div>
+                                            </td>
+
+                                            {{-- Kuantitas --}}
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center justify-between bg-gray-100/50 dark:bg-gray-800 rounded-lg p-1 border border-gray-200/50 dark:border-gray-700 max-w-[120px] mx-auto">
+                                                    <button @click="qty = Math.max(1, qty - 1); updateVal()" type="button" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-primary-600 transition-all">
+                                                        <x-heroicon-o-minus class="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <input type="text" inputmode="numeric" x-model.number="qty" @blur="updateVal()" class="w-8 text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0 dark:text-white" />
+                                                    <button @click="qty = qty + 1; updateVal()" type="button" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-primary-600 transition-all">
+                                                        <x-heroicon-o-plus class="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </td>
+
+                                            {{-- Satuan --}}
+                                            <td class="px-4 py-4 text-center">
+                                                <span class="text-[10px] font-black bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2.5 py-1.5 rounded uppercase border border-gray-100 dark:border-gray-700">
+                                                    {{ $item['satuan'] }}
+                                                </span>
+                                            </td>
+
+                                            {{-- Harga Beli --}}
+                                            <td class="px-4 py-4 text-right">
+                                                <input
+                                                    type="text"
+                                                    inputmode="numeric"
+                                                    x-model.number="harga"
+                                                    @blur="updateVal()"
+                                                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700 rounded-lg py-1.5 px-2 text-xs font-black text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white outline-none" />
+                                            </td>
+
+                                            {{-- Subtotal --}}
+                                            <td class="px-4 py-4 text-right font-black text-sm text-primary-600 dark:text-primary-400">
+                                                <span x-text="'Rp '+fmt(subtotal)"></span>
+                                            </td>
+
+                                            {{-- Hapus --}}
+                                            <td class="px-6 py-4 text-center">
+                                                <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                                    <x-heroicon-o-trash class="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        @empty
+                                        <tr>
+                                            <td colspan="6" class="py-20">
+                                                <!-- Bungkus dengan div agar flexbox bekerja maksimal -->
+                                                <div class="flex flex-col items-center justify-center w-full">
+                                                    <x-heroicon-o-shopping-bag class="w-12 h-12 text-gray-200 mb-2" />
+                                                    <span class="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">
+                                                        Belum ada barang
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {{-- Mobile Card View --}}
+                            <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach($items as $index => $item)
+                                <div class="p-4 space-y-3" x-data="{ qty: {{ $item['qty'] }}, harga: {{ $item['harga_beli'] }}, get subtotal() { return this.qty * this.harga; }, fmt(n) { return Math.round(n).toLocaleString('id-ID'); } }">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold text-sm dark:text-white leading-tight">{{ $item['nama_barang'] }}</span>
+                                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ $item['kode_barang'] }}</span>
+                                        </div>
+                                        <button wire:click="removeItem({{ $index }})" class="text-red-300 hover:text-red-500 p-1 transition-colors">
+                                            <x-heroicon-o-trash class="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                                        <div class="flex flex-col">
+                                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Subtotal</span>
+                                            <span class="text-sm font-black text-primary-600" x-text="'Rp '+fmt(subtotal)"></span>
+                                        </div>
+                                        <div class="flex items-center bg-white dark:bg-gray-700 rounded-lg p-1 shadow-sm border border-gray-100 dark:border-gray-600">
+                                            <button @click="qty = Math.max(1, qty - 1); $wire.set('items.{{ $index }}.qty', qty)" class="p-1 text-gray-400"><x-heroicon-o-minus class="w-3 h-3" /></button>
+                                            <span class="px-3 text-xs font-black dark:text-white" x-text="qty + ' {{ $item['satuan'] }}'"></span>
+                                            <button @click="qty = qty + 1; $wire.set('items.{{ $index }}.qty', qty)" class="p-1 text-gray-400"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
 
@@ -369,7 +436,7 @@
 
                             <div class="col-span-1 md:col-span-2 flex flex-col gap-1.5 sm:gap-2">
                                 <label class="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg font-semibold text-gray-700 dark:text-gray-300">
-                                    <x-heroicon-o-photo class="w-5 h-5 text-primary-500" /> Foto Nota (Opsional)
+                                    <x-heroicon-o-photo class="w-5 h-5 text-primary-500" /> Foto Nota
                                 </label>
                                 <label for="foto-upload" class="w-full p-6 sm:p-8 border-4 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-800 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 sm:gap-3 text-center relative overflow-hidden">
                                     @if (!$foto_nota)
@@ -390,7 +457,7 @@
                                             @endforeach
                                         </div>
                                         <div class="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-bold bg-primary-50 dark:bg-primary-900/40 px-4 py-2 rounded-full">
-                                            <x-heroicon-o-arrow-path class="w-5 h-5" /> Sentuh lagi untuk ganti foto
+                                            <x-heroicon-o-arrow-path class="w-5 h-5" /> Klik untuk ganti foto
                                         </div>
                                     </div>
                                     @endif
@@ -415,11 +482,44 @@
 
                 </div>
 
+
+
                 {{-- ========================================================== --}}
                 {{-- BAGIAN KANAN: RINGKASAN & KASIR                             --}}
                 {{-- Semua kalkulasi di sini MURNI Alpine.js — zero server trip  --}}
                 {{-- ========================================================== --}}
-                <div class="w-full xl:w-[35%] flex flex-col gap-4 sm:gap-6 xl:sticky xl:top-[5.5rem] pb-2">
+                <div class="w-full xl:w-[35%] flex flex-col gap-4 sm:gap-6 xl:sticky xl:top-[5.5rem] pb-2" x-data="{
+        {{-- Koneksi data ke Livewire --}}
+        items: @entangle('items'),
+        ongkir: @entangle('ongkir'),
+        biayaLain: @entangle('biaya_lain'),
+        paymentAmount: @entangle('payment_amount'),
+
+        {{-- Helper Format Rupiah --}}
+        fmt(v) {
+            return new Intl.NumberFormat('id-ID').format(v || 0);
+        },
+
+        {{-- Hitung Subtotal Barang Otomatis --}}
+        get subTotal() {
+            return this.items.reduce((acc, item) => acc + (parseFloat(item.qty || 0) * parseFloat(item.harga_beli || 0)), 0);
+        },
+
+        {{-- Hitung Grand Total --}}
+        get grandTotal() {
+            return this.subTotal + (parseFloat(this.ongkir) || 0) + (parseFloat(this.biayaLain) || 0);
+        },
+
+        {{-- Hitung Sisa/Kembalian --}}
+        get sisa() {
+            return (parseFloat(this.paymentAmount) || 0) - this.grandTotal;
+        },
+
+        {{-- Fungsi Tombol Uang Pas --}}
+        setBayarPas() {
+            this.paymentAmount = this.grandTotal;
+        }
+    }">
 
                     <div class="bg-white dark:bg-[#1a1d24] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden shrink-0">
                         <div class="bg-gray-50 dark:bg-[#20242c] p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800">
@@ -440,21 +540,6 @@
                                     <span class="font-bold dark:text-white" x-text="'Rp ' + fmt(subTotal)"></span>
                                 </div>
 
-                                {{-- Diskon Global --}}
-                                <div class="flex justify-between items-center text-sm sm:text-base">
-                                    <span class="font-semibold text-gray-600 dark:text-gray-400">Diskon Global (−)</span>
-                                    <input type="text" inputmode="numeric" placeholder="0"
-                                        x-on:input="onInput('diskon', $el)"
-                                        class="w-32 p-1.5 text-right font-bold border-2 rounded dark:bg-gray-900 outline-none border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 focus:border-rose-500" />
-                                </div>
-
-                                {{-- PPN --}}
-                                <div class="flex justify-between items-center text-sm sm:text-base">
-                                    <span class="font-semibold text-gray-600 dark:text-gray-400">Total PPN (+)</span>
-                                    <input type="text" inputmode="numeric" placeholder="0"
-                                        x-on:input="onInput('ppn', $el)"
-                                        class="w-32 p-1.5 text-right font-bold border-2 rounded dark:bg-gray-900 outline-none border-gray-300 dark:border-gray-700 dark:text-white focus:border-success-500" />
-                                </div>
 
                                 {{-- Ongkir --}}
                                 <div class="flex justify-between items-center text-sm sm:text-base">
@@ -491,7 +576,7 @@
                                 </h3>
 
                                 {{-- Metode: murni Alpine, tidak memicu re-render Livewire --}}
-                                <div class="grid grid-cols-2 gap-2 mb-4"
+                                <div class="grid grid-cols-2 gap-2 mb-4" wire:ignore
                                     x-data="{ active: '{{ $payment_method }}' }">
                                     @foreach(\App\Models\PembelianMetodePembayaran::labelMetode() as $val => $label)
                                     <button type="button"
@@ -507,15 +592,17 @@
 
                                 <div class="space-y-3">
                                     <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tgl Bayar</label>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Tgl Bayar</label>
+
                                             <input type="date" wire:model="tanggal_bayar"
-                                                class="w-full p-2 text-sm font-bold bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white outline-none focus:border-primary-500 [color-scheme:light] dark:[color-scheme:dark]" />
+                                                class="w-full p-2 text-xs font-bold bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg dark:text-white outline-none focus:border-primary-500 shadow-sm" />
+
                                         </div>
-                                        <div>
-                                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">No. Bukti / Ref</label>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">No. Bukti / Ref</label>
                                             <input type="text" wire:model="payment_reference" placeholder="Opsional..."
-                                                class="w-full p-2 text-sm font-bold bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md dark:text-white outline-none focus:border-primary-500" />
+                                                class="w-full p-2 text-xs font-bold bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg dark:text-white outline-none focus:border-primary-500 shadow-sm" />
                                         </div>
                                     </div>
 
@@ -523,11 +610,6 @@
                                     <div>
                                         <div class="flex justify-between items-end mb-1">
                                             <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Jumlah Dibayar</label>
-                                            {{-- Uang Pas: set Alpine state + update input value langsung --}}
-                                            <button type="button" @click="setBayarPas()"
-                                                class="text-xs font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-1 rounded hover:bg-primary-100 transition-colors">
-                                                Uang Pas
-                                            </button>
                                         </div>
                                         <div class="relative">
                                             <span class="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400 text-xl">Rp</span>
@@ -548,7 +630,7 @@
                                 <div class="mt-3">
                                     <template x-if="statusBayar === 'kurang'">
                                         <div class="p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg flex justify-between items-center">
-                                            <span class="font-bold text-rose-700 dark:text-rose-400 text-sm">Kurang / Ngutang:</span>
+                                            <span class="font-bold text-rose-700 dark:text-rose-400 text-sm">Kurang: </span>
                                             <span class="font-black text-rose-700 dark:text-rose-400 text-lg" x-text="'Rp ' + fmt(sisaBayar)"></span>
                                         </div>
                                     </template>
@@ -584,8 +666,4 @@
 
     </div>
 
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
-    @endpush
 </x-filament-panels::page>

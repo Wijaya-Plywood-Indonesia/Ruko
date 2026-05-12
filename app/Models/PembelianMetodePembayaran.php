@@ -10,11 +10,8 @@ class PembelianMetodePembayaran extends Model
     // TODO: Ganti ke enum saat release
     const METODE_TUNAI = 'tunai';
     const METODE_TRANSFER = 'transfer';
-    const METODE_QRIS = 'qris';
-    const METODE_KARTU_DEBIT = 'kartu_debit';
-    const METODE_KARTU_KREDIT = 'kartu_kredit';
     const METODE_CICILAN = 'cicilan';
-    const METODE_LAINNYA = 'lainnya';
+    const METODE_LAINNYA = 'Down Payment (DP)';
 
     protected $fillable = [
         'pembelian_id',
@@ -60,20 +57,17 @@ class PembelianMetodePembayaran extends Model
     public static function labelMetode(): array
     {
         return [
-            self::METODE_TUNAI => '💵 Tunai',
-            self::METODE_TRANSFER => '🏦 Transfer Bank',
-            self::METODE_QRIS => '📱 QRIS',
-            self::METODE_KARTU_DEBIT => '💳 Kartu Debit',
-            self::METODE_KARTU_KREDIT => '💳 Kartu Kredit',
-            self::METODE_CICILAN => '📅 Cicilan',
-            self::METODE_LAINNYA => '📝 Lainnya',
+            self::METODE_TUNAI => 'Tunai',
+            self::METODE_TRANSFER => 'Transfer Bank',
+            self::METODE_CICILAN => 'Cicilan',
+            self::METODE_LAINNYA => 'Down Payment (DP)',
         ];
     }
 
-    public function getLabelMetodeAttribute(): string
-    {
-        $labels = self::labelMetode();
-        $key = str_replace(['💵 ', '🏦 ', '📱 ', '💳 ', '📅 ', '📝 '], '', $labels[$this->payment_method] ?? $this->payment_method);
-        return $key;
-    }
+    // public function getLabelMetodeAttribute(): string
+    // {
+    //     $labels = self::labelMetode();
+    //     $key = str_replace(['💵 ', '🏦 ', '📱 ', '💳 ', '📅 ', '📝 '], '', $labels[$this->payment_method] ?? $this->payment_method);
+    //     return $key;
+    // }
 }

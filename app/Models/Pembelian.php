@@ -101,7 +101,7 @@ class Pembelian extends Model
 
     public function metodePembayarans(): HasMany
     {
-        return $this->hasMany(PembelianMetodePembayaran::class);
+        return $this->hasMany(PembelianMetodePembayaran::class, "pembelian_id");
     }
 
     // ==================
@@ -139,12 +139,20 @@ class Pembelian extends Model
         return (float) $this->grand_total - $this->totalSudahDibayar();
     }
 
-    public function hitungGrandTotal(): float
-    {
-        return $this->sub_total
-            - $this->total_diskon
-            + $this->total_ppn
-            + $this->ongkir
-            + $this->biaya_lain;
+    public function hitungGrandTotal(
+        ?float $subTotal    = null,
+        ?float $totalDiskon = null,
+        ?float $totalPpn    = null,
+        ?float $ongkir      = null,
+        ?float $biayaLain   = null,
+    ): float {
+        return max(
+            0.0,
+            ($subTotal    ?? (float) $this->sub_total)
+                - ($totalDiskon ?? (float) $this->total_diskon)
+                + ($totalPpn    ?? (float) $this->total_ppn)
+                + ($ongkir      ?? (float) $this->ongkir)
+                + ($biayaLain   ?? (float) $this->biaya_lain)
+        );
     }
 }
