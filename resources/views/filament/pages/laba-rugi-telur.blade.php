@@ -104,7 +104,7 @@
     {{-- Card header --}}
     <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
         <div>
-            <p class="text-[10px] text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-0.5">INA TELUR</p>
+            {{-- <p class="text-[10px] text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-0.5">INA TELUR</p> --}}
             <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Laporan Laba Rugi</h2>
         </div>
         <div class="flex items-center gap-2">
@@ -127,10 +127,10 @@
         <table class="w-full text-sm border-collapse" style="min-width: {{ 300 + count($buls) * 280 }}px">
             <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
-                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider w-28">Kode</th>
-                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Nama Akun</th>
+                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider w-28">Kode</th>
+                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Nama Akun</th>
                     @foreach($buls as $periode)
-                        <th class="px-4 py-3 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-l border-gray-200 dark:border-gray-700"
+                        <th class="px-4 py-3 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-l border-gray-200 dark:border-gray-700"
                             colspan="2">
                             {{ $this->getNamaBulan($periode['bulan']) }} {{ $periode['tahun'] }}
                         </th>
