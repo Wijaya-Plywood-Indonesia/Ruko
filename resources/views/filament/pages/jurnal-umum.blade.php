@@ -522,66 +522,67 @@
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden">
 
                 {{-- Header kolom —— hanya 3 kolom besar --}}
-                <div class="grid grid-cols-[1fr_auto_auto] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
+                {{-- Header kolom --}}
+                <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Akun & Keterangan</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest w-40 text-right">Qty × Harga</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest w-44 text-right">Debit / Kredit</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Harga</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipe</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Debit / Kredit</div>
                 </div>
 
                 {{-- Rows --}}
                 <div class="divide-y divide-gray-100 dark:divide-gray-800">
                     <template x-for="(row, i) in items" :key="i">
-                        <div class="grid grid-cols-[1fr_auto_auto] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
+                        <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
 
                             {{-- Kolom 1: Akun info --}}
                             <div class="min-w-0 pr-4">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    {{-- Badge No Jurnal --}}
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 dark:text-gray-400 tracking-wider shrink-0"
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
                                         x-text="'#' + row.jurnal"></span>
-                                    {{-- No Akun --}}
                                     <span class="font-mono font-black text-amber-600 dark:text-amber-500 text-sm"
                                         x-text="row.no_akun"></span>
-                                    {{-- Nama Akun --}}
                                     <span class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate"
                                         x-text="row.nama_akun"></span>
                                 </div>
-                                {{-- Nama + Keterangan --}}
-                                <div class="mt-1 flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+                                <div class="mt-1 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
                                     <span x-show="row.nama" x-text="row.nama"
                                         class="font-medium text-gray-500 dark:text-gray-400 shrink-0"></span>
                                     <span x-show="row.nama && row.keterangan"
                                         class="text-gray-300 dark:text-gray-600">·</span>
                                     <span x-show="row.keterangan" x-text="row.keterangan"
-                                        class="truncate text-gray-400 dark:text-gray-500 italic"></span>
+                                        class="truncate text-gray-400 dark:text-gray-500"></span>
                                 </div>
                             </div>
 
-                            {{-- Kolom 2: Qty × Harga --}}
-                            <div class="w-40 text-right pr-6 shrink-0">
-                                <div class="text-sm font-bold text-gray-500 dark:text-gray-400">
-                                    <span x-text="new Intl.NumberFormat('id-ID').format(row.banyak)"></span>
-                                    <span class="text-gray-300 dark:text-gray-600 font-normal mx-0.5">×</span>
-                                    <span x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
-                                </div>
-                                {{-- Badge Tipe Mutasi --}}
-                                <div class="mt-1">
-                                    <span :class="row.map.toLowerCase() === 'd'
-                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
-                                        class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[10px] font-black uppercase tracking-widest">
-                                        <span x-text="row.map.toLowerCase() === 'd' ? 'Debit' : 'Kredit'"></span>
-                                    </span>
-                                </div>
+                            {{-- Kolom 2: Qty --}}
+                            <div class="text-right shrink-0">
+                                <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                    x-text="new Intl.NumberFormat('id-ID').format(row.banyak)"></span>
                             </div>
 
-                            {{-- Kolom 3: Total + Hapus --}}
-                            <div class="w-44 flex items-center justify-end gap-3 shrink-0">
-                                <div class="text-right">
-                                    <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                                        class="font-black text-sm tabular-nums"
-                                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(row.total)">
-                                    </div>
+                            {{-- Kolom 3: Harga --}}
+                            <div class="text-right pr-4 shrink-0">
+                                <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                    x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
+                            </div>
+
+                            {{-- Kolom 4: Tipe Mutasi — hanya D atau K --}}
+                            <div class="flex justify-center shrink-0">
+                                <span :class="row.map.toLowerCase() === 'd'
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
+                                    class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
+                                    x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
+                                </span>
+                            </div>
+
+                            {{-- Kolom 5: Total + Hapus --}}
+                            <div class="flex items-center justify-end gap-3 shrink-0">
+                                <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
+                                    class="font-black text-sm tabular-nums"
+                                    x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(row.total)">
                                 </div>
                                 <button type="button" @click="$wire.removeItem(i)"
                                     class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
