@@ -159,99 +159,126 @@ class JurnalPembantuHeadersTable
                     ->modalSubmitActionLabel('Ya, Posting Sekarang')
                     ->action(function ($record) {
 
-                        // 1. Cek balance seluruh jurnal se-nomor
+                        // ── STEP 1: Validasi Balance ──────────────────────────────────────
+                        // Sebelum apapun dilakukan, pastikan total Debit = total Kredit.
+                        // Kalau tidak balance, jurnal tidak boleh diposting karena akan
+                        // merusak keseimbangan buku besar. Proses langsung dihentikan.
                         if (!$record->isBalanced()) {
-                            Notification::make()
-                                ->danger()
+                            Notification::make()->danger()
                                 ->title('Tidak Balance!')
-                                ->body('Total Debet ≠ Total Kredit untuk Jurnal No. ' . $record->jurnal . '. Posting dibatalkan.')
+                                ->body('Posting dibatalkan.')
                                 ->send();
                             return;
                         }
 
-                        // 2. Pastikan semua baris se-jurnal masih draft
-                        $adaYangBukanDraft = JurnalPembantuHeader::where('jurnal', $record->jurnal)
+                        // ── STEP 2: Validasi Status Draft ────────────────────────────────
+                        // Pastikan semua baris dalam grup jurnal ini masih berstatus draft.
+                        // Kalau ada yang sudah diposting sebelumnya, hentikan prosesnya
+                        // agar tidak terjadi double posting pada baris yang sama.
+                        if (JurnalPembantuHeader::where('jurnal', $record->jurnal)
                             ->where('status', '!=', JurnalPembantuHeader::STATUS_DRAFT)
-                            ->exists();
-
-                        if ($adaYangBukanDraft) {
-                            Notification::make()
-                                ->danger()
+                            ->exists()
+                        ) {
+                            Notification::make()->danger()
                                 ->title('Jurnal Sudah Diposting')
-                                ->body('Jurnal No. ' . $record->jurnal . ' sebagian atau seluruhnya sudah diposting sebelumnya.')
                                 ->send();
                             return;
                         }
 
-                        // 3. Cek duplikasi di Jurnal Umum
-                        $sudahAda = JurnalUmum::where('jurnal', $record->jurnal)->exists();
+                        // ── STEP 3: Tentukan Nomor Jurnal Final ──────────────────────────
+                        // Cek apakah nomor jurnal ini sudah ada di Jurnal Umum.
+                        // Kalau belum ada  → pakai nomor asli.
+                        // Kalau sudah ada  → ambil nomor terbesar dari kedua tabel (JP & JU)
+                        //                    lalu tambah 1 sebagai nomor baru yang aman.
+                        // Ini hanya kalkulasi — belum ada operasi ke database sama sekali.
+                        $nomorAsli  = (int) $record->jurnal;
+                        $nomorFinal = $nomorAsli;
 
-                        if ($sudahAda) {
-                            Notification::make()
-                                ->danger()
-                                ->title('Duplikasi Jurnal!')
-                                ->body('Jurnal No. ' . $record->jurnal . ' sudah ada di Jurnal Umum.')
-                                ->send();
-                            return;
+                        if (JurnalUmum::where('jurnal', $nomorAsli)->exists()) {
+                            $nomorFinal = max(
+                                (int) (JurnalUmum::max('jurnal') ?? 0),
+                                (int) (JurnalPembantuHeader::max('jurnal') ?? 0)
+                            ) + 1;
                         }
 
-                        // 4. Ambil semua header se-jurnal dengan urutan id ASC
-                        //    Lalu INSERT ke JU dengan urutan TERBALIK (id DESC)
-                        //    Karena JU ditampilkan latest('id'), urutan terbalik saat insert
-                        //    = urutan benar saat ditampilkan di JU
-                        $headers = JurnalPembantuHeader::where('jurnal', $record->jurnal)
-                            ->orderBy('id', 'desc') // ← terbalik agar di JU tampil ASC
+
+                        // ── STEP 4: Ambil Data Headers Sebelum Transaksi ─────────────────
+                        // Query dilakukan di luar transaksi menggunakan nomor ASLI,
+                        // karena JP belum diupdate di titik ini.
+                        // Urutan id DESC agar saat masuk ke JU (yang tampil latest id),
+                        // urutan baris tetap terbaca dari atas ke bawah dengan benar.
+                        $headers     = JurnalPembantuHeader::where('jurnal', $nomorAsli)
+                            ->orderBy('id', 'desc')
                             ->get();
 
                         $tgl         = $record->tgl_transaksi?->format('Y-m-d') ?? now()->format('Y-m-d');
                         $postingOleh = Auth::id();
                         $tglPosting  = now();
 
-                        DB::transaction(function () use ($headers, $tgl, $postingOleh, $tglPosting) {
-                            foreach ($headers as $header) {
 
-                                // Hitung total qty dan harga rata-rata dari items aktif
-                                $itemsAktif  = $header->items()->where('status', true)->get();
-                                $totalBanyak = $itemsAktif->sum('banyak');
-                                $totalJumlah = $itemsAktif->sum('jumlah');
+                        // ── STEP 5: Eksekusi dalam Satu Transaksi Database ───────────────
+                        // Semua operasi DB digabung dalam satu DB::transaction.
+                        // Artinya: kalau salah satu langkah gagal di tengah jalan,
+                        // seluruh operasi otomatis di-rollback — tidak ada data setengah jalan.
+                        // Urutan di dalam transaksi:
+                        //   5a → Update nomor jurnal di JP (kalau berubah)
+                        //   5b → Insert ke Jurnal Umum
+                        //   5c → Update status JP menjadi 'diposting'
+                        try {
+                            DB::transaction(function () use ($headers, $tgl, $postingOleh, $tglPosting, $nomorAsli, $nomorFinal) {
 
-                                if ($totalBanyak > 0) {
-                                    $hargaRata = $totalJumlah / $totalBanyak;
-                                    $banyak    = $totalBanyak;
-                                } else {
-                                    $hargaRata = $header->total_nilai;
-                                    $banyak    = 1;
+                                // ✅ Update nomor JP — hanya di dalam transaksi, hanya sekali
+                                if ($nomorFinal !== $nomorAsli) {
+                                    JurnalPembantuHeader::where('jurnal', $nomorAsli)
+                                        ->update(['jurnal' => $nomorFinal]);
                                 }
 
-                                JurnalUmum::create([
-                                    'tgl'        => $tgl,
-                                    'jurnal'     => $header->jurnal,
-                                    'no_akun'    => $header->no_akun,
-                                    'nama_akun'  => $header->nama_akun,
-                                    'nama'       => $header->no_dokumen
-                                        ?? JurnalPembantuHeader::JENIS[$header->jenis_transaksi]
-                                        ?? null,
-                                    'keterangan' => $header->keterangan,
-                                    'banyak'     => $banyak,
-                                    'harga'      => round($hargaRata, 2),
-                                    'map'        => strtolower($header->map),
-                                ]);
+                                foreach ($headers as $header) {
+                                    $itemsAktif  = $header->items()->where('status', true)->get();
+                                    $totalBanyak = $itemsAktif->sum('banyak');
+                                    $totalJumlah = $itemsAktif->sum('jumlah');
 
-                                $header->update([
-                                    'status'         => JurnalPembantuHeader::STATUS_DIPOSTING,
-                                    'diposting_oleh' => $postingOleh,
-                                    'tgl_posting'    => $tglPosting,
-                                ]);
-                            }
-                        });
+                                    $banyak    = $totalBanyak > 0 ? $totalBanyak : 1;
+                                    $hargaRata = $totalBanyak > 0
+                                        ? $totalJumlah / $totalBanyak
+                                        : $header->total_nilai;
 
-                        Notification::make()
-                            ->success()
+                                    JurnalUmum::create([
+                                        'tgl'        => $tgl,
+                                        'jurnal'     => $nomorFinal, // ← nomor yang sudah benar
+                                        'no_akun'    => $header->no_akun,
+                                        'nama_akun'  => $header->nama_akun,
+                                        'nama'       => $header->no_dokumen
+                                            ?? JurnalPembantuHeader::JENIS[$header->jenis_transaksi]
+                                            ?? null,
+                                        'keterangan' => $header->keterangan,
+                                        'banyak'     => $banyak,
+                                        'harga'      => round($hargaRata, 2),
+                                        'map'        => strtolower($header->map),
+                                    ]);
+
+                                    $header->update([
+                                        'status'         => JurnalPembantuHeader::STATUS_DIPOSTING,
+                                        'diposting_oleh' => $postingOleh,
+                                        'tgl_posting'    => $tglPosting,
+                                    ]);
+                                }
+                            });
+                        } catch (\Throwable $e) {
+                            Notification::make()->danger()
+                                ->title('Gagal Posting')
+                                ->body($e->getMessage())
+                                ->send();
+                            return;
+                        }
+
+                        $info = $nomorFinal !== $nomorAsli
+                            ? " (No. disesuaikan: {$nomorAsli} → {$nomorFinal})"
+                            : '';
+
+                        Notification::make()->success()
                             ->title('Berhasil Diposting!')
-                            ->body(
-                                'Jurnal No. ' . $record->jurnal .
-                                ' (' . $headers->count() . ' baris) berhasil dikirim ke Jurnal Umum.'
-                            )
+                            ->body("Jurnal No. {$nomorFinal} ({$headers->count()} baris) dikirim ke Jurnal Umum.{$info}")
                             ->send();
                     }),
 
@@ -260,70 +287,136 @@ class JurnalPembantuHeadersTable
                     ->label('Jurnal Balik')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
-                    ->visible(fn($record) => $record->isPosted() && !$record->adalah_jurnal_balik)
+                    ->visible(function ($record) {
+                        // Hanya tampilkan kalau sudah diposting dan bukan jurnal balik
+                        if (!$record->isPosted() || $record->adalah_jurnal_balik) return false;
+
+                        // ✅ Sama seperti posting — hanya muncul di baris pertama
+                        // (id terkecil) per nomor jurnal yang sama
+                        $idPertama = JurnalPembantuHeader::where('jurnal', $record->jurnal)
+                            ->where('status', JurnalPembantuHeader::STATUS_DIPOSTING)
+                            ->min('id');
+
+                        return $record->id === $idPertama;
+                    })
                     ->requiresConfirmation()
-                    ->modalHeading('Buat Jurnal Balik')
-                    ->modalDescription(
-                        fn($record) =>
-                        "Jurnal No. {$record->jurnal} akan dibalik. Sistem membuat jurnal baru D/K terbalik dengan status Draft."
-                    )
+                    ->modalHeading(fn($record) => "Buat Jurnal Balik No. {$record->jurnal}")
+                    ->modalDescription(function ($record) {
+                        // Tampilkan ringkasan jurnal yang akan dibalik
+                        $headers = JurnalPembantuHeader::where('jurnal', $record->jurnal)
+                            ->where('status', JurnalPembantuHeader::STATUS_DIPOSTING)
+                            ->get();
+
+                        $totalD = $headers->where('map', 'd')->sum('total_nilai');
+                        $totalK = $headers->where('map', 'k')->sum('total_nilai');
+                        $count  = $headers->count();
+
+                        return "Jurnal No. {$record->jurnal} memiliki {$count} baris. "
+                            . "Debit: Rp " . number_format($totalD, 0, ',', '.') . " | "
+                            . "Kredit: Rp " . number_format($totalK, 0, ',', '.') . ". "
+                            . "Sistem akan membuat jurnal baru dengan D/K terbalik, status Draft.";
+                    })
+                    ->modalSubmitActionLabel('Ya, Buat Jurnal Balik')
                     ->action(function ($record) {
+
+                        // ── STEP 1: Ambil semua headers se-jurnal yang sudah diposting ───
+                        // Hanya ambil yang status-nya DIPOSTING agar tidak ikut
+                        // membalik baris yang mungkin sudah berstatus lain.
                         $headers = JurnalPembantuHeader::where('jurnal', $record->jurnal)
                             ->where('status', JurnalPembantuHeader::STATUS_DIPOSTING)
                             ->orderBy('id')
                             ->get();
 
-                        $noJurnalBaru = (JurnalPembantuHeader::max('jurnal') ?? 0) + 1;
-                        $noJpBaru     = (JurnalPembantuHeader::max('no_jurnal_pembantu') ?? 0) + 1;
+                        if ($headers->isEmpty()) {
+                            Notification::make()->danger()
+                                ->title('Tidak Ada Data')
+                                ->body('Tidak ada baris diposting untuk Jurnal No. ' . $record->jurnal)
+                                ->send();
+                            return;
+                        }
 
-                        DB::transaction(function () use ($headers, $noJurnalBaru, &$noJpBaru) {
-                            foreach ($headers as $header) {
-                                // Buat header jurnal balik (D/K dibalik)
-                                $headerBalik = JurnalPembantuHeader::create([
-                                    'no_jurnal_pembantu'  => $noJpBaru++,
-                                    'tgl_transaksi'       => now()->toDateString(),
-                                    'jenis_transaksi'     => 'balik',
-                                    'modul_asal'          => $header->modul_asal,
-                                    'jurnal'              => $noJurnalBaru,
-                                    'no_akun'             => $header->no_akun,
-                                    'nama_akun'           => $header->nama_akun,
-                                    'map'                 => $header->map === 'd' ? 'k' : 'd',
-                                    'keterangan'          => 'BALIK: ' . $header->keterangan,
-                                    'no_dokumen'          => $header->no_dokumen,
-                                    'total_nilai'         => $header->total_nilai,
-                                    'status'              => JurnalPembantuHeader::STATUS_DRAFT,
-                                    'adalah_jurnal_balik' => true,
-                                    'membalik_id'         => $header->id,
-                                    'dibuat_oleh'         => Auth::id(),
-                                ]);
+                        // ── STEP 2: Tentukan Nomor Jurnal & No JP Baru ───────────────────
+                        // Ambil nomor terbesar dari tabel JP lalu +1.
+                        // Dilakukan di luar transaksi karena hanya kalkulasi.
+                        $noJurnalBaru = (int) (JurnalPembantuHeader::max('jurnal') ?? 0) + 1;
+                        $noJpBaru     = (int) (JurnalPembantuHeader::max('no_jurnal_pembantu') ?? 0) + 1;
 
-                                // Salin items aktif dari header asli ke header balik
-                                $itemsAktif = $header->items()->where('status', true)->get();
-                                foreach ($itemsAktif as $item) {
-                                    $headerBalik->items()->create([
-                                        'urut'         => $item->urut,
-                                        'jenis_pihak'  => $item->jenis_pihak,
-                                        'nama_pihak'   => $item->nama_pihak,
-                                        'nama_barang'  => $item->nama_barang,
-                                        'no_dokumen'   => $item->no_dokumen,
-                                        'no_referensi' => $item->no_referensi,
-                                        'keterangan'   => $item->keterangan,
-                                        'banyak'       => $item->banyak,
-                                        'harga'        => $item->harga,
-                                        'jumlah'       => $item->jumlah,
-                                        'status'       => true,
-                                        'created_by'   => Auth::id(),
+                        // ── STEP 3: Eksekusi dalam Satu Transaksi ────────────────────────
+                        // Semua operasi digabung agar atomic — kalau gagal di tengah,
+                        // seluruh perubahan otomatis di-rollback.
+                        try {
+                            DB::transaction(function () use ($headers, $noJurnalBaru, &$noJpBaru) {
+                                foreach ($headers as $header) {
+
+                                    // ── STEP 3a: Buat Header Jurnal Balik ────────────────
+                                    // D/K dibalik: yang tadinya 'd' jadi 'k', begitu pula sebaliknya.
+                                    // Keterangan diberi prefix 'BALIK:' agar mudah diidentifikasi.
+                                    $headerBalik = JurnalPembantuHeader::create([
+                                        'no_jurnal_pembantu'  => $noJpBaru++,
+                                        'tgl_transaksi'       => now()->toDateString(),
+                                        'jenis_transaksi'     => 'balik',
+                                        'modul_asal'          => $header->modul_asal,
+                                        'jurnal'              => $noJurnalBaru,
+                                        'no_akun'             => $header->no_akun,
+                                        'nama_akun'           => $header->nama_akun,
+                                        'map'                 => $header->map === 'd' ? 'k' : 'd',
+                                        'keterangan'          => 'BALIK: ' . $header->keterangan,
+                                        'no_dokumen'          => $header->no_dokumen,
+                                        'total_nilai'         => $header->total_nilai,
+                                        'status'              => JurnalPembantuHeader::STATUS_DRAFT,
+                                        'adalah_jurnal_balik' => true,
+                                        'membalik_id'         => $header->id,
+                                        'dibuat_oleh'         => Auth::id(),
+                                    ]);
+
+                                    // ── STEP 3b: Salin Items Aktif ke Header Balik ───────
+                                    // Items disalin agar jurnal balik punya detail
+                                    // yang sama dengan jurnal aslinya.
+                                    $itemsAktif = $header->items()->where('status', true)->get();
+                                    foreach ($itemsAktif as $item) {
+                                        $headerBalik->items()->create([
+                                            'urut'         => $item->urut,
+                                            'jenis_pihak'  => $item->jenis_pihak,
+                                            'nama_pihak'   => $item->nama_pihak,
+                                            'nama_barang'  => $item->nama_barang,
+                                            'no_dokumen'   => $item->no_dokumen,
+                                            'no_referensi' => $item->no_referensi,
+                                            'keterangan'   => $item->keterangan,
+                                            'banyak'       => $item->banyak,
+                                            'harga'        => $item->harga,
+                                            'jumlah'       => $item->jumlah,
+                                            'status'       => true,
+                                            'created_by'   => Auth::id(),
+                                        ]);
+                                    }
+
+                                    // ── STEP 3c: Update Status Header Asli → DIBALIK ─────
+                                    // Tandai header asli sebagai sudah dibalik
+                                    // agar tidak bisa dibalik dua kali.
+                                    $header->update([
+                                        'status' => JurnalPembantuHeader::STATUS_DIBALIK,
                                     ]);
                                 }
+                            });
+                        } catch (\Throwable $e) {
+                            // ── STEP 3 GAGAL: Tangkap Error ──────────────────────────────
+                            // Transaksi otomatis di-rollback, tidak ada data setengah jalan.
+                            Notification::make()->danger()
+                                ->title('Gagal Membuat Jurnal Balik')
+                                ->body('Terjadi error: ' . $e->getMessage())
+                                ->send();
+                            return;
+                        }
 
-                                $header->update(['status' => JurnalPembantuHeader::STATUS_DIBALIK]);
-                            }
-                        });
-
-                        Notification::make()
-                            ->success()
+                        // ── STEP 4: Notifikasi Sukses ─────────────────────────────────────
+                        // Informasikan nomor jurnal balik yang baru dibuat.
+                        // Status masih Draft — user perlu posting jurnal balik ini secara terpisah.
+                        Notification::make()->success()
                             ->title('Jurnal Balik Dibuat')
-                            ->body("Jurnal Balik No. {$noJurnalBaru} berhasil dibuat (status Draft). Items dari jurnal asli sudah disalin.")
+                            ->body(
+                                "Jurnal Balik No. {$noJurnalBaru} berhasil dibuat ({$headers->count()} baris), "
+                                    . "status Draft. Silakan posting jika sudah siap."
+                            )
                             ->send();
                     }),
 
