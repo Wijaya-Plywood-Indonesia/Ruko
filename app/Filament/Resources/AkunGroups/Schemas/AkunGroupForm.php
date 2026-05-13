@@ -31,13 +31,13 @@ class AkunGroupForm
                     ->label('Tipe (untuk Laba Rugi)')
                     ->placeholder('Kosongkan jika hanya grouping')
                     ->options([
-                        'pendapatan'      => 'Pendapatan',
-                        'retur_potongan'  => 'Retur & Potongan Penjualan',
-                        'hpp'             => 'Harga Pokok Penjualan (HPP)',
-                        'beban_produksi'  => 'Beban Produksi',
-                        'beban_usaha'     => 'Beban Usaha',
-                        'pendapatan_lain' => 'Pendapatan Lain-lain',
-                        'beban_lain'      => 'Beban Lain-lain',
+                        'pendapatan'      => 'Pendapatan                    | (+) menambah Pendapatan Bruto',
+                        'retur_potongan'  => 'Retur & Potongan Penjualan    | (−) mengurangi Pendapatan Bruto',
+                        'hpp'             => 'Harga Pokok Penjualan (HPP)   | (−) mengurangi Laba Kotor',
+                        'beban_produksi'  => 'Beban Produksi                | (−) mengurangi Laba Kotor',
+                        'beban_usaha'     => 'Beban Usaha                   | (−) mengurangi Laba Usaha',
+                        'pendapatan_lain' => 'Pendapatan Lain-lain          | (+) menambah Laba Akhir',
+                        'beban_lain'      => 'Beban Lain-lain               | (−) mengurangi Laba Akhir',
                     ])
                     ->nullable(),
 
