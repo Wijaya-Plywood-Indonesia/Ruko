@@ -4,10 +4,12 @@ $isKredit    = in_array($saldoNormal, ['kredit', 'credit', 'k']);
 $running     = (float) $saldoAwal;
 $totalDebit  = 0.0;
 $totalKredit = 0.0;
+$totalQty    = 0.0;
 
-$rows = $transaksis->map(function ($trx) use (&$running, &$totalDebit, &$totalKredit, $isKredit) {
+$rows = $transaksis->map(function ($trx) use (&$running, &$totalDebit, &$totalKredit, &$totalQty, $isKredit) {
     $nominal = (float) ($trx->banyak ?? 1) * (float) ($trx->harga ?? 0);
     $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
+    $qty     = (float) ($trx->banyak ?? 0);
 
     if ($isKredit) {
         $running += $isDebit ? -$nominal : $nominal;
@@ -15,8 +17,18 @@ $rows = $transaksis->map(function ($trx) use (&$running, &$totalDebit, &$totalKr
         $running += $isDebit ? $nominal : -$nominal;
     }
 
-    if ($isDebit) { $totalDebit  += $nominal; }
-    else          { $totalKredit += $nominal; }
+    if ($isDebit) {
+        $totalDebit += $nominal;
+        // Hanya hitung qty jika ada banyak (bukan null dan bukan 1 default)
+        if ($trx->banyak !== null && $qty > 0) {
+            $totalQty += $qty;
+        }
+    } else {
+        $totalKredit += $nominal;
+        if ($trx->banyak !== null && $qty > 0) {
+            $totalQty -= $qty;
+        }
+    }
 
     return (object) [
         'trx'     => $trx,
@@ -136,7 +148,7 @@ $saldoClass = $saldoAkhir < 0 ? 'lgt-neg' : '';
                 {{ $row->trx->keterangan ?? '—' }}
             </td>
             <td class="lgt-qty r">
-                @if($row->trx->banyak !== null && (float)$row->trx->banyak != 1)
+                @if($row->trx->banyak !== null && (float)$row->trx->banyak > 0)
                     {{ number_format((float)$row->trx->banyak, 0, ',', '.') }}
                 @else
                     —
@@ -181,8 +193,16 @@ $saldoClass = $saldoAkhir < 0 ? 'lgt-neg' : '';
     <tfoot>
         <tr class="lgt-foot">
             <td colspan="4" class="lgt-foot-lbl">Total Mutasi Bulan Ini</td>
-            <td class="lgt-qty r">—</td>
-            <td class="lgt-harga r">—</td>
+            <td class="lgt-qty r">
+                @if($totalQty != 0)
+                    <span class="{{ $totalQty < 0 ? 'lgt-neg' : '' }}">
+                        {{ number_format(abs($totalQty), 0, ',', '.') }}
+                    </span>
+                @else
+                    —
+                @endif
+            </td>
+            <td class="lgt-harga r"></td>
             <td class="lgt-debit r" style="color:var(--bb-debit)">
                 {{ number_format($totalDebit, 0, ',', '.') }}
             </td>
@@ -190,8 +210,7 @@ $saldoClass = $saldoAkhir < 0 ? 'lgt-neg' : '';
                 {{ number_format($totalKredit, 0, ',', '.') }}
             </td>
             <td class="lgt-saldo r {{ $saldoAkhir < 0 ? 'lgt-neg' : '' }}">
-                @if($saldoAkhir < 0)–@endif.
-                
+                @if($saldoAkhir < 0)–@endif
                 {{ number_format(abs($saldoAkhir), 0, ',', '.') }}
             </td>
         </tr>
