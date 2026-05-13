@@ -67,7 +67,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $this->map   = in_array(strtolower($savedMap), ['d', 'k']) ? strtolower($savedMap) : 'd';
 
         $this->syncJurnalNumber();
-        $this->recalcAutoBalance(changemap: false);
+        // $this->recalcAutoBalance(changemap: false);
     }
 
     // ---
@@ -95,31 +95,31 @@ class JurnalUmum extends Page implements HasActions, HasForms
     // AUTO BALANCE RECALCULATE
     // total per item = banyak × harga
     // ---
-    private function recalcAutoBalance(bool $changemap = true): void
-    {
-        if (empty($this->items)) {
-            $this->harga  = '';
-            $this->banyak = 1;
-            $this->map    = 'd';
-            return;
-        }
+    // private function recalcAutoBalance(bool $changemap = true): void
+    // {
+    //     if (empty($this->items)) {
+    //         $this->harga  = '';
+    //         $this->banyak = 1;
+    //         $this->map    = 'd';
+    //         return;
+    //     }
 
-        $draft   = collect($this->items);
-        $debit   = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'd')->sum('total');
-        $kredit  = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'k')->sum('total');
-        $selisih = $debit - $kredit;
+    //     $draft   = collect($this->items);
+    //     $debit   = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'd')->sum('total');
+    //     $kredit  = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'k')->sum('total');
+    //     $selisih = $debit - $kredit;
 
-        if (abs($selisih) > 0.01) {
-            $this->harga  = abs($selisih);
-            $this->banyak = 1;
-            if ($changemap) {
-                $this->map = ($selisih > 0) ? 'k' : 'd';
-            }
-        } else {
-            $this->harga  = '';
-            $this->banyak = 1;
-        }
-    }
+    //     if (abs($selisih) > 0.01) {
+    //         $this->harga  = abs($selisih);
+    //         $this->banyak = 1;
+    //         if ($changemap) {
+    //             $this->map = ($selisih > 0) ? 'k' : 'd';
+    //         }
+    //     } else {
+    //         $this->harga  = '';
+    //         $this->banyak = 1;
+    //     }
+    // }
 
     // ---
     // PERSIST SESSION
@@ -236,7 +236,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
             ?? AnakAkun::where('kode_anak_akun', $value)->first()?->nama_anak_akun
             ?? '';
 
-        $this->recalcAutoBalance(changemap: false);
+        // $this->recalcAutoBalance(changemap: false);
         $this->persistDraftState();
     }
 
@@ -283,6 +283,9 @@ class JurnalUmum extends Page implements HasActions, HasForms
 
         $this->reset(['no_akun', 'nama_akun', 'nama', 'keterangan']);
 
+        $this->harga  = '';
+        $this->banyak = 1;
+
         if ($this->isDraftBalanced()) {
             $this->harga     = '';
             $this->banyak    = 1;
@@ -291,7 +294,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $this->syncJurnalNumber();
             $this->dispatch('toast', type: 'success', title: 'Jurnal Balanced!', msg: 'Draft selesai — siap diposting.');
         } else {
-            $this->recalcAutoBalance(changemap: true);
+            // $this->recalcAutoBalance(changemap: true);
             $this->dispatch('toast', type: 'info', title: 'Item Ditambahkan', msg: 'Jurnal belum balance — tambah entri penyeimbang.');
         }
 
@@ -313,7 +316,8 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $this->map    = 'd';
             $this->dispatch('toast', type: 'error', title: 'Draft Dikosongkan', msg: 'Semua item berhasil dihapus.');
         } else {
-            $this->recalcAutoBalance(changemap: true);
+            $this->harga  = '';
+            $this->banyak = 1;
             $this->dispatch('toast', type: 'error', title: 'Item Dihapus', msg: 'Item berhasil dihapus dari draft.');
         }
 
