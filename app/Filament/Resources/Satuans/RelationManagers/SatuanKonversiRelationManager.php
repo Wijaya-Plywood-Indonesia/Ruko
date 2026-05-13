@@ -22,6 +22,11 @@ class SatuanKonversiRelationManager extends RelationManager
 {
     protected static string $relationship = 'konversiDari';
 
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
