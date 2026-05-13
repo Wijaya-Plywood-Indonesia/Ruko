@@ -303,10 +303,14 @@
             items:        @entangle('items'),
 
             get filteredAccounts() {
-                if (this.searchTerm === '') return this.accounts;
-                return this.accounts.filter(acc =>
-                    acc.no.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                    acc.nama.toLowerCase().includes(this.searchTerm.toLowerCase())
+                const valid = (this.accounts ?? []).filter(acc => acc && acc.no && acc.nama);
+
+                if (this.searchTerm === '') return valid;
+
+                const term = this.searchTerm.toLowerCase();
+                return valid.filter(acc =>
+                    acc.no.toLowerCase().includes(term) ||
+                    acc.nama.toLowerCase().includes(term)
                 );
             },
             selectAccount(acc) {
@@ -325,6 +329,43 @@
                 if (val === null || val === undefined || val === '') return '';
                 let s = val.toString().replace(/[^0-9]/g, '');
                 return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            },
+            renderDropdown() {
+                const container = this.$refs.dropdownList;
+                if (!container) return;
+                container.innerHTML = '';
+
+                const list = this.filteredAccounts;
+
+                if (list.length === 0) {
+                    container.innerHTML = '<div class=\'px-3 py-4 text-center text-xs text-gray-400 italic\'>Tidak ada akun ditemukan.</div>';
+                    return;
+                }
+
+                list.forEach(acc => {
+                    if (!acc || !acc.no || !acc.nama) return;
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-[2px] flex flex-col group transition-none';
+
+                    const spanNama = document.createElement('span');
+                    spanNama.className = 'text-sm text-gray-500 dark:text-gray-300 font-medium';
+                    spanNama.textContent = acc.nama;
+
+                    const spanNo = document.createElement('span');
+                    spanNo.className = 'font-bold text-gray-800 dark:text-gray-200 text-sm';
+                    spanNo.textContent = acc.no;
+
+                    btn.appendChild(spanNama);
+                    btn.appendChild(spanNo);
+
+                    btn.addEventListener('click', () => {
+                        this.selectAccount(acc);
+                    });
+
+                    container.appendChild(btn);
+                });
             },
             initFlatpickr() {
                 const init = () => {
@@ -354,15 +395,27 @@
         }"
         x-init="
             initFlatpickr();
+
+            (function(self) {
+                $watch('searchTerm', () => { self.renderDropdown(); });
+                $watch('isDropdownOpen', val => {
+                    if (val) {
+                        setTimeout(() => { self.renderDropdown(); }, 0);
+                    }
+                });
+                $watch('accounts', () => { self.renderDropdown(); });
+            })(Alpine.raw ? Alpine.raw($data) : $data);
+
+            
             $watch('harga_raw', v => { harga_display = formatRupiah(v); });
-            $watch('no_akun', v => {
-                if (!v) { searchTerm = ''; }
-                else if (searchTerm !== v) { searchTerm = v; }
-            });
-            harga_display = formatRupiah(harga_raw);
-            $wire.on('toast', ({ type, title, msg }) => {
-                window.showToast(type, title, msg ?? '');
-            });
+                $watch('no_akun', v => {
+                    if (!v) { searchTerm = ''; }
+                    else if (searchTerm !== v) { searchTerm = v; }
+                });
+                harga_display = formatRupiah(harga_raw);
+                $wire.on('toast', ({ type, title, msg }) => {
+                    window.showToast(type, title, msg ?? '');
+                });
         ">
 
         {{-- ── Form Input ─────────────────────────────────────────────── --}}
@@ -409,14 +462,8 @@
                             </button>
                         </div>
                         <div x-show="isDropdownOpen" x-cloak
-                            class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[4px] shadow-lg max-h-60 overflow-y-auto p-1 custom-scroll">
-                            <template x-for="acc in filteredAccounts" :key="acc.no">
-                                <button type="button" @click="selectAccount(acc)"
-                                    class="w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-[2px] flex flex-col group transition-none">
-                                    <span class="text-sm text-gray-500 dark:text-gray-300 font-medium" x-text="acc.nama"></span>
-                                    <span class="font-bold text-gray-800 dark:text-gray-200 text-sm group-hover:text-amber-700" x-text="acc.no"></span>
-                                </button>
-                            </template>
+                            class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[4px] shadow-lg max-h-60 overflow-y-auto p-1 custom-scroll"
+                            x-ref="dropdownList">
                         </div>
                     </div>
                     <div class="space-y-1.5">
@@ -528,71 +575,73 @@
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Harga</div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipe</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Debit / Kredit</div>
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Debit / Kredit</div>
                 </div>
 
                 {{-- Rows --}}
                 <div class="divide-y divide-gray-100 dark:divide-gray-800">
                     <template x-for="(row, i) in items" :key="i">
-                        <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
+                        <template x-if="row && row.no_akun && row.nama_akun">
+                            <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
 
-                            {{-- Kolom 1: Akun info --}}
-                            <div class="min-w-0 pr-4">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
-                                        x-text="'#' + row.jurnal"></span>
-                                    <span class="font-mono font-black text-amber-600 dark:text-amber-500 text-sm"
-                                        x-text="row.no_akun"></span>
-                                    <span class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate"
-                                        x-text="row.nama_akun"></span>
+                                {{-- Kolom 1: Akun info --}}
+                                <div class="min-w-0 pr-4">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
+                                            x-text="'#' + row.jurnal"></span>
+                                        <span class="font-mono font-black text-amber-600 dark:text-amber-500 text-sm"
+                                            x-text="row.no_akun"></span>
+                                        <span class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate"
+                                            x-text="row.nama_akun"></span>
+                                    </div>
+                                    <div class="mt-1 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+                                        <span x-show="row.nama" x-text="row.nama"
+                                            class="font-medium text-gray-500 dark:text-gray-400 shrink-0"></span>
+                                        <span x-show="row.nama && row.keterangan"
+                                            class="text-gray-300 dark:text-gray-600">·</span>
+                                        <span x-show="row.keterangan" x-text="row.keterangan"
+                                            class="truncate text-gray-400 dark:text-gray-500"></span>
+                                    </div>
                                 </div>
-                                <div class="mt-1 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-                                    <span x-show="row.nama" x-text="row.nama"
-                                        class="font-medium text-gray-500 dark:text-gray-400 shrink-0"></span>
-                                    <span x-show="row.nama && row.keterangan"
-                                        class="text-gray-300 dark:text-gray-600">·</span>
-                                    <span x-show="row.keterangan" x-text="row.keterangan"
-                                        class="truncate text-gray-400 dark:text-gray-500"></span>
+
+                                {{-- Kolom 2: Qty --}}
+                                <div class="text-right shrink-0">
+                                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                        x-text="new Intl.NumberFormat('id-ID').format(row.banyak)"></span>
                                 </div>
-                            </div>
 
-                            {{-- Kolom 2: Qty --}}
-                            <div class="text-right shrink-0">
-                                <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                    x-text="new Intl.NumberFormat('id-ID').format(row.banyak)"></span>
-                            </div>
+                                {{-- Kolom 3: Harga --}}
+                                <div class="text-right pr-4 shrink-0">
+                                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                        x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
+                                </div>
 
-                            {{-- Kolom 3: Harga --}}
-                            <div class="text-right pr-4 shrink-0">
-                                <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                    x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
-                            </div>
-
-                            {{-- Kolom 4: Tipe Mutasi — hanya D atau K --}}
-                            <div class="flex justify-center shrink-0">
-                                <span :class="row.map.toLowerCase() === 'd'
+                                {{-- Kolom 4: Tipe Mutasi — hanya D atau K --}}
+                                <div class="flex justify-center shrink-0">
+                                    <span :class="row.map.toLowerCase() === 'd'
                         ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
                         : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
-                                    class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
-                                    x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
-                                </span>
-                            </div>
-
-                            {{-- Kolom 5: Total + Hapus --}}
-                            <div class="flex items-center justify-end gap-3 shrink-0">
-                                <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                                    class="font-black text-sm tabular-nums"
-                                    x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(row.total)">
+                                        class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
+                                        x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
+                                    </span>
                                 </div>
-                                <button type="button" @click="$wire.removeItem(i)"
-                                    class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+
+                                {{-- Kolom 5: Total + Hapus --}}
+                                <div class="flex items-center justify-end gap-3 shrink-0">
+                                    <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
+                                        class="font-black text-sm tabular-nums"
+                                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(row.total)">
+                                    </div>
+                                    <button type="button" @click="$wire.removeItem(i)"
+                                        class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        </template>
                     </template>
                 </div>
 
