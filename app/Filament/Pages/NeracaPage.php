@@ -21,9 +21,9 @@ class NeracaPage extends Page implements HasForms
     protected static ?string $title = 'Neraca Telur';
     protected string $view = 'filament.pages.neraca-page';
 
-    // ── Filter state ──────────────────────────────────────────────────
     public string $periodeAwal;
     public string $periodeAkhir;
+    public bool $tampilkanSaldoNol = false; // ← tambahan
 
     public function mount(): void
     {
@@ -32,11 +32,6 @@ class NeracaPage extends Page implements HasForms
         $this->periodeAkhir = $now->format('Y-m');
     }
 
-    // ── Computed ──────────────────────────────────────────────────────
-
-    /**
-     * Neraca multi-periode dari tabel buku_besar.
-     */
     #[Computed]
     public function neracaMulti(): array
     {
@@ -45,8 +40,6 @@ class NeracaPage extends Page implements HasForms
 
         return app(NeracaService::class)->hitungMulti($periodeList);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────
 
     public function buildPeriodeList(): array
     {
@@ -59,7 +52,6 @@ class NeracaPage extends Page implements HasForms
 
         if ($awal->gt($akhir)) return [];
 
-        // Guard: maksimal 12 bulan
         if ($awal->diffInMonths($akhir) > 11) {
             $akhir = $awal->copy()->addMonths(11);
         }
