@@ -64,6 +64,9 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
             ])
             ->navigationGroups([
+                NavigationGroup::make(label: 'Kandang')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->collapsed(),
                 NavigationGroup::make(label: 'Master Data')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->collapsed(),

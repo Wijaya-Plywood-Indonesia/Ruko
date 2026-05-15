@@ -91,7 +91,6 @@
             $isBalance = abs($neraca['totalAktiva'] - $neraca['totalPasiva']) < 1;
             $fmt = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : '-';
 
-            // ── Flatten sections → array baris ─────────────────────────────
             $flattenSections = null;
             $flattenSections = function(array $sections, int $depth = 0) use (&$flattenSections): array {
                 $rows = [];
@@ -122,7 +121,7 @@
                             $rows[] = [
                                 'type'  => 'item',
                                 'label' => $item['nama'],
-                                'kode'  => $item['kode'],  // ← kode sub akun
+                                'kode'  => $item['kode'],
                                 'nilai' => $item['nilai'],
                                 'depth' => $depth,
                             ];
@@ -139,8 +138,22 @@
                 return $rows;
             };
 
-            $aktivaRows = $flattenSections($neraca['aktiva']['sections']);
-            $pasivaRows = $flattenSections($neraca['pasiva']['sections']);
+            $aktivaRowsRaw = $flattenSections($neraca['aktiva']['sections']);
+            $pasivaRowsRaw = $flattenSections($neraca['pasiva']['sections']);
+
+            // Filter saldo nol
+            $filterRows = function(array $rows) use ($tampilkanSaldoNol): array {
+                if ($tampilkanSaldoNol) return $rows;
+                return array_values(array_filter($rows, function($row) {
+                    if ($row['type'] === 'item' && ($row['nilai'] ?? 0) == 0) {
+                        return false;
+                    }
+                    return true;
+                }));
+            };
+
+            $aktivaRows = $filterRows($aktivaRowsRaw);
+            $pasivaRows = $filterRows($pasivaRowsRaw);
             $maxRows    = max(count($aktivaRows), count($pasivaRows), 1);
         @endphp
 
@@ -159,25 +172,52 @@
                     </h2>
                 </div>
 
-                @if($isBalance)
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                             bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
-                             border border-green-200 dark:border-green-700">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Balance
-                </span>
-                @else
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                             bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
-                             border border-red-200 dark:border-red-700">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    Tidak Balance
-                </span>
-                @endif
+                <div class="flex items-center gap-3">
+
+                    {{-- Tombol toggle saldo nol --}}
+                    <button
+                        wire:click="$toggle('tampilkanSaldoNol')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                               transition-colors border
+                               {{ $tampilkanSaldoNol
+                                   ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                                   : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400' }}">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            @if($tampilkanSaldoNol)
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>
+                            @else
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            @endif
+                        </svg>
+                        {{ $tampilkanSaldoNol ? 'Sembunyikan Saldo Nol' : 'Tampilkan Saldo Nol' }}
+                    </button>
+
+                    {{-- Badge balance --}}
+                    @if($isBalance)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                                 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                                 border border-green-200 dark:border-green-700">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Balance
+                    </span>
+                    @else
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                                 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
+                                 border border-red-200 dark:border-red-700">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Tidak Balance
+                    </span>
+                    @endif
+
+                </div>
             </div>
 
             {{-- Tabel Neraca Dua Kolom --}}
@@ -221,7 +261,7 @@
                             {{ $isItem ? 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20' : '' }}
                             transition-colors">
 
-                            {{-- ── Kolom AKTIVA ── --}}
+                            {{-- Kolom AKTIVA --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 pr-5
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $aIndent : '' }}
@@ -242,14 +282,8 @@
                                                     @endif
                                                     {{ $aRow['label'] }}
                                                 </span>
-                                            @elseif($isTot)
-                                                {{ $aRow['label'] }}
-                                            @elseif($isSub)
-                                                {{ $aRow['label'] }}
-                                            @elseif($isHdr)
-                                                {{ $aRow['label'] }}
                                             @else
-                                                - {{ $aRow['label'] }}
+                                                {{ $aRow['label'] }}
                                             @endif
                                         </span>
                                         @if(isset($aRow['nilai']) && !$isHdr && !$isSub)
@@ -262,7 +296,7 @@
                                 @endif
                             </td>
 
-                            {{-- ── Kolom PASIVA ── --}}
+                            {{-- Kolom PASIVA --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 pr-5
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $pIndent : '' }}
@@ -283,14 +317,8 @@
                                                     @endif
                                                     {{ $pRow['label'] }}
                                                 </span>
-                                            @elseif($isTot)
-                                                {{ $pRow['label'] }}
-                                            @elseif($isSub)
-                                                {{ $pRow['label'] }}
-                                            @elseif($isHdr)
-                                                {{ $pRow['label'] }}
                                             @else
-                                                - {{ $pRow['label'] }}
+                                                {{ $pRow['label'] }}
                                             @endif
                                         </span>
                                         @if(isset($pRow['nilai']) && !$isHdr && !$isSub)

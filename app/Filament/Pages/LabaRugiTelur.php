@@ -19,9 +19,9 @@ class LabaRugiTelur extends Page
     protected static ?string $navigationLabel = 'Laba Rugi Telur';
     protected string $view = 'filament.pages.laba-rugi-telur';
 
-    // ── Filter state (sama seperti NeracaPage) ────────────────────────
     public string $periodeAwal;
     public string $periodeAkhir;
+    public bool $tampilkanSaldoNol = false; // ← tambahan
 
     public array $laporanData       = [];
     public array $bulanList         = [];
@@ -33,23 +33,12 @@ class LabaRugiTelur extends Page
         $now = now();
         $this->periodeAwal  = $now->format('Y-m');
         $this->periodeAkhir = $now->format('Y-m');
-
         $this->generateLaporan();
     }
 
-    // ── Dipanggil saat input berubah (wire:model.live) ────────────────
-    public function updatedPeriodeAwal(): void
-    {
-        $this->generateLaporan();
-    }
-    public function updatedPeriodeAkhir(): void
-    {
-        $this->generateLaporan();
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // HELPERS PERIODE (sama persis dengan NeracaPage)
-    // ─────────────────────────────────────────────────────────────────
+    public function updatedPeriodeAwal(): void  { $this->generateLaporan(); }
+    public function updatedPeriodeAkhir(): void { $this->generateLaporan(); }
+    public function updatedTampilkanSaldoNol(): void {} // tidak perlu regenerate, filter di blade
 
     public function buildPeriodeList(): array
     {
@@ -62,7 +51,6 @@ class LabaRugiTelur extends Page
 
         if ($awal->gt($akhir)) return [];
 
-        // Guard: maksimal 12 bulan
         if ($awal->diffInMonths($akhir) > 11) {
             $akhir = $awal->copy()->addMonths(11);
         }
@@ -97,29 +85,22 @@ class LabaRugiTelur extends Page
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // GENERATE
-    // ─────────────────────────────────────────────────────────────────
-
     public function generateLaporan(): void
     {
         $periodeList = $this->buildPeriodeList();
 
         if (empty($periodeList)) {
-            $this->laporanData       = [];  
+            $this->laporanData       = [];
             $this->bulanList         = [];
             $this->ringkasanPerBulan = [];
             $this->sudahFilter       = true;
             return;
         }
 
-        // bulanList sekarang adalah array of ['tahun' => Y, 'bulan' => n]
         $this->bulanList = $periodeList;
 
-        // Saldo per periode dari jurnal
         $saldoPerPeriode = $this->getSaldoMapPerPeriode($periodeList);
 
-        // Root group "Laba Rugi"
         $root = AkunGroup::whereNull('parent_id')
             ->whereRaw('LOWER(nama) LIKE ?', ['%laba rugi%'])
             ->first();
@@ -132,47 +113,45 @@ class LabaRugiTelur extends Page
         }
 
         $groups = AkunGroup::where('parent_id', $root->id)
-    ->visible()
-    ->ordered()
-    ->with([
-        'subAnakAkuns' => fn($q) => $q
-            ->orderBy('kode_sub_anak_akun')
-            ->select([
-                'sub_anak_akuns.id',
-                'id_anak_akun',
-                'kode_sub_anak_akun',
-                'nama_sub_anak_akun',
-                'saldo_normal',
+            ->visible()
+            ->ordered()
+            ->with([
+                'subAnakAkuns' => fn($q) => $q
+                    ->orderBy('kode_sub_anak_akun')
+                    ->select([
+                        'sub_anak_akuns.id',
+                        'id_anak_akun',
+                        'kode_sub_anak_akun',
+                        'nama_sub_anak_akun',
+                        'saldo_normal',
+                    ])
+                    ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']),
+
+                'childrenRecursive.subAnakAkuns' => fn($q) => $q
+                    ->orderBy('kode_sub_anak_akun')
+                    ->select([
+                        'sub_anak_akuns.id',
+                        'id_anak_akun',
+                        'kode_sub_anak_akun',
+                        'nama_sub_anak_akun',
+                        'saldo_normal',
+                    ])
+                    ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']),
+
+                'childrenRecursive.anakAkuns.subAnakAkuns',
+                'anakAkuns.subAnakAkuns',
             ])
-            ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']), // ← tambah ini
+            ->get();
 
-        'childrenRecursive.subAnakAkuns' => fn($q) => $q
-            ->orderBy('kode_sub_anak_akun')
-            ->select([
-                'sub_anak_akuns.id',
-                'id_anak_akun',
-                'kode_sub_anak_akun',
-                'nama_sub_anak_akun',
-                'saldo_normal',
-            ])
-            ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']), // ← tambah ini
-
-        'childrenRecursive.anakAkuns.subAnakAkuns',
-        'anakAkuns.subAnakAkuns',
-    ])
-    ->get();
-
-        // Build tree
         $sections = [];
         foreach ($groups as $group) {
             $sections[] = $this->buildGroupNode($group, $saldoPerPeriode, $periodeList);
         }
 
-        // Ringkasan per periode
         $ringkasan = [];
         foreach ($periodeList as $periode) {
             $key = $this->periodeKey($periode);
-            $r = [
+            $r   = [
                 'pendapatan'      => 0,
                 'retur_potongan'  => 0,
                 'hpp'             => 0,
@@ -210,10 +189,6 @@ class LabaRugiTelur extends Page
         $this->sudahFilter       = true;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // KEY HELPER — ubah ['tahun'=>Y,'bulan'=>n] jadi string unik
-    // ─────────────────────────────────────────────────────────────────
-
     public function periodeKey(array $periode): string
     {
         return $periode['tahun'] . '-' . str_pad($periode['bulan'], 2, '0', STR_PAD_LEFT);
@@ -223,10 +198,6 @@ class LabaRugiTelur extends Page
     {
         return $this->getNamaBulan($periode['bulan']) . ' ' . $periode['tahun'];
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // SALDO MAP
-    // ─────────────────────────────────────────────────────────────────
 
     private function getSaldoMapPerPeriode(array $periodeList): array
     {
@@ -262,31 +233,20 @@ class LabaRugiTelur extends Page
         return $saldoPerPeriode;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // BUILD TREE NODES
-    // ─────────────────────────────────────────────────────────────────
-
     private function buildGroupNode(AkunGroup $group, array $saldoPerPeriode, array $periodeList): array
     {
         $children        = [];
         $nilaiPerPeriode = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
 
-        // Pola A: group langsung punya subAnakAkuns via pivot
-        // → kelompokkan per anak akun dulu, bukan flat
         if ($group->subAnakAkuns->isNotEmpty()) {
-
-            // Grup sub akun berdasarkan anak akunnya
             $perAnakAkun = $group->subAnakAkuns->groupBy('id_anak_akun');
 
             foreach ($perAnakAkun as $idAnakAkun => $subs) {
-                // Ambil info anak akun dari sub pertama
                 $anakAkun = $subs->first()->anakAkun;
-
                 if (!$anakAkun) continue;
 
-                // Build node untuk tiap sub di bawah anak akun ini
-                $subChildren     = [];
-                $nilaiAnakAkun   = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
+                $subChildren   = [];
+                $nilaiAnakAkun = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
 
                 foreach ($subs->sortBy('kode_sub_anak_akun') as $sub) {
                     $subNode = $this->buildSubNode($sub, $saldoPerPeriode, $periodeList);
@@ -297,7 +257,6 @@ class LabaRugiTelur extends Page
                     }
                 }
 
-                // Node anak akun sebagai header group
                 $anakNode = [
                     'type'              => 'anak_akun',
                     'kode'              => $anakAkun->kode_anak_akun,
@@ -316,7 +275,6 @@ class LabaRugiTelur extends Page
             }
         }
 
-        // Pola B: group punya children groups (rekursif)
         foreach ($group->children as $child) {
             $node = $this->buildGroupNode($child, $saldoPerPeriode, $periodeList);
             $children[] = $node;
@@ -326,7 +284,6 @@ class LabaRugiTelur extends Page
             }
         }
 
-        // Pola C: group punya anakAkuns langsung (relasi lama)
         if ($group->relationLoaded('anakAkuns')) {
             foreach ($group->anakAkuns as $anak) {
                 $node = $this->buildAnakAkunNode($anak, $saldoPerPeriode, $periodeList);
@@ -358,12 +315,12 @@ class LabaRugiTelur extends Page
         }
 
         return [
-            'type'            => 'sub_anak_akun',
-            'kode'            => $sub->kode_sub_anak_akun,
-            'nama'            => $sub->nama_sub_anak_akun,
-            'children'        => [],
+            'type'              => 'sub_anak_akun',
+            'kode'              => $sub->kode_sub_anak_akun,
+            'nama'              => $sub->nama_sub_anak_akun,
+            'children'          => [],
             'nilai_per_periode' => $nilaiPerPeriode,
-            'nilai_per_bulan' => $nilaiPerPeriode,
+            'nilai_per_bulan'   => $nilaiPerPeriode,
         ];
     }
 
@@ -385,34 +342,22 @@ class LabaRugiTelur extends Page
         }
 
         return [
-            'type'            => 'anak_akun',
-            'kode'            => $anak->kode_anak_akun,
-            'nama'            => $anak->nama_anak_akun,
-            'children'        => $children,
+            'type'              => 'anak_akun',
+            'kode'              => $anak->kode_anak_akun,
+            'nama'              => $anak->nama_anak_akun,
+            'children'          => $children,
             'nilai_per_periode' => $nilaiPerPeriode,
-            'nilai_per_bulan' => $nilaiPerPeriode,
+            'nilai_per_bulan'   => $nilaiPerPeriode,
         ];
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // HELPERS
-    // ─────────────────────────────────────────────────────────────────
 
     public function getNamaBulan(int $bulan): string
     {
         return [
-            1 => 'Januari',
-            2 => 'Februari',
-            3 => 'Maret',
-            4 => 'April',
-            5 => 'Mei',
-            6 => 'Juni',
-            7 => 'Juli',
-            8 => 'Agustus',
-            9 => 'September',
-            10 => 'Oktober',
-            11 => 'November',
-            12 => 'Desember',
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret',
+            4 => 'April',   5 => 'Mei',       6 => 'Juni',
+            7 => 'Juli',    8 => 'Agustus',   9 => 'September',
+            10 => 'Oktober',11 => 'November', 12 => 'Desember',
         ][$bulan] ?? '';
     }
 
