@@ -11,7 +11,7 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 class SatuanKonversiPolicy
 {
     use HandlesAuthorization;
-    
+
     public function viewAny(AuthUser $authUser): bool
     {
         return $authUser->can('ViewAny:SatuanKonversi');
@@ -21,6 +21,19 @@ class SatuanKonversiPolicy
     {
         return $authUser->can('View:SatuanKonversi');
     }
+
+    // public function before($user, $ability)
+    // {
+    //     // Jika user punya email ini, abaikan semua pengecekan permission dan kembalikan TRUE
+    //     if ($user->email === 'email-admin-anda@domain.com') {
+    //         return true;
+    //     }
+
+    //     // Atau jika Anda menggunakan role super_admin
+    //     if ($user->hasRole('super_admin')) {
+    //         return true;
+    //     }
+    // }
 
     public function create(AuthUser $authUser): bool
     {
@@ -66,5 +79,4 @@ class SatuanKonversiPolicy
     {
         return $authUser->can('Reorder:SatuanKonversi');
     }
-
 }
