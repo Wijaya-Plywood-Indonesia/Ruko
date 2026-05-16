@@ -24,13 +24,14 @@ class NeracaService
             $bulan = (int) $periode['bulan'];
 
             $saldo = $this->getSaldo($tahun, $bulan);
+            $qty   = $this->getSaldoQty($tahun, $bulan);
 
             $key   = $tahun . '-' . str_pad($bulan, 2, '0', STR_PAD_LEFT);
             $label = Carbon::create($tahun, $bulan)->locale('id')->isoFormat('MMMM Y');
 
             $result[$key] = array_merge(
                 ['label' => $label, 'tahun' => $tahun, 'bulan' => $bulan],
-                $this->buildNeraca($groups, $saldo)
+                $this->buildNeraca($groups, $saldo, $qty)
             );
         }
 
@@ -96,30 +97,20 @@ class NeracaService
     }
 
     /**
-     * Hitung saldo akhir setiap akun per bulan dari jurnal_umum.
-     *
-     * Logika sama dengan BukuBesar.php:
-     *   saldo_awal  = snapshot buku_besar bulan sebelumnya (jika ada)
-     *   mutasi      = SUM debit/kredit dari jurnal_umum bulan ini
-     *   saldo_akhir = saldo_awal + debit - kredit  (untuk akun debit)
-     *               = saldo_awal + kredit - debit  (untuk akun kredit)
-     *
-     * Return: [ 'kode_sub_anak_akun' => float ]
+     * Hitung saldo akhir (nilai Rp) setiap akun per bulan.
      */
     private function getSaldo(int $tahun, int $bulan): array
     {
         $start = Carbon::create($tahun, $bulan)->startOfMonth();
         $end   = Carbon::create($tahun, $bulan)->endOfMonth();
 
-        // ── Saldo awal dari snapshot buku_besar bulan sebelumnya ──────────
-        $prevDate    = Carbon::create($tahun, $bulan)->subMonth();
-        $saldoAwal   = DB::table('buku_besar')
+        $prevDate  = Carbon::create($tahun, $bulan)->subMonth();
+        $saldoAwal = DB::table('buku_besar')
             ->where('tahun', $prevDate->year)
             ->where('bulan', $prevDate->month)
             ->pluck('saldo', 'no_akun')
             ->toArray();
 
-        // ── Mutasi bulan ini dari jurnal_umum ────────────────────────────
         $mutasi = JurnalUmum::whereBetween('tgl', [$start, $end])
             ->selectRaw("
                 no_akun,
@@ -130,14 +121,10 @@ class NeracaService
             ->get()
             ->keyBy('no_akun');
 
-        // ── Gabungkan semua kode akun yang ada ───────────────────────────
         $semuaKode = collect(array_keys($saldoAwal))
             ->merge($mutasi->keys())
             ->unique();
 
-        // ── Hitung saldo akhir per akun ──────────────────────────────────
-        // Kita butuh saldo_normal dari sub_anak_akuns untuk menentukan
-        // apakah akun debit atau kredit
         $saldoNormalMap = DB::table('sub_anak_akuns')
             ->pluck('saldo_normal', 'kode_sub_anak_akun')
             ->toArray();
@@ -151,17 +138,93 @@ class NeracaService
             $saldoNormal = strtolower($saldoNormalMap[$kode] ?? 'debit');
             $isKredit    = in_array($saldoNormal, ['kredit', 'credit', 'k']);
 
-            if ($isKredit) {
-                $result[$kode] = $awal + $kredit - $debit;
-            } else {
-                $result[$kode] = $awal + $debit - $kredit;
+            $result[$kode] = $isKredit
+                ? $awal + $kredit - $debit
+                : $awal + $debit - $kredit;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hitung saldo qty akhir setiap akun per bulan.
+     * Hanya akun yang benar-benar punya data qty (banyak > 0) yang masuk.
+     * Return: [ 'kode' => float ] — akun tanpa qty tidak ada di array ini.
+     */
+    private function getSaldoQty(int $tahun, int $bulan): array
+    {
+        $start = Carbon::create($tahun, $bulan)->startOfMonth();
+        $end   = Carbon::create($tahun, $bulan)->endOfMonth();
+
+        // Qty awal dari snapshot buku_besar bulan sebelumnya (kolom qty opsional)
+        $prevDate = Carbon::create($tahun, $bulan)->subMonth();
+        try {
+            $qtyAwal = DB::table('buku_besar')
+                ->where('tahun', $prevDate->year)
+                ->where('bulan', $prevDate->month)
+                ->whereNotNull('qty')
+                ->where('qty', '>', 0)
+                ->pluck('qty', 'no_akun')
+                ->toArray();
+        } catch (\Exception $e) {
+            $qtyAwal = [];
+        }
+
+        // Mutasi qty bulan ini — hanya akun yang punya banyak > 0
+        $mutasiQty = JurnalUmum::whereBetween('tgl', [$start, $end])
+            ->whereNotNull('banyak')
+            ->where('banyak', '>', 0)   // ← perbaikan: filter banyak > 0
+            ->selectRaw("
+                no_akun,
+                SUM(CASE WHEN LOWER(map) = 'd' THEN COALESCE(banyak, 0) ELSE 0 END) as qty_debit,
+                SUM(CASE WHEN LOWER(map) = 'k' THEN COALESCE(banyak, 0) ELSE 0 END) as qty_kredit
+            ")
+            ->groupBy('no_akun')
+            ->get()
+            ->keyBy('no_akun');
+
+        if ($mutasiQty->isEmpty() && empty($qtyAwal)) {
+            return [];
+        }
+
+        $semuaKode = collect(array_keys($qtyAwal))
+            ->merge($mutasiQty->keys())
+            ->unique();
+
+        $saldoNormalMap = DB::table('sub_anak_akuns')
+            ->pluck('saldo_normal', 'kode_sub_anak_akun')
+            ->toArray();
+
+        $result = [];
+        foreach ($semuaKode as $kode) {
+            $awal = (float) ($qtyAwal[$kode] ?? 0);
+            $qtyD = (float) ($mutasiQty[$kode]->qty_debit  ?? 0);
+            $qtyK = (float) ($mutasiQty[$kode]->qty_kredit ?? 0);
+
+            // Skip jika tidak ada data qty sama sekali
+            if ($qtyD == 0 && $qtyK == 0 && $awal == 0) {
+                continue;
+            }
+
+            $saldoNormal = strtolower($saldoNormalMap[$kode] ?? 'debit');
+            $isKredit    = in_array($saldoNormal, ['kredit', 'credit', 'k']);
+
+            $net = $isKredit
+                ? $awal + $qtyK - $qtyD
+                : $awal + $qtyD - $qtyK;
+
+            // Hanya masukkan jika hasil akhir tidak nol
+            if ($net != 0) {
+                $result[$kode] = $net;
             }
         }
 
         return $result;
     }
 
-    private function buildNeraca(Collection $groups, array $saldo): array
+    // ─────────────────────────────────────────────────────────────────
+
+    private function buildNeraca(Collection $groups, array $saldo, array $qty = []): array
     {
         $aktiva = ['sections' => [], 'total' => 0.0];
         $pasiva = ['sections' => [], 'total' => 0.0];
@@ -170,11 +233,12 @@ class NeracaService
             $namaUpper = strtoupper(trim($rootGroup->nama));
 
             if ($rootGroup->childrenRecursive->isEmpty()) {
-                [$sections, $totalRoot] = $this->buildSectionsFromRoot($rootGroup, $saldo);
+                [$sections, $totalRoot] = $this->buildSectionsFromRoot($rootGroup, $saldo, $qty);
             } else {
                 [$sections, $totalRoot] = $this->buildSections(
                     $rootGroup->childrenRecursive,
-                    $saldo
+                    $saldo,
+                    $qty
                 );
             }
 
@@ -195,7 +259,7 @@ class NeracaService
         ];
     }
 
-    private function buildSectionsFromRoot(AkunGroup $rootGroup, array $saldo): array
+    private function buildSectionsFromRoot(AkunGroup $rootGroup, array $saldo, array $qty = []): array
     {
         $items = [];
         $total = 0.0;
@@ -206,11 +270,13 @@ class NeracaService
 
         foreach ($subs as $sub) {
             $nilai = $saldo[$sub->kode_sub_anak_akun] ?? 0.0;
+            $q     = isset($qty[$sub->kode_sub_anak_akun]) ? (float) $qty[$sub->kode_sub_anak_akun] : null;
 
             $items[] = [
                 'kode'  => $sub->kode_sub_anak_akun,
                 'nama'  => $sub->nama_sub_anak_akun,
                 'nilai' => $nilai,
+                'qty'   => $q,
             ];
             $total += $nilai;
         }
@@ -225,7 +291,7 @@ class NeracaService
         return [$sections, $total];
     }
 
-    private function buildSections(Collection $groups, array $saldo): array
+    private function buildSections(Collection $groups, array $saldo, array $qty = []): array
     {
         $sections = [];
         $totalAll = 0.0;
@@ -241,17 +307,19 @@ class NeracaService
                 if ($group->relationLoaded('subAnakAkuns') && $group->subAnakAkuns->isNotEmpty()) {
                     foreach ($group->subAnakAkuns as $sub) {
                         $nilai = $saldo[$sub->kode_sub_anak_akun] ?? 0.0;
+                        $q     = isset($qty[$sub->kode_sub_anak_akun]) ? (float) $qty[$sub->kode_sub_anak_akun] : null;
 
                         $items[] = [
                             'kode'  => $sub->kode_sub_anak_akun,
                             'nama'  => $sub->nama_sub_anak_akun,
                             'nilai' => $nilai,
+                            'qty'   => $q,
                         ];
                         $totalSection += $nilai;
                     }
                 }
 
-                // Sub-pola B2: anakAkuns (relasi lama)
+                // Sub-pola B2: anakAkuns
                 foreach ($group->anakAkuns as $anakAkun) {
                     $nilaiAkun = $this->hitungNilaiAkun($anakAkun, $saldo);
 
@@ -259,6 +327,7 @@ class NeracaService
                         'kode'  => $anakAkun->kode_anak_akun,
                         'nama'  => $anakAkun->nama_anak_akun,
                         'nilai' => $nilaiAkun,
+                        'qty'   => null,
                     ];
                     $totalSection += $nilaiAkun;
                 }
@@ -275,7 +344,8 @@ class NeracaService
             } else {
                 [$subSections, $totalBranch] = $this->buildSections(
                     $group->children,
-                    $saldo
+                    $saldo,
+                    $qty
                 );
 
                 $sections[] = [
@@ -310,4 +380,6 @@ class NeracaService
 
         return $total;
     }
+
+    
 }

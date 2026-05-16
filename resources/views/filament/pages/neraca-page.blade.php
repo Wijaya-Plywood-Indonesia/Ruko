@@ -89,7 +89,9 @@
         @foreach($this->neracaMulti as $key => $neraca)
         @php
             $isBalance = abs($neraca['totalAktiva'] - $neraca['totalPasiva']) < 1;
-            $fmt = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : '-';
+
+            $fmt    = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : '-';
+            $fmtQty = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : null;
 
             $flattenSections = null;
             $flattenSections = function(array $sections, int $depth = 0) use (&$flattenSections): array {
@@ -112,6 +114,7 @@
                             'label' => 'Total ' . $section['group'],
                             'kode'  => null,
                             'nilai' => $section['total'],
+                            'qty'   => null,
                             'depth' => $depth,
                         ];
                     }
@@ -123,6 +126,7 @@
                                 'label' => $item['nama'],
                                 'kode'  => $item['kode'],
                                 'nilai' => $item['nilai'],
+                                'qty'   => $item['qty'] ?? null,   // ← baru
                                 'depth' => $depth,
                             ];
                         }
@@ -131,6 +135,7 @@
                             'label' => 'Total ' . $section['group'],
                             'kode'  => null,
                             'nilai' => $section['total'],
+                            'qty'   => null,
                             'depth' => $depth,
                         ];
                     }
@@ -141,7 +146,6 @@
             $aktivaRowsRaw = $flattenSections($neraca['aktiva']['sections']);
             $pasivaRowsRaw = $flattenSections($neraca['pasiva']['sections']);
 
-            // Filter saldo nol
             $filterRows = function(array $rows) use ($tampilkanSaldoNol): array {
                 if ($tampilkanSaldoNol) return $rows;
                 return array_values(array_filter($rows, function($row) {
@@ -173,7 +177,6 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-
                     {{-- Tombol toggle saldo nol --}}
                     <button
                         wire:click="$toggle('tampilkanSaldoNol')"
@@ -216,25 +219,36 @@
                         Tidak Balance
                     </span>
                     @endif
-
                 </div>
             </div>
 
             {{-- Tabel Neraca Dua Kolom --}}
             <div class="overflow-x-auto">
-                <table class="w-full text-sm border-collapse" style="min-width:600px">
+                <table class="w-full text-sm border-collapse" style="min-width:700px">
                     <thead>
                         <tr>
-                            <th class="w-1/2 border border-gray-200 dark:border-gray-700
+                            {{-- Header AKTIVA: 3 sub-kolom (kode+nama | qty | nilai) --}}
+                            <th colspan="3"
+                                class="border border-gray-200 dark:border-gray-700
                                        bg-blue-50 dark:bg-blue-900/20 py-3 px-5
                                        text-center text-sm font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
                                 AKTIVA
                             </th>
-                            <th class="w-1/2 border border-gray-200 dark:border-gray-700
+                            {{-- Header PASIVA: 3 sub-kolom (kode+nama | qty | nilai) --}}
+                            <th colspan="3"
+                                class="border border-gray-200 dark:border-gray-700
                                        bg-green-50 dark:bg-green-900/20 py-3 px-5
                                        text-center text-sm font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">
                                 PASIVA
                             </th>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-4 text-left font-semibold w-[32%]">Akun</th>
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-3 text-right font-semibold w-[7%]">Qty</th>
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-4 text-right font-semibold w-[11%]">Nilai (Rp)</th>
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-4 text-left font-semibold w-[32%]">Akun</th>
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-3 text-right font-semibold w-[7%]">Qty</th>
+                            <th class="border border-gray-100 dark:border-gray-700 py-1.5 px-4 text-right font-semibold w-[11%]">Nilai (Rp)</th>
                         </tr>
                     </thead>
 
@@ -243,15 +257,18 @@
                         @php
                             $aRow    = $aktivaRows[$i] ?? null;
                             $pRow    = $pasivaRows[$i] ?? null;
+
+                            // Tentukan tipe baris dominan
                             $rowType = $aRow['type'] ?? $pRow['type'] ?? 'item';
-                            $isHdr   = $rowType === 'header';
-                            $isSub   = $rowType === 'subheader';
-                            $isTot   = $rowType === 'subtotal';
-                            $isItem  = $rowType === 'item';
+                            $isHdr  = $rowType === 'header';
+                            $isSub  = $rowType === 'subheader';
+                            $isTot  = $rowType === 'subtotal';
+                            $isItem = $rowType === 'item';
+
                             $aDepth  = $aRow['depth'] ?? 0;
                             $pDepth  = $pRow['depth'] ?? 0;
-                            $aIndent = $aDepth > 0 ? 'pl-' . (5 + ($aDepth * 4)) : 'pl-5';
-                            $pIndent = $pDepth > 0 ? 'pl-' . (5 + ($pDepth * 4)) : 'pl-5';
+                            $aPl     = $aDepth > 0 ? 'pl-' . (4 + ($aDepth * 4)) : 'pl-4';
+                            $pPl     = $pDepth > 0 ? 'pl-' . (4 + ($pDepth * 4)) : 'pl-4';
                         @endphp
 
                         <tr class="
@@ -261,73 +278,95 @@
                             {{ $isItem ? 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20' : '' }}
                             transition-colors">
 
-                            {{-- Kolom AKTIVA --}}
-                            <td class="border border-gray-100 dark:border-gray-700 py-2 pr-5
+                            {{-- ── AKTIVA: kolom nama ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
-                                {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $aIndent : '' }}
-                                {{ $isTot  ? 'font-semibold text-gray-800 dark:text-gray-100 ' . $aIndent : '' }}
-                                {{ $isItem ? 'text-gray-700 dark:text-gray-300 ' . $aIndent : '' }}">
+                                {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $aPl : '' }}
+                                {{ $isTot  ? 'font-semibold text-gray-800 dark:text-gray-100 ' . $aPl : '' }}
+                                {{ $isItem ? 'text-gray-700 dark:text-gray-300 ' . $aPl : '' }}">
                                 @if($aRow)
-                                    <div class="flex justify-between items-center gap-4">
-                                        <span class="{{ $isSub ? 'text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400' : '' }}">
-                                            @if($isItem)
-                                                <span class="inline-flex items-center gap-2">
-                                                    @if(!empty($aRow['kode']))
-                                                        <span class="font-mono text-xs text-amber-600 dark:text-amber-400
-                                                                     bg-amber-50 dark:bg-amber-900/20
-                                                                     border border-amber-200 dark:border-amber-800
-                                                                     px-1.5 py-0.5 rounded whitespace-nowrap">
-                                                            {{ $aRow['kode'] }}
-                                                        </span>
-                                                    @endif
-                                                    {{ $aRow['label'] }}
-                                                </span>
-                                            @else
+                                    <span class="{{ $isSub ? 'text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400' : '' }}">
+                                        @if($isItem)
+                                            <span class="inline-flex items-center gap-2">
+                                                @if(!empty($aRow['kode']))
+                                                    <span class="font-mono text-xs text-amber-600 dark:text-amber-400
+                                                                 bg-amber-50 dark:bg-amber-900/20
+                                                                 border border-amber-200 dark:border-amber-800
+                                                                 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                                        {{ $aRow['kode'] }}
+                                                    </span>
+                                                @endif
                                                 {{ $aRow['label'] }}
-                                            @endif
-                                        </span>
-                                        @if(isset($aRow['nilai']) && !$isHdr && !$isSub)
-                                            <span class="tabular-nums flex-shrink-0
-                                                {{ $isTot ? 'border-t border-b border-gray-400 dark:border-gray-500 px-1' : '' }}">
-                                                {{ $fmt($aRow['nilai']) }}
                                             </span>
+                                        @else
+                                            {{ $aRow['label'] }}
                                         @endif
-                                    </div>
+                                    </span>
                                 @endif
                             </td>
 
-                            {{-- Kolom PASIVA --}}
-                            <td class="border border-gray-100 dark:border-gray-700 py-2 pr-5
+                            {{-- ── AKTIVA: kolom qty ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
+                                @if($aRow && $isItem && isset($aRow['qty']) && $aRow['qty'] !== null)
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
+                                        {{ $fmtQty($aRow['qty']) }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- ── AKTIVA: kolom nilai ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2 px-4 text-right tabular-nums whitespace-nowrap
+                                {{ $isTot ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300' }}">
+                                @if($aRow && isset($aRow['nilai']) && !$isHdr && !$isSub)
+                                    <span class="{{ $isTot ? 'border-t border-b border-gray-400 dark:border-gray-500 px-1' : '' }}">
+                                        {{ $fmt($aRow['nilai']) }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- ── PASIVA: kolom nama ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
-                                {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $pIndent : '' }}
-                                {{ $isTot  ? 'font-semibold text-gray-800 dark:text-gray-100 ' . $pIndent : '' }}
-                                {{ $isItem ? 'text-gray-700 dark:text-gray-300 ' . $pIndent : '' }}">
+                                {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $pPl : '' }}
+                                {{ $isTot  ? 'font-semibold text-gray-800 dark:text-gray-100 ' . $pPl : '' }}
+                                {{ $isItem ? 'text-gray-700 dark:text-gray-300 ' . $pPl : '' }}">
                                 @if($pRow)
-                                    <div class="flex justify-between items-center gap-4">
-                                        <span class="{{ $isSub ? 'text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400' : '' }}">
-                                            @if($isItem)
-                                                <span class="inline-flex items-center gap-2">
-                                                    @if(!empty($pRow['kode']))
-                                                        <span class="font-mono text-xs text-amber-600 dark:text-amber-400
-                                                                     bg-amber-50 dark:bg-amber-900/20
-                                                                     border border-amber-200 dark:border-amber-800
-                                                                     px-1.5 py-0.5 rounded whitespace-nowrap">
-                                                            {{ $pRow['kode'] }}
-                                                        </span>
-                                                    @endif
-                                                    {{ $pRow['label'] }}
-                                                </span>
-                                            @else
+                                    <span class="{{ $isSub ? 'text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400' : '' }}">
+                                        @if($isItem)
+                                            <span class="inline-flex items-center gap-2">
+                                                @if(!empty($pRow['kode']))
+                                                    <span class="font-mono text-xs text-amber-600 dark:text-amber-400
+                                                                 bg-amber-50 dark:bg-amber-900/20
+                                                                 border border-amber-200 dark:border-amber-800
+                                                                 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                                        {{ $pRow['kode'] }}
+                                                    </span>
+                                                @endif
                                                 {{ $pRow['label'] }}
-                                            @endif
-                                        </span>
-                                        @if(isset($pRow['nilai']) && !$isHdr && !$isSub)
-                                            <span class="tabular-nums flex-shrink-0
-                                                {{ $isTot ? 'border-t border-b border-gray-400 dark:border-gray-500 px-1' : '' }}">
-                                                {{ $fmt($pRow['nilai']) }}
                                             </span>
+                                        @else
+                                            {{ $pRow['label'] }}
                                         @endif
-                                    </div>
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- ── PASIVA: kolom qty ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
+                                @if($pRow && $isItem && isset($pRow['qty']) && $pRow['qty'] !== null)
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
+                                        {{ $fmtQty($pRow['qty']) }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            {{-- ── PASIVA: kolom nilai ── --}}
+                            <td class="border border-gray-100 dark:border-gray-700 py-2 px-4 text-right tabular-nums whitespace-nowrap
+                                {{ $isTot ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300' }}">
+                                @if($pRow && isset($pRow['nilai']) && !$isHdr && !$isSub)
+                                    <span class="{{ $isTot ? 'border-t border-b border-gray-400 dark:border-gray-500 px-1' : '' }}">
+                                        {{ $fmt($pRow['nilai']) }}
+                                    </span>
                                 @endif
                             </td>
                         </tr>
@@ -335,21 +374,21 @@
 
                         {{-- Grand Total --}}
                         <tr class="bg-gray-800 dark:bg-gray-900 text-white">
-                            <td class="border border-gray-700 px-5 py-3">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-sm uppercase tracking-wide">Total Aktiva</span>
-                                    <span class="tabular-nums font-bold text-base border-t-2 border-b-4 border-double border-white px-2">
-                                        {{ $fmt($neraca['totalAktiva']) }}
-                                    </span>
-                                </div>
+                            <td colspan="2" class="border border-gray-700 px-5 py-3">
+                                <span class="font-bold text-sm uppercase tracking-wide">Total Aktiva</span>
                             </td>
-                            <td class="border border-gray-700 px-5 py-3">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-sm uppercase tracking-wide">Total Pasiva</span>
-                                    <span class="tabular-nums font-bold text-base border-t-2 border-b-4 border-double border-white px-2">
-                                        {{ $fmt($neraca['totalPasiva']) }}
-                                    </span>
-                                </div>
+                            <td class="border border-gray-700 px-4 py-3 text-right tabular-nums">
+                                <span class="font-bold text-base border-t-2 border-b-4 border-double border-white px-2">
+                                    {{ $fmt($neraca['totalAktiva']) }}
+                                </span>
+                            </td>
+                            <td colspan="2" class="border border-gray-700 px-5 py-3">
+                                <span class="font-bold text-sm uppercase tracking-wide">Total Pasiva</span>
+                            </td>
+                            <td class="border border-gray-700 px-4 py-3 text-right tabular-nums">
+                                <span class="font-bold text-base border-t-2 border-b-4 border-double border-white px-2">
+                                    {{ $fmt($neraca['totalPasiva']) }}
+                                </span>
                             </td>
                         </tr>
                     </tbody>

@@ -169,28 +169,31 @@
     <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse" style="min-width: {{ 300 + count($buls) * 280 }}px">
             <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
-                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider w-28">Kode</th>
-                    <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Nama Akun</th>
-                    @foreach($buls as $periode)
-                        <th class="px-4 py-3 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-l border-gray-200 dark:border-gray-700"
-                            colspan="2">
-                            {{ $this->getNamaBulan($periode['bulan']) }} {{ $periode['tahun'] }}
-                        </th>
-                    @endforeach
-                </tr>
-                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40">
-                    <th colspan="2"></th>
-                    @foreach($buls as $periode)
-                        <th class="px-4 py-1 text-right text-[9px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider min-w-[120px]">
-                            Rincian
-                        </th>
-                        <th class="px-4 py-1 text-right text-[9px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider min-w-[140px] border-l border-gray-200 dark:border-gray-700">
-                            Jumlah
-                        </th>
-                    @endforeach
-                </tr>
-            </thead>
+    <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+        <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider w-28">Kode</th>
+        <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Nama Akun</th>
+        @foreach($buls as $periode)
+            <th class="px-4 py-3 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-l border-gray-200 dark:border-gray-700"
+                colspan="3"> {{-- ← 3 kolom --}}
+                {{ $this->getNamaBulan($periode['bulan']) }} {{ $periode['tahun'] }}
+            </th>
+        @endforeach
+    </tr>
+    <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40">
+        <th colspan="2"></th>
+        @foreach($buls as $periode)
+            <th class="px-3 py-1 text-right text-[9px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider min-w-[70px]">
+                Qty
+            </th>
+            <th class="px-4 py-1 text-right text-[9px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider min-w-[120px]">
+                Rincian
+            </th>
+            <th class="px-4 py-1 text-right text-[9px] font-medium text-gray-400 dark:text-gray-600 uppercase tracking-wider min-w-[140px] border-l border-gray-200 dark:border-gray-700">
+                Jumlah
+            </th>
+        @endforeach
+    </tr>
+</thead>
 
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800/80">
 
