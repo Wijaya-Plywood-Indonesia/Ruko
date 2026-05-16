@@ -46,18 +46,8 @@
         }
 
         @keyframes blink {
-
-            0%,
-            80%,
-            100% {
-                opacity: .15;
-                transform: scale(.8);
-            }
-
-            40% {
-                opacity: 1;
-                transform: scale(1.2);
-            }
+            0%, 80%, 100% { opacity: .15; transform: scale(.8); }
+            40% { opacity: 1; transform: scale(1.2); }
         }
 
         .loading-dot {
@@ -69,26 +59,13 @@
             animation: blink 1.4s infinite ease-in-out;
         }
 
-        .loading-dot:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .loading-dot:nth-child(2) {
-            animation-delay: .2s;
-        }
-
-        .loading-dot:nth-child(3) {
-            animation-delay: .4s;
-        }
+        .loading-dot:nth-child(1) { animation-delay: 0s; }
+        .loading-dot:nth-child(2) { animation-delay: .2s; }
+        .loading-dot:nth-child(3) { animation-delay: .4s; }
 
         @keyframes shimmer {
-            0% {
-                background-position: -600px 0;
-            }
-
-            100% {
-                background-position: 600px 0;
-            }
+            0% { background-position: -600px 0; }
+            100% { background-position: 600px 0; }
         }
 
         .skeleton-row td {
@@ -105,15 +82,8 @@
         }
 
         @keyframes fadeInRow {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .row-fadein {
@@ -138,29 +108,11 @@
             overflow-x: auto;
         }
 
-        .table-body-scroll::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-
-        .table-body-scroll::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .table-body-scroll::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 4px;
-        }
-
-        .dark .table-body-scroll::-webkit-scrollbar-thumb {
-            background: #374151;
-        }
-
-        .table-body-scroll thead {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+        .table-body-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .table-body-scroll::-webkit-scrollbar-track { background: transparent; }
+        .table-body-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .dark .table-body-scroll::-webkit-scrollbar-thumb { background: #374151; }
+        .table-body-scroll thead { position: sticky; top: 0; z-index: 10; }
 
         #toast-container {
             position: fixed;
@@ -182,85 +134,30 @@
             border-left: 3px solid;
             min-width: 280px;
             max-width: 360px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            box-shadow: 0 8px 24px rgba(0,0,0,.18);
             pointer-events: all;
-            animation: toastIn .22s cubic-bezier(.16, 1, .3, 1) forwards;
+            animation: toastIn .22s cubic-bezier(.16,1,.3,1) forwards;
         }
 
-        .toast.hide {
-            animation: toastOut .18s ease-in forwards;
-        }
+        .toast.hide { animation: toastOut .18s ease-in forwards; }
+        .toast-success { background: #111827; border-color: #10b981; color: #d1fae5; }
+        .toast-error   { background: #111827; border-color: #ef4444; color: #fee2e2; }
+        .toast-info    { background: #111827; border-color: #d97706; color: #fef3c7; }
 
-        .toast-success {
-            background: #111827;
-            border-color: #10b981;
-            color: #d1fae5;
-        }
-
-        .toast-error {
-            background: #111827;
-            border-color: #ef4444;
-            color: #fee2e2;
-        }
-
-        .toast-info {
-            background: #111827;
-            border-color: #d97706;
-            color: #fef3c7;
-        }
-
-        .toast-icon {
-            flex-shrink: 0;
-            width: 18px;
-            height: 18px;
-            margin-top: 1px;
-        }
-
-        .toast-body {
-            flex: 1;
-        }
-
-        .toast-title {
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .1em;
-            line-height: 1.3;
-        }
-
-        .toast-msg {
-            font-size: 12px;
-            font-weight: 500;
-            opacity: .75;
-            margin-top: 2px;
-            line-height: 1.4;
-        }
+        .toast-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+        .toast-body { flex: 1; }
+        .toast-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; }
+        .toast-msg   { font-size: 12px; font-weight: 500; opacity: .75; margin-top: 2px; line-height: 1.4; }
 
         @keyframes toastIn {
-            from {
-                opacity: 0;
-                transform: translateX(24px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(24px); }
+            to   { opacity: 1; transform: translateX(0); }
         }
-
         @keyframes toastOut {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-
-            to {
-                opacity: 0;
-                transform: translateX(24px);
-            }
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(24px); }
         }
 
-        /* BULK */
         .bulk-bar {
             position: sticky;
             top: 0;
@@ -287,26 +184,32 @@
     {{-- ══════════════════════════════════════════════════════════════ --}}
     <div class="fi-page-content max-w-7xl mx-auto no-transition"
         x-data="{
-            tgl:          @entangle('tgl'),
-            jurnal:       @entangle('jurnal'),
-            no_akun:      @entangle('no_akun'),
-            nama_akun:    @entangle('nama_akun'),
-            nama:         @entangle('nama'),
-            keterangan:   @entangle('keterangan'),
-            banyak:       @entangle('banyak'),
-            harga_display: '',
-            harga_raw:    @entangle('harga'),
-            map:          @entangle('map'),
-            searchTerm:   '',
+            tgl:            @entangle('tgl'),
+            jurnal:         @entangle('jurnal'),
+            no_akun:        @entangle('no_akun'),
+            nama_akun:      @entangle('nama_akun'),
+            nama:           @entangle('nama'),
+            keterangan:     @entangle('keterangan'),
+            banyak:         @entangle('banyak'),
+            harga_display:  '',
+            harga_raw:      @entangle('harga'),
+            map:            @entangle('map'),
+            searchTerm:     '',
             isDropdownOpen: false,
-            accounts:     @js($accounts ?? []),
-            items:        @entangle('items'),
+            accounts:       @js($accounts ?? []),
+            items:          @entangle('items'),
+
+            hitungTotal(banyak, harga) {
+                const h = parseFloat(harga) || 0;
+                if (banyak === null || banyak === undefined || banyak === '' || parseFloat(banyak) <= 0) {
+                    return h;
+                }
+                return parseFloat(banyak) * h;
+            },
 
             get filteredAccounts() {
                 const valid = (this.accounts ?? []).filter(acc => acc && acc.no && acc.nama);
-
                 if (this.searchTerm === '') return valid;
-
                 const term = this.searchTerm.toLowerCase();
                 return valid.filter(acc =>
                     acc.no.toLowerCase().includes(term) ||
@@ -314,15 +217,15 @@
                 );
             },
             selectAccount(acc) {
-                this.no_akun      = acc.no;
-                this.nama_akun    = acc.nama;
-                this.searchTerm   = acc.no;
+                this.no_akun        = acc.no;
+                this.nama_akun      = acc.nama;
+                this.searchTerm     = acc.no;
                 this.isDropdownOpen = false;
             },
             clearAccount() {
-                this.no_akun      = '';
-                this.nama_akun    = '';
-                this.searchTerm   = '';
+                this.no_akun        = '';
+                this.nama_akun      = '';
+                this.searchTerm     = '';
                 this.isDropdownOpen = false;
             },
             formatRupiah(val) {
@@ -334,45 +237,31 @@
                 const container = this.$refs.dropdownList;
                 if (!container) return;
                 container.innerHTML = '';
-
                 const list = this.filteredAccounts;
-
                 if (list.length === 0) {
                     container.innerHTML = '<div class=\'px-3 py-4 text-center text-xs text-gray-400 italic\'>Tidak ada akun ditemukan.</div>';
                     return;
                 }
-
                 list.forEach(acc => {
                     if (!acc || !acc.no || !acc.nama) return;
-
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-[2px] flex flex-col group transition-none';
-
                     const spanNama = document.createElement('span');
                     spanNama.className = 'text-sm text-gray-500 dark:text-gray-300 font-medium';
                     spanNama.textContent = acc.nama;
-
                     const spanNo = document.createElement('span');
                     spanNo.className = 'font-bold text-gray-800 dark:text-gray-200 text-sm';
                     spanNo.textContent = acc.no;
-
                     btn.appendChild(spanNama);
                     btn.appendChild(spanNo);
-
-                    btn.addEventListener('click', () => {
-                        this.selectAccount(acc);
-                    });
-
+                    btn.addEventListener('click', () => { this.selectAccount(acc); });
                     container.appendChild(btn);
                 });
             },
             initFlatpickr() {
                 const init = () => {
-                    if (typeof flatpickr === 'undefined') {
-                        setTimeout(init, 50);
-                        return;
-                    }
+                    if (typeof flatpickr === 'undefined') { setTimeout(init, 50); return; }
                     flatpickr(this.$refs.dateInput, {
                         dateFormat: 'Y-m-d',
                         defaultDate: this.tgl,
@@ -395,27 +284,21 @@
         }"
         x-init="
             initFlatpickr();
-
             (function(self) {
                 $watch('searchTerm', () => { self.renderDropdown(); });
-                $watch('isDropdownOpen', val => {
-                    if (val) {
-                        setTimeout(() => { self.renderDropdown(); }, 0);
-                    }
-                });
+                $watch('isDropdownOpen', val => { if (val) setTimeout(() => { self.renderDropdown(); }, 0); });
                 $watch('accounts', () => { self.renderDropdown(); });
             })(Alpine.raw ? Alpine.raw($data) : $data);
 
-            
             $watch('harga_raw', v => { harga_display = formatRupiah(v); });
-                $watch('no_akun', v => {
-                    if (!v) { searchTerm = ''; }
-                    else if (searchTerm !== v) { searchTerm = v; }
-                });
-                harga_display = formatRupiah(harga_raw);
-                $wire.on('toast', ({ type, title, msg }) => {
-                    window.showToast(type, title, msg ?? '');
-                });
+            $watch('no_akun', v => {
+                if (!v) { searchTerm = ''; }
+                else if (searchTerm !== v) { searchTerm = v; }
+            });
+            harga_display = formatRupiah(harga_raw);
+            $wire.on('toast', ({ type, title, msg }) => {
+                window.showToast(type, title, msg ?? '');
+            });
         ">
 
         {{-- ── Form Input ─────────────────────────────────────────────── --}}
@@ -448,7 +331,6 @@
 
                 {{-- Baris 2: Akun + Nama --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {{-- Dropdown Akun --}}
                     <div class="space-y-1.5 relative" @click.away="isDropdownOpen = false">
                         <label class="text-[11px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cari Nomor Akun</label>
                         <div class="relative flex items-center">
@@ -488,8 +370,9 @@
                 {{-- Baris 4: Kuantitas + Harga + Tipe Mutasi --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div class="space-y-1.5">
-                        <label class="text-[11px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Kuantitas (Banyak)</label>
-                        <input type="text" inputmode="decimal" x-model="banyak" placeholder="1"
+                        <label class="text-[11px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Kuantitas (Opsional)</label>
+                        <input type="text" inputmode="decimal" x-model="banyak"
+                            placeholder="Kosongkan jika tidak perlu"
                             class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] font-bold text-gray-500 dark:text-gray-300">
                     </div>
                     <div class="space-y-1.5">
@@ -523,7 +406,7 @@
                     <span class="text-[10px] text-gray-300 dark:text-gray-600">→</span>
                     <span class="font-black text-sm"
                         :class="map === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(parseFloat(banyak || 0) * parseFloat(harga_raw || 0))">
+                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(hitungTotal(banyak, harga_raw))">
                     </span>
                     <span class="text-[10px] font-bold text-gray-300 dark:text-gray-600 ml-1"
                         x-text="'(' + (map === 'd' ? 'Debit' : 'Kredit') + ')'"></span>
@@ -550,11 +433,10 @@
         {{-- TABLE DRAFT                                                    --}}
         {{-- ══════════════════════════════════════════════════════════════ --}}
         <div x-show="items.length > 0" x-cloak class="space-y-4 mb-10">
-            {{-- Header Status --}}
             <div class="flex items-center justify-between px-1">
                 <div :class="isBalanced
-                ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-                : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'"
+                    ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+                    : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'"
                     class="px-4 py-2 rounded-[4px] border flex items-center gap-2.5 font-black text-[11px] uppercase tracking-[.2em] shadow-sm">
                     <div :class="isBalanced ? 'bg-green-500' : 'bg-red-500 animate-pulse'"
                         class="w-1.5 h-1.5 rounded-full flex-shrink-0"></div>
@@ -565,11 +447,7 @@
                 </div>
             </div>
 
-            {{-- Card List --}}
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden">
-
-                {{-- Header kolom —— hanya 3 kolom besar --}}
-                {{-- Header kolom --}}
                 <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Akun & Keterangan</div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
@@ -578,13 +456,10 @@
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Debit / Kredit</div>
                 </div>
 
-                {{-- Rows --}}
                 <div class="divide-y divide-gray-100 dark:divide-gray-800">
                     <template x-for="(row, i) in items" :key="i">
                         <template x-if="row && row.no_akun && row.nama_akun">
                             <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
-
-                                {{-- Kolom 1: Akun info --}}
                                 <div class="min-w-0 pr-4">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
@@ -604,29 +479,25 @@
                                     </div>
                                 </div>
 
-                                {{-- Kolom 2: Qty --}}
                                 <div class="text-right shrink-0">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                        x-text="new Intl.NumberFormat('id-ID').format(row.banyak)"></span>
+                                        x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? new Intl.NumberFormat('id-ID').format(row.banyak) : '-'"></span>
                                 </div>
 
-                                {{-- Kolom 3: Harga --}}
                                 <div class="text-right pr-4 shrink-0">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
                                         x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
                                 </div>
 
-                                {{-- Kolom 4: Tipe Mutasi — hanya D atau K --}}
                                 <div class="flex justify-center shrink-0">
                                     <span :class="row.map.toLowerCase() === 'd'
-                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
+                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                        : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
                                         class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
                                         x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
                                     </span>
                                 </div>
 
-                                {{-- Kolom 5: Total + Hapus --}}
                                 <div class="flex items-center justify-end gap-3 shrink-0">
                                     <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
                                         class="font-black text-sm tabular-nums"
@@ -635,8 +506,7 @@
                                     <button type="button" @click="$wire.removeItem(i)"
                                         class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                                d="M6 18L18 6M6 6l12 12" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
@@ -645,7 +515,6 @@
                     </template>
                 </div>
 
-                {{-- Footer Total --}}
                 <div class="border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
                     <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700">
                         <div class="px-6 py-3 text-right">
@@ -660,12 +529,10 @@
                         </div>
                     </div>
 
-                    {{-- Selisih jika unbalanced --}}
                     <div x-show="!isBalanced"
                         class="px-6 py-2 border-t border-dashed border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 flex items-center justify-end gap-2">
                         <svg class="w-3 h-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span class="text-[11px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Selisih</span>
                         <span class="text-[11px] font-black text-amber-700 dark:text-amber-300 tabular-nums"
@@ -674,12 +541,11 @@
                     </div>
                 </div>
 
-                {{-- Tombol Posting --}}
                 <div class="p-4 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-100 dark:border-gray-800 flex justify-end">
                     <button type="button" wire:click="saveJurnal" :disabled="!isBalanced"
                         :class="isBalanced
-                    ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-md cursor-pointer'
-                    : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-transparent shadow-none'"
+                            ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-md cursor-pointer'
+                            : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-transparent shadow-none'"
                         class="px-12 py-3 rounded-[4px] font-black text-[10px] uppercase tracking-[.2em] transition-none">
                         Posting Jurnal
                     </button>
@@ -713,11 +579,11 @@
                     if (this.selectAll) { this.$wire.toggleSelectAll([]); }
                     else { this.$wire.toggleSelectAll(this.visibleIds); }
                 },
-                toggleRow(id)     { this.$wire.toggleSelected(id); },
-                isSelected(id)    { return this.selectedIds.includes(id); },
-                confirmBulkDelete() { if (this.selectedIds.length === 0) return; this.showConfirm = true; },
-                cancelBulkDelete()  { this.showConfirm = false; },
-                doBulkDelete()      { this.showConfirm = false; this.$wire.bulkDelete(); },
+                toggleRow(id)      { this.$wire.toggleSelected(id); },
+                isSelected(id)     { return this.selectedIds.includes(id); },
+                confirmBulkDelete(){ if (this.selectedIds.length === 0) return; this.showConfirm = true; },
+                cancelBulkDelete() { this.showConfirm = false; },
+                doBulkDelete()     { this.showConfirm = false; this.$wire.bulkDelete(); },
 
                 get hasActiveFilter() { return this.activeFilterDari !== '' || this.activeFilterSampai !== ''; },
                 formatDateDisplay(val) {
@@ -768,7 +634,7 @@
                 $wire.on('toast', ({ type, title, msg }) => { window.showToast(type, title, msg ?? ''); });
             ">
 
-            {{-- ── Modal Konfirmasi Bulk Delete ───────────────────────── --}}
+            {{-- Modal Konfirmasi Bulk Delete --}}
             <div x-show="showConfirm" x-cloak
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                 <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-[4px] shadow-2xl p-8 max-w-sm w-full mx-4">
@@ -784,9 +650,7 @@
                         </div>
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                        Anda akan menghapus
-                        <span class="font-black text-red-500" x-text="selectedIds.length"></span>
-                        transaksi secara permanen dari database.
+                        Anda akan menghapus <span class="font-black text-red-500" x-text="selectedIds.length"></span> transaksi secara permanen.
                     </p>
                     <div class="flex gap-3 justify-end">
                         <button @click="cancelBulkDelete()"
@@ -806,7 +670,6 @@
                     </div>
                 </div>
             </div>
-            {{-- ──────────────────────────────────────────────────────── --}}
 
             {{-- Header + Filter --}}
             <div class="flex flex-col gap-3 px-1">
@@ -905,10 +768,7 @@
                         <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
                             <tr class="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-widest">
                                 <th class="px-4 py-4 w-[48px]">
-                                    <input type="checkbox" class="row-checkbox"
-                                        :checked="selectAll"
-                                        @change="toggleSelectAll()"
-                                        title="Pilih semua">
+                                    <input type="checkbox" class="row-checkbox" :checked="selectAll" @change="toggleSelectAll()" title="Pilih semua">
                                 </th>
                                 <th class="px-4 py-4 w-[100px]">Tanggal</th>
                                 <th class="px-4 py-4 w-[100px]">No Akun</th>
@@ -929,39 +789,17 @@
                                 <template x-for="n in 8" :key="n">
                                     <tr class="skeleton-row">
                                         <td class="px-4 py-5"></td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-16 bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-28 bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-10 mx-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-32 bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-10 ml-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-16 ml-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
-                                        <td class="px-4 py-5">
-                                            <div class="h-3 rounded w-8 mx-auto bg-gray-200 dark:bg-gray-700"></div>
-                                        </td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-16 bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-28 bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-10 mx-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-32 bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-10 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-16 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5"><div class="h-3 rounded w-8 mx-auto bg-gray-200 dark:bg-gray-700"></div></td>
                                     </tr>
                                 </template>
                             </template>
@@ -983,13 +821,23 @@
                                 <td class="px-4 py-4 text-center text-gray-400 font-medium">{{ $hj->jurnal }}</td>
                                 <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ $hj->nama ?? '-' }}</td>
                                 <td class="px-4 py-4 text-[12px] leading-relaxed text-gray-500 dark:text-gray-400 break-words whitespace-normal">{{ $hj->keterangan }}</td>
-                                <td class="px-4 py-4 text-right font-medium text-gray-400 dark:text-gray-500">{{ number_format($hj->banyak, 0, ',', '.') }}</td>
+                                <td class="px-4 py-4 text-right font-medium text-gray-400 dark:text-gray-500">
+                                    {{ ($hj->banyak !== null && $hj->banyak > 0) ? number_format($hj->banyak, 0, ',', '.') : '-' }}
+                                </td>
                                 <td class="px-4 py-4 text-right text-gray-400 dark:text-gray-500 font-mono">{{ number_format($hj->harga, 0, ',', '.') }}</td>
                                 <td class="px-4 py-4 text-right font-bold text-green-400 bg-green-50/5">
-                                    {{ in_array(strtolower($hj->map), ['d', 'debit']) ? number_format($hj->banyak * $hj->harga, 0, ',', '.') : '0' }}
+                                    @if(in_array(strtolower($hj->map), ['d', 'debit']))
+                                        {{ number_format(($hj->banyak !== null && $hj->banyak > 0) ? $hj->banyak * $hj->harga : $hj->harga, 0, ',', '.') }}
+                                    @else
+                                        0
+                                    @endif
                                 </td>
                                 <td class="px-4 py-4 text-right font-bold text-red-400 bg-red-50/5">
-                                    {{ in_array(strtolower($hj->map), ['k', 'kredit']) ? number_format($hj->banyak * $hj->harga, 0, ',', '.') : '0' }}
+                                    @if(in_array(strtolower($hj->map), ['k', 'kredit']))
+                                        {{ number_format(($hj->banyak !== null && $hj->banyak > 0) ? $hj->banyak * $hj->harga : $hj->harga, 0, ',', '.') }}
+                                    @else
+                                        0
+                                    @endif
                                 </td>
                                 <td class="px-4 py-4 text-center">
                                     <div class="flex items-center justify-center gap-1">
@@ -1115,18 +963,15 @@
             if (duration === undefined) duration = 3500;
             var container = document.getElementById('toast-container');
             if (!container) return;
-
             var svgNS = 'http://www.w3.org/2000/svg';
             var svg = document.createElementNS(svgNS, 'svg');
             svg.setAttribute('class', 'toast-icon');
             svg.setAttribute('fill', 'none');
             svg.setAttribute('stroke', 'currentColor');
             svg.setAttribute('viewBox', '0 0 24 24');
-
             var path = document.createElementNS(svgNS, 'path');
             path.setAttribute('stroke-linecap', 'round');
             path.setAttribute('stroke-linejoin', 'round');
-
             if (type === 'success') {
                 path.setAttribute('stroke-width', '2.5');
                 path.setAttribute('d', 'M5 13l4 4L19 7');
@@ -1138,34 +983,26 @@
                 path.setAttribute('d', 'M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z');
             }
             svg.appendChild(path);
-
             var body = document.createElement('div');
             body.className = 'toast-body';
-
             var titleEl = document.createElement('div');
             titleEl.className = 'toast-title';
             titleEl.textContent = title;
             body.appendChild(titleEl);
-
             if (msg) {
                 var msgEl = document.createElement('div');
                 msgEl.className = 'toast-msg';
                 msgEl.textContent = msg;
                 body.appendChild(msgEl);
             }
-
             var el = document.createElement('div');
             el.className = 'toast toast-' + type;
             el.appendChild(svg);
             el.appendChild(body);
-
             container.appendChild(el);
-
             setTimeout(function() {
                 el.classList.add('hide');
-                el.addEventListener('animationend', function() {
-                    el.remove();
-                });
+                el.addEventListener('animationend', function() { el.remove(); });
             }, duration);
         };
     </script>
@@ -1174,4 +1011,4 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>
     @endpush
 
-</x-filament-panels::page>
+</x-filament-panels::page>  
