@@ -443,7 +443,7 @@ class PosPenjualan extends Page
             return;
         }
 
-        if ($this->metode_pembayaran === 'TUNAI & TRANSFER' && ($this->bayar_transfer > 0) && !$this->rekening_perusahaan_id) {
+        if (($this->metode_pembayaran === 'TRANSFER' || ($this->metode_pembayaran === 'TUNAI & TRANSFER' && $this->bayar_transfer > 0)) && !$this->rekening_perusahaan_id) {
             Notification::make()
                 ->title('Rekening Belum Dipilih')
                 ->body('Silahkan pilih rekening perusahaan untuk pembayaran transfer.')
