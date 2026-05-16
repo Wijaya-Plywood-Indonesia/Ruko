@@ -100,6 +100,7 @@ class LabaRugiTelur extends Page
         $this->bulanList = $periodeList;
 
         $saldoPerPeriode = $this->getSaldoMapPerPeriode($periodeList);
+        $qtyPerPeriode   = $this->getSaldoQtyPerPeriode($periodeList);
 
         $root = AkunGroup::whereNull('parent_id')
             ->whereRaw('LOWER(nama) LIKE ?', ['%laba rugi%'])
@@ -145,7 +146,7 @@ class LabaRugiTelur extends Page
 
         $sections = [];
         foreach ($groups as $group) {
-            $sections[] = $this->buildGroupNode($group, $saldoPerPeriode, $periodeList);
+            $sections[] = $this->buildGroupNode($group, $saldoPerPeriode, $periodeList, $qtyPerPeriode);
         }
 
         $ringkasan = [];
@@ -233,123 +234,129 @@ class LabaRugiTelur extends Page
         return $saldoPerPeriode;
     }
 
-    private function buildGroupNode(AkunGroup $group, array $saldoPerPeriode, array $periodeList): array
-    {
-        $children        = [];
-        $nilaiPerPeriode = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
+    private function buildGroupNode(AkunGroup $group, array $saldoPerPeriode, array $periodeList, array $qtyPerPeriode = []): array
+{
+    $children        = [];
+    $nilaiPerPeriode = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
 
-        if ($group->subAnakAkuns->isNotEmpty()) {
-            $perAnakAkun = $group->subAnakAkuns->groupBy('id_anak_akun');
+    if ($group->subAnakAkuns->isNotEmpty()) {
+        $perAnakAkun = $group->subAnakAkuns->groupBy('id_anak_akun');
 
-            foreach ($perAnakAkun as $idAnakAkun => $subs) {
-                $anakAkun = $subs->first()->anakAkun;
-                if (!$anakAkun) continue;
+        foreach ($perAnakAkun as $idAnakAkun => $subs) {
+            $anakAkun = $subs->first()->anakAkun;
+            if (!$anakAkun) continue;
 
-                $subChildren   = [];
-                $nilaiAnakAkun = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
+            $subChildren   = [];
+            $nilaiAnakAkun = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
 
-                foreach ($subs->sortBy('kode_sub_anak_akun') as $sub) {
-                    $subNode = $this->buildSubNode($sub, $saldoPerPeriode, $periodeList);
-                    $subChildren[] = $subNode;
-                    foreach ($periodeList as $p) {
-                        $k = $this->periodeKey($p);
-                        $nilaiAnakAkun[$k] += $subNode['nilai_per_periode'][$k] ?? 0;
-                    }
-                }
-
-                $anakNode = [
-                    'type'              => 'anak_akun',
-                    'kode'              => $anakAkun->kode_anak_akun,
-                    'nama'              => $anakAkun->nama_anak_akun,
-                    'children'          => $subChildren,
-                    'nilai_per_periode' => $nilaiAnakAkun,
-                    'nilai_per_bulan'   => $nilaiAnakAkun,
-                ];
-
-                $children[] = $anakNode;
-
+            foreach ($subs->sortBy('kode_sub_anak_akun') as $sub) {
+                $subNode = $this->buildSubNode($sub, $saldoPerPeriode, $periodeList, $qtyPerPeriode);
+                $subChildren[] = $subNode;
                 foreach ($periodeList as $p) {
                     $k = $this->periodeKey($p);
-                    $nilaiPerPeriode[$k] += $nilaiAnakAkun[$k];
+                    $nilaiAnakAkun[$k] += $subNode['nilai_per_periode'][$k] ?? 0;
                 }
             }
-        }
 
-        foreach ($group->children as $child) {
-            $node = $this->buildGroupNode($child, $saldoPerPeriode, $periodeList);
+            $anakNode = [
+                'type'              => 'anak_akun',
+                'kode'              => $anakAkun->kode_anak_akun,
+                'nama'              => $anakAkun->nama_anak_akun,
+                'children'          => $subChildren,
+                'nilai_per_periode' => $nilaiAnakAkun,
+                'nilai_per_bulan'   => $nilaiAnakAkun,
+            ];
+
+            $children[] = $anakNode;
+            foreach ($periodeList as $p) {
+                $k = $this->periodeKey($p);
+                $nilaiPerPeriode[$k] += $nilaiAnakAkun[$k];
+            }
+        }
+    }
+
+    foreach ($group->children as $child) {
+        $node = $this->buildGroupNode($child, $saldoPerPeriode, $periodeList, $qtyPerPeriode);
+        $children[] = $node;
+        foreach ($periodeList as $p) {
+            $k = $this->periodeKey($p);
+            $nilaiPerPeriode[$k] += $node['nilai_per_periode'][$k] ?? 0;
+        }
+    }
+
+    if ($group->relationLoaded('anakAkuns')) {
+        foreach ($group->anakAkuns as $anak) {
+            $node = $this->buildAnakAkunNode($anak, $saldoPerPeriode, $periodeList, $qtyPerPeriode);
             $children[] = $node;
             foreach ($periodeList as $p) {
                 $k = $this->periodeKey($p);
                 $nilaiPerPeriode[$k] += $node['nilai_per_periode'][$k] ?? 0;
             }
         }
-
-        if ($group->relationLoaded('anakAkuns')) {
-            foreach ($group->anakAkuns as $anak) {
-                $node = $this->buildAnakAkunNode($anak, $saldoPerPeriode, $periodeList);
-                $children[] = $node;
-                foreach ($periodeList as $p) {
-                    $k = $this->periodeKey($p);
-                    $nilaiPerPeriode[$k] += $node['nilai_per_periode'][$k] ?? 0;
-                }
-            }
-        }
-
-        return [
-            'type'              => 'group',
-            'nama'              => $group->nama,
-            'tipe'              => $group->tipe ?? 'lainnya',
-            'hidden'            => (bool) $group->hidden,
-            'children'          => $children,
-            'nilai_per_periode' => $nilaiPerPeriode,
-            'nilai_per_bulan'   => $nilaiPerPeriode,
-        ];
     }
 
-    private function buildSubNode(SubAnakAkun $sub, array $saldoPerPeriode, array $periodeList): array
-    {
-        $nilaiPerPeriode = [];
+    return [
+        'type'              => 'group',
+        'nama'              => $group->nama,
+        'tipe'              => $group->tipe ?? 'lainnya',
+        'hidden'            => (bool) $group->hidden,
+        'children'          => $children,
+        'nilai_per_periode' => $nilaiPerPeriode,
+        'nilai_per_bulan'   => $nilaiPerPeriode,
+    ];
+}
+
+private function buildSubNode(SubAnakAkun $sub, array $saldoPerPeriode, array $periodeList, array $qtyPerPeriode = []): array
+{
+    $nilaiPerPeriode = [];
+    $qtyPerPeriodeNode = [];
+
+    foreach ($periodeList as $p) {
+        $key = $this->periodeKey($p);
+        $nilaiPerPeriode[$key]    = (float) ($saldoPerPeriode[$key][$sub->kode_sub_anak_akun] ?? 0);
+        $qtyPerPeriodeNode[$key]  = isset($qtyPerPeriode[$key][$sub->kode_sub_anak_akun])
+            ? (float) $qtyPerPeriode[$key][$sub->kode_sub_anak_akun]
+            : null;
+    }
+
+    return [
+        'type'              => 'sub_anak_akun',
+        'kode'              => $sub->kode_sub_anak_akun,
+        'nama'              => $sub->nama_sub_anak_akun,
+        'children'          => [],
+        'nilai_per_periode' => $nilaiPerPeriode,
+        'nilai_per_bulan'   => $nilaiPerPeriode,
+        'qty_per_periode'   => $qtyPerPeriodeNode, // ← baru
+    ];
+}
+
+private function buildAnakAkunNode($anak, array $saldoPerPeriode, array $periodeList, array $qtyPerPeriode = []): array
+{
+    $children        = [];
+    $nilaiPerPeriode = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
+
+    foreach ($anak->subAnakAkuns as $sub) {
+        $node = $this->buildSubNode($sub, $saldoPerPeriode, $periodeList, $qtyPerPeriode);
+        $children[] = $node;
         foreach ($periodeList as $p) {
-            $key = $this->periodeKey($p);
-            $nilaiPerPeriode[$key] = (float) ($saldoPerPeriode[$key][$sub->kode_sub_anak_akun] ?? 0);
+            $nilaiPerPeriode[$this->periodeKey($p)] += $node['nilai_per_periode'][$this->periodeKey($p)] ?? 0;
         }
-
-        return [
-            'type'              => 'sub_anak_akun',
-            'kode'              => $sub->kode_sub_anak_akun,
-            'nama'              => $sub->nama_sub_anak_akun,
-            'children'          => [],
-            'nilai_per_periode' => $nilaiPerPeriode,
-            'nilai_per_bulan'   => $nilaiPerPeriode,
-        ];
     }
 
-    private function buildAnakAkunNode($anak, array $saldoPerPeriode, array $periodeList): array
-    {
-        $children        = [];
-        $nilaiPerPeriode = array_fill_keys(array_map([$this, 'periodeKey'], $periodeList), 0.0);
-
-        foreach ($anak->subAnakAkuns as $sub) {
-            $node = $this->buildSubNode($sub, $saldoPerPeriode, $periodeList);
-            $children[] = $node;
-            foreach ($periodeList as $p) {
-                $nilaiPerPeriode[$this->periodeKey($p)] += $node['nilai_per_periode'][$this->periodeKey($p)] ?? 0;
-            }
-        }
-
-        foreach ($periodeList as $p) {
-            $nilaiPerPeriode[$this->periodeKey($p)] += (float) ($saldoPerPeriode[$this->periodeKey($p)][$anak->kode_anak_akun] ?? 0);
-        }
-
-        return [
-            'type'              => 'anak_akun',
-            'kode'              => $anak->kode_anak_akun,
-            'nama'              => $anak->nama_anak_akun,
-            'children'          => $children,
-            'nilai_per_periode' => $nilaiPerPeriode,
-            'nilai_per_bulan'   => $nilaiPerPeriode,
-        ];
+    foreach ($periodeList as $p) {
+        $nilaiPerPeriode[$this->periodeKey($p)] += (float) ($saldoPerPeriode[$this->periodeKey($p)][$anak->kode_anak_akun] ?? 0);
     }
+
+    return [
+        'type'              => 'anak_akun',
+        'kode'              => $anak->kode_anak_akun,
+        'nama'              => $anak->nama_anak_akun,
+        'children'          => $children,
+        'nilai_per_periode' => $nilaiPerPeriode,
+        'nilai_per_bulan'   => $nilaiPerPeriode,
+        'qty_per_periode'   => [], // anak akun agregat, qty tidak relevan
+    ];
+}
 
     public function getNamaBulan(int $bulan): string
     {
@@ -360,6 +367,50 @@ class LabaRugiTelur extends Page
             10 => 'Oktober',11 => 'November', 12 => 'Desember',
         ][$bulan] ?? '';
     }
+
+    private function getSaldoQtyPerPeriode(array $periodeList): array
+{
+    $qtyPerPeriode = [];
+
+    foreach ($periodeList as $periode) {
+        $key   = $this->periodeKey($periode);
+        $start = Carbon::create($periode['tahun'], $periode['bulan'], 1)->startOfMonth();
+        $end   = Carbon::create($periode['tahun'], $periode['bulan'], 1)->endOfMonth();
+
+        $saldoNormalMap = SubAnakAkun::pluck('saldo_normal', 'kode_sub_anak_akun')->toArray();
+
+        $mutasiQty = JurnalUmum::whereBetween('tgl', [$start, $end])
+            ->whereNotNull('banyak')
+            ->where('banyak', '>', 0)
+            ->selectRaw("
+                no_akun,
+                SUM(CASE WHEN LOWER(map) = 'd' THEN COALESCE(banyak, 0) ELSE 0 END) as qty_debit,
+                SUM(CASE WHEN LOWER(map) = 'k' THEN COALESCE(banyak, 0) ELSE 0 END) as qty_kredit
+            ")
+            ->groupBy('no_akun')
+            ->get()
+            ->keyBy('no_akun');
+
+        $map = [];
+        foreach ($mutasiQty as $kode => $row) {
+            $qtyD = (float) $row->qty_debit;
+            $qtyK = (float) $row->qty_kredit;
+
+            if ($qtyD == 0 && $qtyK == 0) continue;
+
+            $saldoNormal = strtolower($saldoNormalMap[$kode] ?? 'debit');
+            $isKredit    = in_array($saldoNormal, ['kredit', 'credit', 'k']);
+
+            $net = $isKredit ? $qtyK - $qtyD : $qtyD - $qtyK;
+
+            $map[$kode] = $net; // bisa negatif
+        }
+
+        $qtyPerPeriode[$key] = $map;
+    }
+
+    return $qtyPerPeriode;
+}
 
     public function formatRupiah(float $nilai): string
     {
