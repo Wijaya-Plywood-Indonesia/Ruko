@@ -13,6 +13,7 @@ class Barang extends Model
         'kode_barang',
         'barcode',
         'nama_barang',
+        'id_sub_anak_akun',
         'id_kategori',
         'id_satuan',
         'harga_beli',
@@ -77,5 +78,11 @@ class Barang extends Model
     public function produksiPakanMentah()
     {
         return $this->hasMany(ProduksiPakanMentah::class);
+    }
+
+    public function subAnakAkun()
+    {
+        // Parameter kedua adalah nama kolom foreign key yang kita buat di migration tadi
+        return $this->belongsTo(SubAnakAkun::class, 'id_sub_anak_akun');
     }
 }

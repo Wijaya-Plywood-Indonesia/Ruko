@@ -15,6 +15,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
+use App\Services\JurnalPembelianService;
+use App\Services\JurnalBalikService;
 
 class PembeliansTable
 {
@@ -100,11 +102,8 @@ class PembeliansTable
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
-                    // Sembunyikan jika sudah divalidasi atau dibatalkan
-                    ->visible(fn($record) => empty($record->validated_by) && $record->status_transaksi !== Pembelian::STATUS_BATAL)
-                    // Cegah validasi diri sendiri (kecuali super_admin)
+                    ->visible(fn($record) => empty($record->validated_by) && $record->status !== Pembelian::STATUS_BATAL) // Sesuai kolom status model
                     ->disabled(fn($record) => $record->created_by === filament()->auth()->id() && !filament()->auth()->user()->hasRole('super_admin'))
-
                     ->form([
                         TextInput::make('validator_name')
                             ->label('Petugas Validasi')
@@ -112,7 +111,7 @@ class PembeliansTable
                             ->disabled()
                             ->dehydrated(false),
 
-                        Select::make('status_transaksi')
+                        Select::make('status') // Ganti key form dari status_transaksi ke status sesuai kolom pembelians
                             ->label('Update Status Pembelian')
                             ->options(Pembelian::labelStatus())
                             ->required()
@@ -123,38 +122,46 @@ class PembeliansTable
 
                         DB::transaction(function () use ($record, $data, $validatorId) {
                             $record->update([
-                                'validated_by'     => $validatorId,
-                                'status_transaksi' => $data['status_transaksi'],
+                                'validated_by' => $validatorId,
+                                'status'       => $data['status'], // Update ke kolom status pembelian
                                 'tanggal_validasi' => now(),
                             ]);
+
+                            // 🔥 TRIGGER: Jalankan otomatis service jurnal pembantu pembelian
+                            app(JurnalPembelianService::class)
+                                ->buatJurnalDariPembelian($record, $validatorId);
                         });
 
                         Notification::make()
-                            ->title('Pembelian Berhasil Divalidasi')
+                            ->title('Pembelian Berhasil Divalidasi & Jurnal Tercatat')
                             ->success()
                             ->send();
                     }),
 
-                // ❌ ACTION: BATAL VALIDASI
+                // ❌ ACTION: BATAL VALIDASI (SUNTIKKAN JURNAL BALIK)
                 Action::make('batal_validasi')
                     ->label('Batal Validasi')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    // Hanya muncul jika sudah divalidasi & user adalah super_admin
                     ->visible(fn($record) => !empty($record->validated_by) && filament()->auth()->user()->hasRole('super_admin'))
                     ->action(function ($record) {
-                        DB::transaction(function () use ($record) {
-                            // Logika jurnal balik atau kurangi stok bisa ditaruh di sini
+                        $userId = filament()->auth()->id();
+
+                        DB::transaction(function () use ($record, $userId) {
+
+                            // 🔥 TRIGGER: Panggil JurnalBalikService menggunakan nomor_nota pembelian
+                            app(JurnalBalikService::class)
+                                ->buatJurnalBalikDariNota($record->nomor_nota, $userId);
 
                             $record->update([
-                                'validated_by'     => null,
-                                'status_transaksi' => 'BELUM DIBAYAR',
+                                'validated_by' => null,
+                                'status'       => Pembelian::STATUS_DRAFT, // Kembalikan ke draft saat batal
                             ]);
                         });
 
                         Notification::make()
-                            ->title('Validasi telah dibatalkan')
+                            ->title('Validasi telah dibatalkan & Jurnal Balik Terbit')
                             ->warning()
                             ->send();
                     }),
