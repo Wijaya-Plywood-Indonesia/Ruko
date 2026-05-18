@@ -10,6 +10,91 @@ use Illuminate\Support\Facades\DB;
 
 class NeracaService
 {
+    /**
+     * Hitung laba rugi berjalan dari jurnal umum bulan tersebut.
+     * Logika sama dengan LabaRugiTelur:
+     *   Pendapatan (kredit naik) - Beban (debit naik) = Laba Berjalan
+     */
+    private function hitungLabaRugiBerjalan(int $tahun, int $bulan): float
+    {
+        $start = Carbon::create($tahun, $bulan)->startOfMonth();
+        $end   = Carbon::create($tahun, $bulan)->endOfMonth();
+
+        // Cari root group Laba Rugi
+        $rootLabaRugi = DB::table('akun_groups')
+            ->whereNull('parent_id')
+            ->whereRaw('LOWER(nama) LIKE ?', ['%laba rugi%'])
+            ->first();
+
+        if (!$rootLabaRugi) return 0.0;
+
+        // Ambil semua child group id di bawah root Laba Rugi (rekursif)
+        $allGroupIds = $this->getAllChildGroupIds($rootLabaRugi->id);
+
+        if (empty($allGroupIds)) return 0.0;
+
+        // Ambil semua sub akun yang terdaftar di group-group tersebut
+        $akunLabaRugi = DB::table('akun_group_sub_anak_akun as pivot')
+            ->join('sub_anak_akuns as saa', 'saa.id', '=', 'pivot.sub_anak_akun_id')
+            ->whereIn('pivot.akun_group_id', $allGroupIds)
+            ->select('saa.kode_sub_anak_akun', 'saa.saldo_normal')
+            ->get()
+            ->keyBy('kode_sub_anak_akun');
+
+        if ($akunLabaRugi->isEmpty()) return 0.0;
+
+        // Ambil mutasi bulan ini
+        $kodeList = $akunLabaRugi->keys()->toArray();
+
+        $mutasi = JurnalUmum::whereBetween('tgl', [$start, $end])
+            ->whereIn('no_akun', $kodeList)
+            ->selectRaw("
+            no_akun,
+            SUM(CASE WHEN LOWER(map) = 'd' THEN COALESCE(banyak * harga, harga, 0) ELSE 0 END) as total_debit,
+            SUM(CASE WHEN LOWER(map) = 'k' THEN COALESCE(banyak * harga, harga, 0) ELSE 0 END) as total_kredit
+        ")
+            ->groupBy('no_akun')
+            ->get()
+            ->keyBy('no_akun');
+
+        $laba = 0.0;
+
+        foreach ($akunLabaRugi as $kode => $akun) {
+            $debit  = (float) ($mutasi[$kode]->total_debit  ?? 0);
+            $kredit = (float) ($mutasi[$kode]->total_kredit ?? 0);
+
+            $saldoNormal = strtolower($akun->saldo_normal ?? 'debit');
+            $isKredit    = in_array($saldoNormal, ['kredit', 'credit', 'k']);
+
+            if ($isKredit) {
+                $laba += $kredit - $debit;
+            } else {
+                $laba -= $debit - $kredit;
+            }
+        }
+
+        return $laba;
+    }
+
+    /**
+     * Ambil semua child group id secara rekursif dari parent_id tertentu.
+     */
+    private function getAllChildGroupIds(int $parentId): array
+    {
+        $ids      = [];
+        $children = DB::table('akun_groups')
+            ->where('parent_id', $parentId)
+            ->pluck('id')
+            ->toArray();
+
+        foreach ($children as $childId) {
+            $ids[] = $childId;
+            $ids   = array_merge($ids, $this->getAllChildGroupIds($childId));
+        }
+
+        return $ids;
+    }
+
     public function hitungMulti(array $periodeList): array
     {
         if (empty($periodeList)) {
@@ -23,15 +108,16 @@ class NeracaService
             $tahun = (int) $periode['tahun'];
             $bulan = (int) $periode['bulan'];
 
-            $saldo = $this->getSaldo($tahun, $bulan);
-            $qty   = $this->getSaldoQty($tahun, $bulan);
+            $saldo            = $this->getSaldo($tahun, $bulan);
+            $qty              = $this->getSaldoQty($tahun, $bulan);
+            $labaRugiBerjalan = $this->hitungLabaRugiBerjalan($tahun, $bulan); // ← pastikan ini ada
 
             $key   = $tahun . '-' . str_pad($bulan, 2, '0', STR_PAD_LEFT);
             $label = Carbon::create($tahun, $bulan)->locale('id')->isoFormat('MMMM Y');
 
             $result[$key] = array_merge(
                 ['label' => $label, 'tahun' => $tahun, 'bulan' => $bulan],
-                $this->buildNeraca($groups, $saldo, $qty)
+                $this->buildNeraca($groups, $saldo, $qty, $labaRugiBerjalan) // ← pastikan ini ada
             );
         }
 
@@ -224,7 +310,7 @@ class NeracaService
 
     // ─────────────────────────────────────────────────────────────────
 
-    private function buildNeraca(Collection $groups, array $saldo, array $qty = []): array
+    private function buildNeraca(Collection $groups, array $saldo, array $qty = [], float $labaRugiBerjalan = 0.0): array
     {
         $aktiva = ['sections' => [], 'total' => 0.0];
         $pasiva = ['sections' => [], 'total' => 0.0];
@@ -249,6 +335,22 @@ class NeracaService
             } elseif (str_contains($namaUpper, 'PASIVA')) {
                 $pasiva = $data;
             }
+        }
+
+        // ── Tambahkan laba rugi berjalan ke pasiva secara otomatis ──────
+        if ($labaRugiBerjalan != 0) {
+            $pasiva['sections'][] = [
+                'group'        => 'Laba Rugi Berjalan',
+                'items'        => [[
+                    'kode'  => '—',
+                    'nama'  => 'Laba (Rugi) Periode Berjalan',
+                    'nilai' => $labaRugiBerjalan,
+                    'qty'   => null,
+                ]],
+                'total'        => $labaRugiBerjalan,
+                'sub_sections' => [],
+            ];
+            $pasiva['total'] += $labaRugiBerjalan;
         }
 
         return [
@@ -340,7 +442,6 @@ class NeracaService
                 ];
 
                 $totalAll += $totalSection;
-
             } else {
                 [$subSections, $totalBranch] = $this->buildSections(
                     $group->children,
@@ -380,6 +481,4 @@ class NeracaService
 
         return $total;
     }
-
-    
 }
