@@ -1,6 +1,59 @@
 <x-filament-panels::page>
 
     {{-- ══════════════════════════════════════════════════════════
+         HEADER + TOMBOL EXPORT
+    ══════════════════════════════════════════════════════════ --}}
+    <div class="flex items-center justify-between mb-2">
+        <div>
+            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">INA TELUR</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Neraca Telur</h1>
+        </div>
+
+        @if($this->periodeValid() && $this->jumlahPeriode() > 0)
+            <button
+                wire:click="exportExcel"
+                wire:loading.attr="disabled"
+                wire:target="exportExcel"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                       bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800
+                       text-white shadow-sm transition-colors
+                       disabled:opacity-60 disabled:cursor-not-allowed">
+
+                {{-- Spinner saat loading --}}
+                <svg wire:loading wire:target="exportExcel"
+                     class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+
+                {{-- Icon unduh (default) --}}
+                <svg wire:loading.remove wire:target="exportExcel"
+                     class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+
+                <span wire:loading.remove wire:target="exportExcel">
+                    Export Excel
+                    <span class="font-normal opacity-75">({{ $this->jumlahPeriode() }} bulan)</span>
+                </span>
+                <span wire:loading wire:target="exportExcel">Mengunduh...</span>
+            </button>
+        @else
+            <button disabled
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                       bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500
+                       cursor-not-allowed shadow-sm">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Excel
+            </button>
+        @endif
+    </div>
+
+    {{-- ══════════════════════════════════════════════════════════
          FILTER
     ══════════════════════════════════════════════════════════ --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
@@ -126,7 +179,7 @@
                                 'label' => $item['nama'],
                                 'kode'  => $item['kode'],
                                 'nilai' => $item['nilai'],
-                                'qty'   => $item['qty'] ?? null,   // ← baru
+                                'qty'   => $item['qty'] ?? null,
                                 'depth' => $depth,
                             ];
                         }
@@ -227,14 +280,12 @@
                 <table class="w-full text-sm border-collapse" style="min-width:700px">
                     <thead>
                         <tr>
-                            {{-- Header AKTIVA: 3 sub-kolom (kode+nama | qty | nilai) --}}
                             <th colspan="3"
                                 class="border border-gray-200 dark:border-gray-700
                                        bg-blue-50 dark:bg-blue-900/20 py-3 px-5
                                        text-center text-sm font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
                                 AKTIVA
                             </th>
-                            {{-- Header PASIVA: 3 sub-kolom (kode+nama | qty | nilai) --}}
                             <th colspan="3"
                                 class="border border-gray-200 dark:border-gray-700
                                        bg-green-50 dark:bg-green-900/20 py-3 px-5
@@ -258,7 +309,6 @@
                             $aRow    = $aktivaRows[$i] ?? null;
                             $pRow    = $pasivaRows[$i] ?? null;
 
-                            // Tentukan tipe baris dominan
                             $rowType = $aRow['type'] ?? $pRow['type'] ?? 'item';
                             $isHdr  = $rowType === 'header';
                             $isSub  = $rowType === 'subheader';
@@ -278,7 +328,6 @@
                             {{ $isItem ? 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20' : '' }}
                             transition-colors">
 
-                            {{-- ── AKTIVA: kolom nama ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $aPl : '' }}
@@ -305,7 +354,6 @@
                                 @endif
                             </td>
 
-                            {{-- ── AKTIVA: kolom qty ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
                                 @if($aRow && $isItem && isset($aRow['qty']) && $aRow['qty'] !== null)
                                     <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
@@ -314,7 +362,6 @@
                                 @endif
                             </td>
 
-                            {{-- ── AKTIVA: kolom nilai ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-4 text-right tabular-nums whitespace-nowrap
                                 {{ $isTot ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300' }}">
                                 @if($aRow && isset($aRow['nilai']) && !$isHdr && !$isSub)
@@ -324,7 +371,6 @@
                                 @endif
                             </td>
 
-                            {{-- ── PASIVA: kolom nama ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $pPl : '' }}
@@ -351,7 +397,6 @@
                                 @endif
                             </td>
 
-                            {{-- ── PASIVA: kolom qty ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
                                 @if($pRow && $isItem && isset($pRow['qty']) && $pRow['qty'] !== null)
                                     <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
@@ -360,7 +405,6 @@
                                 @endif
                             </td>
 
-                            {{-- ── PASIVA: kolom nilai ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-4 text-right tabular-nums whitespace-nowrap
                                 {{ $isTot ? 'font-semibold text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300' }}">
                                 @if($pRow && isset($pRow['nilai']) && !$isHdr && !$isSub)
