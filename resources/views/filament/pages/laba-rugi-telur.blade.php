@@ -129,7 +129,8 @@
             <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Laporan Laba Rugi</h2>
         </div>
         <div class="flex items-center gap-2">
-
+ 
+            {{-- Tombol toggle saldo nol --}}
             <button
                 wire:click="$toggle('tampilkanSaldoNol')"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
@@ -150,7 +151,8 @@
                 </svg>
                 {{ $tampilkanSaldoNol ? 'Sembunyikan Saldo Nol' : 'Tampilkan Saldo Nol' }}
             </button>
-
+ 
+            {{-- Collapse / Expand --}}
             <button type="button" @click="$dispatch('laba-rugi-telur-collapse')"
                 class="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400
                        border border-gray-200 dark:border-gray-700 rounded-md
@@ -163,6 +165,34 @@
                        rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 Expand All
             </button>
+ 
+            {{-- ★ TOMBOL EXPORT EXCEL ★ --}}
+            <button
+                wire:click="exportExcel"
+                wire:loading.attr="disabled"
+                wire:target="exportExcel"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                       bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600
+                       transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+ 
+                {{-- Spinner --}}
+                <svg wire:loading wire:target="exportExcel"
+                     class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+ 
+                {{-- Icon unduh --}}
+                <svg wire:loading.remove wire:target="exportExcel"
+                     class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+ 
+                <span wire:loading.remove wire:target="exportExcel">Export Excel</span>
+                <span wire:loading wire:target="exportExcel">Mengunduh...</span>
+            </button>
+ 
         </div>
     </div>
 
