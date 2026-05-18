@@ -46,7 +46,7 @@ class JurnalBalikService
         $headersAsli = JurnalPembantuHeader::where('no_dokumen', $noDokumen)
             ->where('adalah_jurnal_balik', false)
             ->where('status', '!=', JurnalPembantuHeader::STATUS_DIBALIK)
-            ->where('modul_asal', 'penjualan_telur')
+            ->whereIn('modul_asal', ['pembelian_barang', 'penjualan_telur'])
             ->get();
 
         if ($headersAsli->isEmpty()) {
