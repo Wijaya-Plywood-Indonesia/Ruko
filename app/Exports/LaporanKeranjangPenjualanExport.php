@@ -50,10 +50,11 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
         'Subtotal',
         'Kasir',
         'Status',
+        'Keterangan',
         ];
 
         $sheet->getDelegate()->fromArray($headers, null, "A{$row}");
-        $sheet->getStyle("A{$row}:L{$row}")
+        $sheet->getStyle("A{$row}:M{$row}")
             ->applyFromArray($this->styleHeaderPenjualan());
         $row++;
 
@@ -77,6 +78,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                         (float)$detail['subtotal'],
                         $penjualan['kasir'],
                         $penjualan['status_transaksi'],
+                        $penjualan['keterangan'] ?? '-',
                     ]
                 ], null, "A{$row}");
 
@@ -88,6 +90,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                 $sheet->getStyle("I{$row}:J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $sheet->getStyle("K{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
                 $sheet->getStyle("L{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("M{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
                 $sheet->getStyle("I{$row}")->applyFromArray($this->styleDiskon());
                 $sheet->getStyle("J{$row}")->applyFromArray($this->styleSubtotal());
@@ -103,8 +106,9 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
                 $row['no_nota'],
                 $row['tanggal'],
                 $row['nama_customer'],
-                $row['user'],
+                $row['kasir'] ?? '-',
                 $row['status_transaksi'],
+                $row['keterangan'] ?? '-',
             ];
         })->toArray();
     }
@@ -124,6 +128,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
             'Subtotal',
             'Kasir',
             'Status',
+            'Keterangan',
         ];
     }
 
@@ -215,6 +220,7 @@ class LaporanKeranjangPenjualanExport implements WithEvents,
             'J' => 30, // Subtotal
             'K' => 25, // Kasir
             'L' => 10, // Status
+            'M' => 30, // Keterangan
         ];
         
     }
