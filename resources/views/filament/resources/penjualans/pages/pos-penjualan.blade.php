@@ -60,7 +60,12 @@
                                     @foreach($searchResults as $barang)
                                         <div wire:click="selectBarang({{ $barang->id }})" class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
                                             <div>
-                                                <div class="font-semibold text-sm text-gray-900 dark:text-white">{{ $barang->nama_barang }}</div>
+                                                <div class="font-semibold text-sm text-gray-900 dark:text-white">
+                                                    {{ $barang->nama_barang }}
+                                                    @if($barang->satuan)
+                                                        <span class="text-[10px] text-gray-500 font-bold ml-1">({{ $barang->satuan->nama_satuan }})</span>
+                                                    @endif
+                                                </div>
                                                 <div class="text-[10px] text-gray-500 uppercase">{{ $barang->barcode }}</div>
                                             </div>
                                             <div class="text-right">
@@ -131,15 +136,15 @@
                     
                     <div>
                         {{-- Desktop Table --}}
-                        <div class="hidden md:block min-w-full">
-                            <table class="w-full text-left table-fixed border-collapse">
+                        <div class="hidden md:block w-full overflow-x-auto">
+                            <table class="w-full min-w-[700px] text-left table-fixed border-collapse">
                                 <thead class="bg-gray-50/50 dark:bg-gray-800/50">
                                     <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[30%]">Item</th>
-                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[12%]">Qty</th>
-                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[20%]">H. Jual</th>
-                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[18%]">Potongan</th>
-                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[17%]">Total</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[25%]">Item</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[22%]">Qty</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[18%]">H. Jual</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[16%]">Potongan</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[16%]">Total</th>
                                         <th class="px-2 py-2 w-[3%]"></th>
                                     </tr>
                                 </thead>
@@ -153,10 +158,13 @@
                                                 </div>
                                             </td>
                                             <td class="px-2 py-2">
-                                                <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
-                                                    <button wire:click="decrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
-                                                    <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0" />
-                                                    <button wire:click="incrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                                <div class="flex items-center justify-center gap-1.5">
+                                                    <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
+                                                        <button wire:click="decrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
+                                                        <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0" />
+                                                        <button wire:click="incrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                                    </div>
+                                                    <span class="text-xs text-gray-500 font-bold whitespace-nowrap">{{ $item['satuan'] }}</span>
                                                 </div>
                                             </td>
                                             <td class="px-2 py-2" x-data="{
