@@ -115,24 +115,17 @@ class PosPenjualan extends Page
             return;
         }
 
-        $tokoId = $this->toko_id;
-        $t = (new StokBarangToko)->getTable();
-
-        $this->searchResults = Barang::query()
-            ->leftJoin($t, function ($q) use ($t, $tokoId) {
-                $q->on("$t.barang_id", '=', 'barangs.id')
-                    ->where("$t.toko_id", $tokoId);
-            })
-            ->select(
-                'barangs.*',
-                DB::raw("COALESCE($t.stok, 0) as stok_aktual")
-            )
+        $this->searchResults = Barang::with('satuan')
             ->where(function ($query) {
                 $query->where('barangs.nama_barang', 'like', "%{$this->search}%")
                     ->orWhere('barangs.barcode', 'like', "%{$this->search}%");
             })
             ->limit(10)
             ->get();
+
+        foreach ($this->searchResults as $barang) {
+            $barang->stok_aktual = $barang->stok_buku_besar;
+        }
         
         $this->showDropdown = true;
     }
@@ -149,14 +142,10 @@ class PosPenjualan extends Page
 
     public function selectBarang(int $id): void
     {
-        $barang = Barang::find($id);
+        $barang = Barang::with('satuan')->find($id);
         if (!$barang) return;
 
-        $stokToko = StokBarangToko::where('barang_id', $id)
-            ->where('toko_id', $this->toko_id)
-            ->first();
-
-        $stok = $stokToko?->stok ?? 0;
+        $stok = $barang->stok_buku_besar;
 
         if ($stok < 0.01) {
             Notification::make()
@@ -184,9 +173,9 @@ class PosPenjualan extends Page
                 'qty' => 1,
                 'harga_awal' => (int) $barang->harga_jual,
                 'harga_jual' => (int) $barang->harga_jual,
-                'potongan' => $this->is_member ? 5000 : 0,
+                'potongan' => $this->is_member ? 0 : 0, // diskon member dinonaktifkan (sebelumnya 5000)
                 'member_discount_active' => $this->is_member ? true : false,
-                'total_potongan' => $this->is_member ? 5000 : 0,
+                'total_potongan' => $this->is_member ? 0 : 0,
                 'subtotal' => 0,
             ];
         }
@@ -208,9 +197,8 @@ class PosPenjualan extends Page
     {
         if (!isset($this->cart[$id])) return;
 
-        $stock = (float) (StokBarangToko::where('barang_id', $id)
-            ->where('toko_id', $this->toko_id)
-            ->value('stok') ?? 0);
+        $barang = Barang::find($id);
+        $stock = $barang ? $barang->stok_buku_besar : 0;
 
         $qty = max(0.01, (float) $this->cart[$id]['qty']);
 
@@ -392,13 +380,13 @@ class PosPenjualan extends Page
             if ($this->is_member) {
                 // ONLY add if not already active
                 if (!isset($this->cart[$id]['member_discount_active']) || !$this->cart[$id]['member_discount_active']) {
-                    $this->cart[$id]['potongan'] += 5000;
+                    $this->cart[$id]['potongan'] += 0; // diskon member + 0 (sebelumnya + 5000)
                     $this->cart[$id]['member_discount_active'] = true;
                 }
             } else {
                 // ONLY subtract if active
                 if (isset($this->cart[$id]['member_discount_active']) && $this->cart[$id]['member_discount_active']) {
-                    $this->cart[$id]['potongan'] = max(0, $this->cart[$id]['potongan'] - 5000);
+                    $this->cart[$id]['potongan'] = max(0, $this->cart[$id]['potongan'] - 0); // diskon member - 0 (sebelumnya - 5000)
                     $this->cart[$id]['member_discount_active'] = false;
                 }
             }
@@ -495,13 +483,24 @@ class PosPenjualan extends Page
                 ]);
 
                 foreach ($this->cart as $item) {
+                    $barang = Barang::find($item['barang_id']);
+                    $stokBukuBesar = $barang ? $barang->stok_buku_besar : 0;
+
+                    if ($stokBukuBesar < $item['qty']) {
+                        throw new \Exception("Stok {$item['nama_barang']} tidak mencukupi.");
+                    }
+
                     $stokToko = StokBarangToko::where('barang_id', $item['barang_id'])
                         ->where('toko_id', $this->toko_id)
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$stokToko || $stokToko->stok < $item['qty']) {
-                        throw new \Exception("Stok {$item['nama_barang']} tidak mencukupi.");
+                    if (!$stokToko) {
+                        $stokToko = StokBarangToko::create([
+                            'barang_id' => $item['barang_id'],
+                            'toko_id' => $this->toko_id,
+                            'stok' => 0,
+                        ]);
                     }
 
                     $stokToko->kurang($item['qty']);
