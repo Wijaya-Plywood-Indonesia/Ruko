@@ -22,7 +22,7 @@ class Pembelian extends Page
 
     protected string $view = 'filament.resources.pembelians.pages.pembelian';
 
-    protected static ?string $title = '';
+    protected static ?string $title = 'Tambah Pembelian';
 
     // =====================================
     // 1. STATE: HEADER PEMBELIAN
@@ -259,6 +259,16 @@ class Pembelian extends Page
             'subtotal'    => 0,
             'catatan'     => '',
         ];
+    }
+
+    public function updateItemField(int $index, float $qty, float $harga): void
+    {
+        if (!isset($this->items[$index])) return;
+
+        $this->items[$index]['qty'] = $qty;
+        $this->items[$index]['harga_beli'] = $harga;
+        $this->items[$index]['subtotal'] = max(0.0, $qty * $harga);
+        $this->recalculateSubTotal();
     }
 
     public function removeItem(int $index): void
