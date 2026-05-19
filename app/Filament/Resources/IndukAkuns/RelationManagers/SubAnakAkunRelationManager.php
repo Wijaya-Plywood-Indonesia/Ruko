@@ -11,8 +11,10 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -62,23 +64,43 @@ class SubAnakAkunRelationManager extends RelationManager
                         $anak = AnakAkun::find($get('id_anak_akun'));
                         return $anak ? $anak->kode_anak_akun . '-' : '—-';
                     })
+                    ->live(debounce: 500) // debounce 500ms agar tidak query tiap ketik
+                    ->afterStateUpdated(function ($state, Set $set, Get $get, $record) {
+                        $anak = AnakAkun::find($get('id_anak_akun'));
+                        if (!$anak || blank($state)) {
+                            $set('kode_sudah_ada', false);
+                            return;
+                        }
+
+                        $kode = $anak->kode_anak_akun . '-' . ltrim($state, '-');
+
+                        // Cek unique, exclude record saat ini jika edit
+                        $exists = \App\Models\SubAnakAkun::where('kode_sub_anak_akun', $kode)
+                            ->when($record, fn($q) => $q->where('id', '!=', $record->id))
+                            ->exists();
+
+                        $set('kode_sudah_ada', $exists);
+                    })
+                    ->hintColor(fn(Get $get) => $get('kode_sudah_ada') ? 'danger' : 'gray')
                     ->hint(function (Get $get) {
+                        if ($get('kode_sudah_ada')) {
+                            return '⚠ Kode ini sudah digunakan, pilih kode lain.';
+                        }
                         $anak = AnakAkun::find($get('id_anak_akun'));
                         if (!$anak) return 'Pilih Anak Akun dulu';
                         return "Contoh: 01 → tersimpan sebagai {$anak->kode_anak_akun}-01";
                     })
-                    ->placeholder('01')
-                    // Saat EDIT: strip prefix dari kode lengkap di DB
-                    // agar field hanya menampilkan suffix (02, bukan 2210-02)
                     ->afterStateHydrated(function ($component, $record) {
                         if (!$record) return;
-                        $kode  = $record->kode_sub_anak_akun ?? '';
-                        $parts = explode('-', $kode);
-                        // Ambil bagian terakhir setelah '-'
+                        $kode   = $record->kode_sub_anak_akun ?? '';
+                        $parts  = explode('-', $kode);
                         $suffix = count($parts) > 1 ? end($parts) : $kode;
                         $component->state($suffix);
-                    })
-                    ->live(),
+                    }),
+
+                // Field hidden untuk menyimpan state boolean
+                \Filament\Forms\Components\Hidden::make('kode_sudah_ada')
+                    ->default(false),
 
                 // ── Nama ─────────────────────────────────────────────────────
                 TextInput::make('nama_sub_anak_akun')
@@ -145,16 +167,21 @@ class SubAnakAkunRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->mutateFormDataUsing(function (array $data): array {
+                    ->mutateFormDataUsing(function (\Filament\Actions\CreateAction $action, array $data): array {
                         $anak   = AnakAkun::find($data['id_anak_akun']);
                         $suffix = ltrim($data['kode_sub_anak_akun'] ?? '', '-');
+                        $kode   = $anak ? $anak->kode_anak_akun . '-' . $suffix : $suffix;
 
-                        // Rakit kode lengkap: 2210-01
-                        $data['kode_sub_anak_akun'] = $anak
-                            ? $anak->kode_anak_akun . '-' . $suffix
-                            : $suffix;
+                        if (\App\Models\SubAnakAkun::where('kode_sub_anak_akun', $kode)->exists()) {
+                            Notification::make()
+                                ->title('Kode sudah digunakan')
+                                ->danger()
+                                ->send();
+                            $action->halt(); // 👈 Sekarang aman, menggunakan $action->halt(), bukan $this->halt()
+                        }
 
-                        $data['created_by'] = Auth::id();
+                        $data['kode_sub_anak_akun'] = $kode;
+                        $data['created_by']         = Auth::id();
                         return $data;
                     }),
             ])
