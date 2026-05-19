@@ -32,6 +32,22 @@ class BukuBesar extends Page
         // isLoading = true by default, initLoad akan dipanggil via wire:init
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('export')
+                ->label('Export Excel')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('success')
+                ->action(function () {
+                    return \Maatwebsite\Excel\Facades\Excel::download(
+                        new \App\Exports\BukuBesarExport($this->filterBulan),
+                        'Buku_Besar_' . $this->filterBulan . '.xlsx'
+                    );
+                }),
+        ];
+    }
+
     public function initLoad(): void
     {
         $this->preloadSaldoAwal();

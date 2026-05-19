@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Exports\NeracaExport;
 use App\Services\NeracaService;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Pages\Page;
@@ -9,6 +10,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Livewire\Attributes\Computed;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 use UnitEnum;
 
 class NeracaPage extends Page implements HasForms
@@ -21,9 +23,9 @@ class NeracaPage extends Page implements HasForms
     protected static ?string $title = 'Neraca Telur';
     protected string $view = 'filament.pages.neraca-page';
 
-    // ── Filter state ──────────────────────────────────────────────────
     public string $periodeAwal;
     public string $periodeAkhir;
+    public bool $tampilkanSaldoNol = false;
 
     public function mount(): void
     {
@@ -32,11 +34,6 @@ class NeracaPage extends Page implements HasForms
         $this->periodeAkhir = $now->format('Y-m');
     }
 
-    // ── Computed ──────────────────────────────────────────────────────
-
-    /**
-     * Neraca multi-periode dari tabel buku_besar.
-     */
     #[Computed]
     public function neracaMulti(): array
     {
@@ -45,8 +42,6 @@ class NeracaPage extends Page implements HasForms
 
         return app(NeracaService::class)->hitungMulti($periodeList);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────
 
     public function buildPeriodeList(): array
     {
@@ -59,7 +54,6 @@ class NeracaPage extends Page implements HasForms
 
         if ($awal->gt($akhir)) return [];
 
-        // Guard: maksimal 12 bulan
         if ($awal->diffInMonths($akhir) > 11) {
             $akhir = $awal->copy()->addMonths(11);
         }
@@ -92,5 +86,37 @@ class NeracaPage extends Page implements HasForms
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * Return type mixed agar kompatibel dengan Livewire:
+     * Excel::download() mengembalikan BinaryFileResponse,
+     * tapi Livewire juga perlu bisa return null tanpa error type-hint.
+     */
+    public function exportExcel(): mixed
+    {
+        $periodeList = $this->buildPeriodeList();
+
+        if (empty($periodeList)) {
+            return null;
+        }
+
+        if (count($periodeList) === 1) {
+            $p        = $periodeList[0];
+            $filename = 'Neraca_' . $p['tahun'] . '-' . str_pad($p['bulan'], 2, '0', STR_PAD_LEFT) . '.xlsx';
+        } else {
+            $first    = $periodeList[0];
+            $last     = $periodeList[count($periodeList) - 1];
+            $filename = 'Neraca_'
+                . $first['tahun'] . '-' . str_pad($first['bulan'], 2, '0', STR_PAD_LEFT)
+                . '_sd_'
+                . $last['tahun'] . '-' . str_pad($last['bulan'], 2, '0', STR_PAD_LEFT)
+                . '.xlsx';
+        }
+
+        return Excel::download(
+            new NeracaExport($periodeList, $this->tampilkanSaldoNol),
+            $filename
+        );
     }
 }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\SatuanKonversi;
+
 return [
 
     /*
@@ -122,8 +124,17 @@ return [
         'merge' => true,
         'generate' => true,
         'methods' => [
-            'viewAny', 'view', 'create', 'update', 'delete', 'restore',
-            'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
+            'viewAny',
+            'view',
+            'create',
+            'update',
+            'delete',
+            'restore',
+            'forceDelete',
+            'forceDeleteAny',
+            'restoreAny',
+            'replicate',
+            'reorder',
         ],
         'single_parameter_methods' => [
             'viewAny',
@@ -228,7 +239,19 @@ return [
     |
     */
 
-    'custom_permissions' => [],
+    'custom_permissions' => [
+        SatuanKonversi::class => [
+            'View:SatuanKonversi',
+            'Create:SatuanKonversi',
+            'Update:SatuanKonversi',
+            'Delete:SatuanKonversi',
+            'Restore:SatuanKonversi',
+            'ForceDelete:SatuanKonversi',
+            'ForceDeleteAny:SatuanKonversi',
+            'RestoreAny:SatuanKonversi',
+            'Replicate:SatuanKonversi',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------

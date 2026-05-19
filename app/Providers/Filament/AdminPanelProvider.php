@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarFullyCollapsibleOnDesktop()
             ->spa()
             ->id('admin')
+            ->brandName('Telur')
             ->path('admin')
             ->login()
             ->viteTheme('resources/css/app.css')
