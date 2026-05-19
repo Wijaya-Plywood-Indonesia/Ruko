@@ -639,7 +639,7 @@
             </div>
 
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden">
-                <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
+                <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Akun & Keterangan</div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
                     <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Harga</div>
@@ -650,7 +650,7 @@
                 <div class="divide-y divide-gray-100 dark:divide-gray-800">
                     <template x-for="(row, i) in items" :key="i">
                         <template x-if="row && row.no_akun && row.nama_akun">
-                            <div class="grid grid-cols-[1fr_80px_140px_60px_160px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
+                            <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
                                 <div class="min-w-0 pr-4">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
@@ -670,13 +670,13 @@
                                     </div>
                                 </div>
 
-                                <div class="text-right shrink-0">
+                                <div class="text-right shrink-0 whitespace-nowrap">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
                                         x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? formatTotal(row.banyak) : '-'"></span>
                                 </div>
 
                                 {{-- Kolom Harga: tampilkan desimal jika ada --}}
-                                <div class="text-right pr-4 shrink-0">
+                                <div class="text-right pr-4 shrink-0 whitespace-nowrap">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
                                         x-text="formatTotal(row.harga)"></span>
                                 </div>
@@ -690,13 +690,21 @@
                                     </span>
                                 </div>
 
-                                <div class="flex items-center justify-end gap-3 shrink-0">
+                                <div class="flex items-center justify-end gap-3 shrink-0 whitespace-nowrap">
                                     <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                                        class="font-black text-sm tabular-nums"
+                                        class="font-black text-sm tabular-nums whitespace-nowrap"
                                         x-text="'Rp ' + formatTotal(row.total)">
                                     </div>
+                                    <button type="button" @click="$wire.mountAction('editDraft', { index: i })"
+                                        class="p-1.5 text-amber-600/80 hover:text-amber-600 dark:text-amber-500/80 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-[3px] transition-none shrink-0"
+                                        title="Edit Item">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                    </button>
                                     <button type="button" @click="$wire.removeItem(i)"
-                                        class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
+                                        class="p-1.5 text-rose-600/80 hover:text-rose-600 dark:text-rose-500/80 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-[3px] transition-none shrink-0"
+                                        title="Hapus Item">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
