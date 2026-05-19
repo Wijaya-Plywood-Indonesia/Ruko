@@ -144,6 +144,8 @@
                         <th>Plat Kendaraan</th>
                         <th>Nama Sopir</th>
                     @endif
+                    
+                    <th>Keterangan</th>
 
                 </tr>
             </thead>
@@ -179,6 +181,7 @@
 
                                 <td>{{ $item['status_transaksi'] }}</td>
                                 <td>{{ $item['kasir'] }}</td>
+                                <td>{{ $item['keterangan'] }}</td>
                             </tr>
                         @empty
                         @endforelse
@@ -205,6 +208,7 @@
                             <td>{{ $item['kendaraan'] }}</td>
                             <td>{{ $item['plat_kendaraan'] }}</td>
                             <td>{{ $item['nama_sopir'] }}</td>
+                            <td>{{ $item['keterangan'] }}</td>
                         </tr>
                     @endif
 
