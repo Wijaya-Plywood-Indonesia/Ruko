@@ -4,7 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Barang;
 use App\Models\IdentitasToko;
-use App\Models\StokBarangToko;
+use App\Models\JurnalUmum;
 use Filament\Pages\Page;
 use UnitEnum;
 
@@ -17,36 +17,86 @@ class StokMatrix extends Page
     protected $tokos;
     protected $barangs;
     protected $stok;
-    protected int $pairs = 5;   // jumlah kolom pasangan "Barang + Banyak"
+    protected int $pairs = 5;
 
     public function mount(): void
     {
-        // ambil semua toko
         $this->tokos = IdentitasToko::orderBy('nama_toko')->get();
 
-        // ambil semua barang (urut)
-        $this->barangs = Barang::orderBy('nama_barang')->get();
+        $this->barangs = Barang::with('subAnakAkun')->orderBy('nama_barang')->get();
 
-        // ambil stok (digroup berdasarkan toko -> barang)
-        $this->stok = StokBarangToko::get()
-            ->groupBy('toko_id')
-            ->map(fn($rows) => $rows->keyBy('barang_id'));
+        $matrixTemporaryStok = [];
+
+        foreach ($this->barangs as $barang) {
+            $subAkun = $barang->subAnakAkun;
+            $kodeAkun = $subAkun?->kode_sub_anak_akun;
+            $namaAkun = $subAkun?->nama_sub_anak_akun;
+
+            if (!$kodeAkun) {
+                continue;
+            }
+
+            $transaksis = JurnalUmum::where('no_akun', $kodeAkun)->get();
+
+            $totalQty = 0.0;
+
+            foreach ($transaksis as $trx) {
+                $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
+
+                $qty = (float) ($trx->banyak ?? 0);
+
+                if ($qty > 0) {
+                    if ($isDebit) {
+                        $totalQty += $qty;
+                    } else {
+                        $totalQty -= $qty;
+                    }
+                }
+            }
+
+            $tokoId = $this->resolveTokoIdFromAccountName($namaAkun);
+
+            $matrixTemporaryStok[$tokoId][$barang->id] = (object) [
+                'stok' => $totalQty
+            ];
+        }
+
+        $this->stok = collect($matrixTemporaryStok);
     }
 
-    /** 
-     * Data yang dikirim ke Blade  
-     **/
+    /**
+     */
+    private function resolveTokoIdFromAccountName(?string $namaAkun): int
+    {
+        if (empty($namaAkun)) {
+            return 1;
+        }
+
+        $namaLower = strtolower($namaAkun);
+
+        if (str_contains($namaLower, 'kandang')) {
+            return 1;
+        }
+        if (str_contains($namaLower, 'pusat') || str_contains($namaLower, 'gudang')) {
+            return 2;
+        }
+        if (str_contains($namaLower, 'retail') || str_contains($namaLower, 'toko')) {
+            return 3;
+        }
+
+        return 1;
+    }
+
     protected function getViewData(): array
     {
-        // Membagi barang ke dalam kelompok (chunks) per N-pairs
         $chunks = $this->barangs->chunk($this->pairs);
 
         return [
-            'tokos' => $this->tokos,
+            'tokos'   => $this->tokos,
             'barangs' => $this->barangs,
-            'stok' => $this->stok,
-            'pairs' => $this->pairs,
-            'chunks' => $chunks,
+            'stok'    => $this->stok,
+            'pairs'   => $this->pairs,
+            'chunks'  => $chunks,
         ];
     }
 }
