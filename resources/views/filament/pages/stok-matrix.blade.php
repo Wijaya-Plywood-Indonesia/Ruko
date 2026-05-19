@@ -74,7 +74,7 @@
     <div class="stok-group">
 
         {{-- Judul Menu Utama Ringkasan Akuntansi --}}
-        <div class="stok-title">Ringkasan Total Stok Seluruh Barang (Buku Besar)</div>
+        <div class="stok-title">Ringkasan Total Stok Seluruh Barang </div>
 
         {{-- Grid responsive diatur menggunakan jumlah pasang kolom dari properti $pairs --}}
         <div class="stok-grid" style="--pairs: {{ $pairs }};">
@@ -94,7 +94,11 @@
                     {{-- Angka saldo berjalan dicetak presisi desimal:4 jika ada pecahan sisa timbangan pakan --}}
                     <div>
                         <strong>
-                            {{ $qtyBarang > 0 ? number_format($qtyBarang, 2, ',', '.') : '0' }}
+                            @if($qtyBarang > 0)
+                            {{ number_format($qtyBarang, 2, ',', '.') }}
+                            @else
+                            0
+                            @endif
                         </strong>
                     </div>
                 </div>

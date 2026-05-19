@@ -46,8 +46,18 @@
         }
 
         @keyframes blink {
-            0%, 80%, 100% { opacity: .15; transform: scale(.8); }
-            40% { opacity: 1; transform: scale(1.2); }
+
+            0%,
+            80%,
+            100% {
+                opacity: .15;
+                transform: scale(.8);
+            }
+
+            40% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         .loading-dot {
@@ -59,13 +69,26 @@
             animation: blink 1.4s infinite ease-in-out;
         }
 
-        .loading-dot:nth-child(1) { animation-delay: 0s; }
-        .loading-dot:nth-child(2) { animation-delay: .2s; }
-        .loading-dot:nth-child(3) { animation-delay: .4s; }
+        .loading-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: .2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: .4s;
+        }
 
         @keyframes shimmer {
-            0% { background-position: -600px 0; }
-            100% { background-position: 600px 0; }
+            0% {
+                background-position: -600px 0;
+            }
+
+            100% {
+                background-position: 600px 0;
+            }
         }
 
         .skeleton-row td {
@@ -82,8 +105,15 @@
         }
 
         @keyframes fadeInRow {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .row-fadein {
@@ -108,11 +138,29 @@
             overflow-x: auto;
         }
 
-        .table-body-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .table-body-scroll::-webkit-scrollbar-track { background: transparent; }
-        .table-body-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-        .dark .table-body-scroll::-webkit-scrollbar-thumb { background: #374151; }
-        .table-body-scroll thead { position: sticky; top: 0; z-index: 10; }
+        .table-body-scroll::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        .table-body-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .table-body-scroll::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        .dark .table-body-scroll::-webkit-scrollbar-thumb {
+            background: #374151;
+        }
+
+        .table-body-scroll thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
 
         #toast-container {
             position: fixed;
@@ -134,28 +182,82 @@
             border-left: 3px solid;
             min-width: 280px;
             max-width: 360px;
-            box-shadow: 0 8px 24px rgba(0,0,0,.18);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
             pointer-events: all;
-            animation: toastIn .22s cubic-bezier(.16,1,.3,1) forwards;
+            animation: toastIn .22s cubic-bezier(.16, 1, .3, 1) forwards;
         }
 
-        .toast.hide { animation: toastOut .18s ease-in forwards; }
-        .toast-success { background: #111827; border-color: #10b981; color: #d1fae5; }
-        .toast-error   { background: #111827; border-color: #ef4444; color: #fee2e2; }
-        .toast-info    { background: #111827; border-color: #d97706; color: #fef3c7; }
+        .toast.hide {
+            animation: toastOut .18s ease-in forwards;
+        }
 
-        .toast-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
-        .toast-body { flex: 1; }
-        .toast-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; line-height: 1.3; }
-        .toast-msg   { font-size: 12px; font-weight: 500; opacity: .75; margin-top: 2px; line-height: 1.4; }
+        .toast-success {
+            background: #111827;
+            border-color: #10b981;
+            color: #d1fae5;
+        }
+
+        .toast-error {
+            background: #111827;
+            border-color: #ef4444;
+            color: #fee2e2;
+        }
+
+        .toast-info {
+            background: #111827;
+            border-color: #d97706;
+            color: #fef3c7;
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+        }
+
+        .toast-body {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            line-height: 1.3;
+        }
+
+        .toast-msg {
+            font-size: 12px;
+            font-weight: 500;
+            opacity: .75;
+            margin-top: 2px;
+            line-height: 1.4;
+        }
 
         @keyframes toastIn {
-            from { opacity: 0; transform: translateX(24px); }
-            to   { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
+
         @keyframes toastOut {
-            from { opacity: 1; transform: translateX(0); }
-            to   { opacity: 0; transform: translateX(24px); }
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(24px);
+            }
         }
 
         .bulk-bar {
@@ -199,12 +301,58 @@
             accounts:       @js($accounts ?? []),
             items:          @entangle('items'),
 
+            /* ── Hitung total: banyak × harga, atau harga saja jika banyak kosong ── */
             hitungTotal(banyak, harga) {
                 const h = parseFloat(harga) || 0;
-                if (banyak === null || banyak === undefined || banyak === '' || parseFloat(banyak) <= 0) {
-                    return h;
-                }
+                if (banyak === null || banyak === undefined || banyak === '' || parseFloat(banyak) <= 0) return h;
                 return parseFloat(banyak) * h;
+            },
+
+            /* ── Format angka jadi Rupiah: titik ribuan, koma desimal ── */
+            formatRupiah(val) {
+                if (val === null || val === undefined || val === '') return '';
+                /* Bersihkan semua kecuali angka dan koma */
+                let clean    = val.toString().replace(/[^0-9,]/g, '');
+                let commaIdx = clean.indexOf(',');
+                let intPart, decPart;
+                if (commaIdx === -1) {
+                    intPart = clean;
+                    decPart = null;
+                } else {
+                    intPart = clean.substring(0, commaIdx);
+                    /* Buang koma ganda di bagian desimal */
+                    decPart = clean.substring(commaIdx + 1).replace(/,/g, '');
+                }
+                /* Format ribuan dengan titik */
+                let formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return decPart !== null ? formatted + ',' + decPart : formatted;
+            },
+
+            /* ── Parse display → float untuk dikirim ke PHP ── */
+            parseToFloat(displayVal) {
+                if (!displayVal) return 0;
+                /* Hapus titik ribuan, ganti koma desimal jadi titik */
+                return parseFloat(displayVal.replace(/\./g, '').replace(',', '.')) || 0;
+            },
+
+            /* ── Format float PHP → display string (untuk populate edit/load draft) ── */
+            floatToDisplay(num) {
+                if (num === null || num === undefined || num === '' || isNaN(parseFloat(num))) return '';
+                let n = parseFloat(num);
+                /* Tampilkan desimal hanya jika ada */
+                let str = Number.isInteger(n) ? n.toString() : n.toString().replace('.', ',');
+                /* Terapkan format ribuan */
+                return this.formatRupiah(str);
+            },
+
+            /* ── Format total untuk preview & tabel: tanpa trailing ,00 ── */
+            formatTotal(num) {
+                if (!num && num !== 0) return '0';
+                let n      = parseFloat(num);
+                let parts  = n.toFixed(2).split('.');
+                let intFmt = new Intl.NumberFormat('id-ID').format(parseInt(parts[0]));
+                let dec    = parts[1];
+                return dec === '00' ? intFmt : intFmt + ',' + dec;
             },
 
             get filteredAccounts() {
@@ -228,11 +376,6 @@
                 this.searchTerm     = '';
                 this.isDropdownOpen = false;
             },
-            formatRupiah(val) {
-                if (val === null || val === undefined || val === '') return '';
-                let s = val.toString().replace(/[^0-9]/g, '');
-                return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            },
             renderDropdown() {
                 const container = this.$refs.dropdownList;
                 if (!container) return;
@@ -244,14 +387,14 @@
                 }
                 list.forEach(acc => {
                     if (!acc || !acc.no || !acc.nama) return;
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-[2px] flex flex-col group transition-none';
+                    const btn      = document.createElement('button');
+                    btn.type       = 'button';
+                    btn.className  = 'w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-[2px] flex flex-col group transition-none';
                     const spanNama = document.createElement('span');
-                    spanNama.className = 'text-sm text-gray-500 dark:text-gray-300 font-medium';
+                    spanNama.className   = 'text-sm text-gray-500 dark:text-gray-300 font-medium';
                     spanNama.textContent = acc.nama;
                     const spanNo = document.createElement('span');
-                    spanNo.className = 'font-bold text-gray-800 dark:text-gray-200 text-sm';
+                    spanNo.className   = 'font-bold text-gray-800 dark:text-gray-200 text-sm';
                     spanNo.textContent = acc.no;
                     btn.appendChild(spanNama);
                     btn.appendChild(spanNo);
@@ -285,19 +428,34 @@
         x-init="
             initFlatpickr();
             (function(self) {
-                $watch('searchTerm', () => { self.renderDropdown(); });
+                $watch('searchTerm',     () => { self.renderDropdown(); });
                 $watch('isDropdownOpen', val => { if (val) setTimeout(() => { self.renderDropdown(); }, 0); });
-                $watch('accounts', () => { self.renderDropdown(); });
+                $watch('accounts',       () => { self.renderDropdown(); });
             })(Alpine.raw ? Alpine.raw($data) : $data);
 
-            $watch('harga_raw', v => { harga_display = formatRupiah(v); });
             $watch('no_akun', v => {
                 if (!v) { searchTerm = ''; }
                 else if (searchTerm !== v) { searchTerm = v; }
             });
-            harga_display = formatRupiah(harga_raw);
+
+            /* Populate display saat load (misal dari draft session) */
+            harga_display = floatToDisplay(harga_raw);
+
+            /* Saat harga_raw diubah dari luar (load to draft), sync display */
+            $watch('harga_raw', v => {
+                let expected = parseToFloat(harga_display);
+                if (Math.abs(expected - parseFloat(v || 0)) > 0.001) {
+                    harga_display = floatToDisplay(v);
+                }
+            });
+
             $wire.on('toast', ({ type, title, msg }) => {
                 window.showToast(type, title, msg ?? '');
+            });
+
+            /* Saat loadToDraft selesai, sync harga_display */
+            $wire.on('harga-loaded', ({ harga }) => {
+                harga_display = floatToDisplay(harga);
             });
         ">
 
@@ -375,18 +533,51 @@
                             placeholder="Kosongkan jika tidak perlu"
                             class="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] font-bold text-gray-500 dark:text-gray-300">
                     </div>
+
                     <div class="space-y-1.5">
                         <label class="text-[11px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Harga</label>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rp</span>
-                            <input type="text" x-model="harga_display"
-                                @input="harga_display = formatRupiah($event.target.value); harga_raw = $event.target.value.replace(/[^0-9]/g, '')"
-                                @blur="harga_raw = $event.target.value.replace(/[^0-9]/g, '')"
-                                @change="harga_raw = $event.target.value.replace(/[^0-9]/g, '')"
+                            <input type="text"
+                                x-model="harga_display"
+                                @input="
+                                    const el      = $event.target;
+                                    const raw     = el.value;
+                                    const cursor  = el.selectionStart;
+
+                                    /* Berapa titik sebelum cursor di nilai lama */
+                                    const dotsBeforeCursor = (raw.substring(0, cursor).match(/\./g) || []).length;
+
+                                    const formatted = formatRupiah(raw);
+
+                                    /* Cari posisi cursor baru berdasarkan jumlah karakter non-titik */
+                                    const targetCharPos = cursor - dotsBeforeCursor;
+                                    let charCount = 0;
+                                    let newCursor = formatted.length;
+                                    for (let i = 0; i < formatted.length; i++) {
+                                        if (formatted[i] !== '.') charCount++;
+                                        if (charCount === targetCharPos) { newCursor = i + 1; break; }
+                                    }
+                                    /* Jika user baru ketik koma, paksa cursor ke akhir */
+                                    if (raw[cursor - 1] === ',') newCursor = formatted.length;
+
+                                    harga_display = formatted;
+                                    harga_raw     = parseToFloat(formatted);
+
+                                    $nextTick(() => { el.setSelectionRange(newCursor, newCursor); });
+                                "
+                                @blur="
+                                    /* Buang koma di akhir saat blur */
+                                    if (harga_display.endsWith(',')) {
+                                        harga_display = harga_display.slice(0, -1);
+                                    }
+                                    harga_raw = parseToFloat(harga_display);
+                                "
                                 placeholder="0"
                                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] font-bold text-gray-500 dark:text-gray-300">
                         </div>
                     </div>
+
                     <div class="space-y-3 pt-1">
                         <label class="text-[11px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider block text-center">Tipe Mutasi</label>
                         <div class="grid grid-cols-2 gap-3">
@@ -406,7 +597,7 @@
                     <span class="text-[10px] text-gray-300 dark:text-gray-600">→</span>
                     <span class="font-black text-sm"
                         :class="map === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(hitungTotal(banyak, harga_raw))">
+                        x-text="'Rp ' + formatTotal(hitungTotal(banyak, harga_raw))">
                     </span>
                     <span class="text-[10px] font-bold text-gray-300 dark:text-gray-600 ml-1"
                         x-text="'(' + (map === 'd' ? 'Debit' : 'Kredit') + ')'"></span>
@@ -418,7 +609,7 @@
                         Batal
                     </button>
                     <button type="button"
-                        @click="harga_raw = harga_display.replace(/[^0-9]/g, ''); $nextTick(() => { $wire.addItem(); });"
+                        @click="harga_raw = parseToFloat(harga_display); $nextTick(() => { $wire.addItem(); });"
                         class="px-10 py-2.5 bg-amber-600 dark:bg-amber-700 text-white rounded-[4px] font-bold text-[10px] uppercase tracking-widest hover:bg-amber-700 transition-none flex items-center gap-2 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -481,12 +672,13 @@
 
                                 <div class="text-right shrink-0">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                        x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? new Intl.NumberFormat('id-ID').format(row.banyak) : '-'"></span>
+                                        x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? formatTotal(row.banyak) : '-'"></span>
                                 </div>
 
+                                {{-- Kolom Harga: tampilkan desimal jika ada --}}
                                 <div class="text-right pr-4 shrink-0">
                                     <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                        x-text="new Intl.NumberFormat('id-ID').format(row.harga)"></span>
+                                        x-text="formatTotal(row.harga)"></span>
                                 </div>
 
                                 <div class="flex justify-center shrink-0">
@@ -501,7 +693,7 @@
                                 <div class="flex items-center justify-end gap-3 shrink-0">
                                     <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
                                         class="font-black text-sm tabular-nums"
-                                        x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(row.total)">
+                                        x-text="'Rp ' + formatTotal(row.total)">
                                     </div>
                                     <button type="button" @click="$wire.removeItem(i)"
                                         class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-[3px] transition-none opacity-0 group-hover:opacity-100 shrink-0">
@@ -520,12 +712,12 @@
                         <div class="px-6 py-3 text-right">
                             <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Debit</div>
                             <div class="font-black text-emerald-500 text-base tabular-nums"
-                                x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(totalDebit)"></div>
+                                x-text="'Rp ' + formatTotal(totalDebit)"></div>
                         </div>
                         <div class="px-6 py-3 text-right">
                             <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kredit</div>
                             <div class="font-black text-rose-500 text-base tabular-nums"
-                                x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(totalKredit)"></div>
+                                x-text="'Rp ' + formatTotal(totalKredit)"></div>
                         </div>
                     </div>
 
@@ -536,7 +728,7 @@
                         </svg>
                         <span class="text-[11px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Selisih</span>
                         <span class="text-[11px] font-black text-amber-700 dark:text-amber-300 tabular-nums"
-                            x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(Math.abs(totalDebit - totalKredit))">
+                            x-text="'Rp ' + formatTotal(Math.abs(totalDebit - totalKredit))">
                         </span>
                     </div>
                 </div>
@@ -775,12 +967,11 @@
                                 <th class="px-4 py-4 w-[160px]">Nama Akun</th>
                                 <th class="px-4 py-4 text-center w-[90px]">No Jurnal</th>
                                 <th class="px-4 py-4 w-[130px]">Nama</th>
-                                <th class="px-4 py-4 w-[200px]">Keterangan</th>
-                                <th class="px-4 py-4 text-right w-[90px]">Qty</th>
-                                <th class="px-4 py-4 text-right w-[130px]">Harga</th>
-                                <th class="px-4 py-4 text-right w-[140px] text-green-400 bg-green-50/10 font-black">Debit (Rp)</th>
-                                <th class="px-4 py-4 text-right w-[140px] text-red-400 bg-red-50/10 font-black">Kredit (Rp)</th>
-                                <th class="px-4 py-4 text-center w-[90px]">Aksi</th>
+                                <th class="px-4 py-4 w-[180px]">Keterangan</th>
+                                <th class="px-4 py-4 text-right w-[80px]">Qty</th>
+                                <th class="px-4 py-4 text-right w-[120px]">Harga</th>
+                                <th class="px-4 py-4 text-right w-[130px] text-green-400 bg-green-50/10 font-black">Debit (Rp)</th>
+                                <th class="px-4 py-4 text-right w-[130px] text-red-400 bg-red-50/10 font-black">Kredit (Rp)</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -789,22 +980,54 @@
                                 <template x-for="n in 8" :key="n">
                                     <tr class="skeleton-row">
                                         <td class="px-4 py-5"></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-16 bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-28 bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-10 mx-auto bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-32 bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-10 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-16 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div></td>
-                                        <td class="px-4 py-5"><div class="h-3 rounded w-8 mx-auto bg-gray-200 dark:bg-gray-700"></div></td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-16 bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-28 bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-10 mx-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-20 bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-32 bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-10 ml-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-16 ml-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-20 ml-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
+                                        <td class="px-4 py-5">
+                                            <div class="h-3 rounded w-8 mx-auto bg-gray-200 dark:bg-gray-700"></div>
+                                        </td>
                                     </tr>
                                 </template>
                             </template>
 
                             @forelse($historyJurnals as $index => $hj)
+                            @php
+                            /* Helper: format angka desimal PHP — buang trailing ,00 */
+                            $fmt = function(float $n): string {
+                            $f = number_format($n, 2, ',', '.');
+                            return str_ends_with($f, ',00') ? substr($f, 0, -3) : $f;
+                            };
+                            $totalNominal = ($hj->banyak !== null && $hj->banyak > 0)
+                            ? $hj->banyak * $hj->harga
+                            : $hj->harga;
+                            @endphp
                             <tr data-row-id="{{ $hj->id }}"
                                 :class="isSelected({{ $hj->id }}) ? 'row-selected' : ''"
                                 class="hover:bg-gray-50 dark:hover:bg-gray-800/50 align-top transition-none row-fadein"
@@ -822,38 +1045,24 @@
                                 <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ $hj->nama ?? '-' }}</td>
                                 <td class="px-4 py-4 text-[12px] leading-relaxed text-gray-500 dark:text-gray-400 break-words whitespace-normal">{{ $hj->keterangan }}</td>
                                 <td class="px-4 py-4 text-right font-medium text-gray-400 dark:text-gray-500">
-                                    {{ ($hj->banyak !== null && $hj->banyak > 0) ? number_format($hj->banyak, 0, ',', '.') : '-' }}
+                                    {{ ($hj->banyak !== null && $hj->banyak > 0) ? $fmt($hj->banyak) : '-' }}
                                 </td>
-                                <td class="px-4 py-4 text-right text-gray-400 dark:text-gray-500 font-mono">{{ number_format($hj->harga, 0, ',', '.') }}</td>
+                                <td class="px-4 py-4 text-right text-gray-400 dark:text-gray-500 font-mono">
+                                    {{ $fmt($hj->harga) }}
+                                </td>
                                 <td class="px-4 py-4 text-right font-bold text-green-400 bg-green-50/5">
                                     @if(in_array(strtolower($hj->map), ['d', 'debit']))
-                                        {{ number_format(($hj->banyak !== null && $hj->banyak > 0) ? $hj->banyak * $hj->harga : $hj->harga, 0, ',', '.') }}
+                                    {{ $fmt($totalNominal) }}
                                     @else
-                                        0
+                                    <span class="text-gray-300 dark:text-gray-600 font-normal">—</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-4 text-right font-bold text-red-400 bg-red-50/5">
                                     @if(in_array(strtolower($hj->map), ['k', 'kredit']))
-                                        {{ number_format(($hj->banyak !== null && $hj->banyak > 0) ? $hj->banyak * $hj->harga : $hj->harga, 0, ',', '.') }}
+                                    {{ $fmt($totalNominal) }}
                                     @else
-                                        0
+                                    <span class="text-gray-300 dark:text-gray-600 font-normal">—</span>
                                     @endif
-                                </td>
-                                <td class="px-4 py-4 text-center">
-                                    <div class="flex items-center justify-center gap-1">
-                                        <button type="button" wire:click="mountAction('editHistory', { id: {{ $hj->id }} })"
-                                            class="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded transition-colors" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" wire:click="mountAction('deleteHistory', { id: {{ $hj->id }} })"
-                                            class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded transition-colors" title="Hapus">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
                                 </td>
                             </tr>
                             @empty
@@ -912,10 +1121,16 @@
                             <tr>
                                 <td colspan="9" class="px-4 py-5 text-right text-gray-400 tracking-widest uppercase">Total Akumulasi</td>
                                 <td class="px-4 py-5 text-right text-green-400 bg-green-50/10 text-base font-black">
-                                    {{ number_format($totalDebitDB, 0, ',', '.') }}
+                                    @php
+                                    $fmtTotal = function(float $n): string {
+                                    $f = number_format($n, 2, ',', '.');
+                                    return str_ends_with($f, ',00') ? substr($f, 0, -3) : $f;
+                                    };
+                                    @endphp
+                                    {{ $fmtTotal($totalDebitDB) }}
                                 </td>
                                 <td class="px-4 py-5 text-right text-red-400 bg-red-50/10 text-base font-black">
-                                    {{ number_format($totalKreditDB, 0, ',', '.') }}
+                                    {{ $fmtTotal($totalKreditDB) }}
                                 </td>
                                 <td></td>
                             </tr>
@@ -941,7 +1156,7 @@
                                             <svg class="w-3 h-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold normal-case tracking-normal">Selisih: Rp {{ number_format($selisihDB, 0, ',', '.') }}</span>
+                                            <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold normal-case tracking-normal">Selisih: Rp {{ $fmtTotal($selisihDB) }}</span>
                                         </div>
                                     </div>
                                     @endif
@@ -1002,7 +1217,9 @@
             container.appendChild(el);
             setTimeout(function() {
                 el.classList.add('hide');
-                el.addEventListener('animationend', function() { el.remove(); });
+                el.addEventListener('animationend', function() {
+                    el.remove();
+                });
             }, duration);
         };
     </script>
@@ -1011,4 +1228,4 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr" defer></script>
     @endpush
 
-</x-filament-panels::page>  
+</x-filament-panels::page>
