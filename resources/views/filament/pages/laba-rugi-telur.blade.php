@@ -1,24 +1,40 @@
 <x-filament-panels::page>
 
 {{-- ══════════════════════════════════════════════════════════
-     FILTER
+     FILTER DINAMIS HARIAN / BULANAN
 ══════════════════════════════════════════════════════════ --}}
 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-6">
 
-    <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-5">
-        Filter Periode Laba Rugi
-    </h3>
+    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4 mb-5">
+        <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+            Filter Periode Laba Rugi
+        </h3>
+        
+        {{-- Tombol Toggle Harian & Bulanan --}}
+        <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            <button type="button" wire:click="ubahJenisFilter('bulan')"
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all {{ $jenisFilter === 'bulan' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-white' : 'text-gray-500' }}">
+                Bulanan
+            </button>
+            <button type="button" wire:click="ubahJenisFilter('hari')"
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all {{ $jenisFilter === 'hari' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-white' : 'text-gray-500' }}">
+                Harian
+            </button>
+        </div>
+    </div>
 
     <div class="flex flex-col sm:flex-row items-start sm:items-end gap-6">
 
         <div class="flex-1 w-full">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Dari Periode</label>
-            <input type="month" wire:model.live="periodeAwal"
-                min="{{ now()->subYears(5)->format('Y-m') }}"
-                max="{{ now()->addYear()->format('Y-m') }}"
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Dari {{ ucfirst($jenisFilter) }}
+            </label>
+            <input type="{{ $jenisFilter === 'hari' ? 'date' : 'month' }}" wire:model.live="periodeAwal"
+                min="{{ $jenisFilter === 'hari' ? now()->subYears(5)->format('Y-m-d') : now()->subYears(5)->format('Y-m') }}"
+                max="{{ $jenisFilter === 'hari' ? now()->addYear()->format('Y-m-d') : now()->addYear()->format('Y-m') }}"
                 class="w-full rounded-lg border border-gray-300 dark:border-gray-700
                        dark:bg-gray-800 dark:text-gray-200 text-sm px-4 py-2.5
-                       focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-200
+                       focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200
                        transition-colors cursor-pointer" />
         </div>
 
@@ -29,13 +45,15 @@
         </div>
 
         <div class="flex-1 w-full">
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Sampai Periode</label>
-            <input type="month" wire:model.live="periodeAkhir"
-                min="{{ now()->subYears(5)->format('Y-m') }}"
-                max="{{ now()->addYear()->format('Y-m') }}"
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Sampai {{ ucfirst($jenisFilter) }}
+            </label>
+            <input type="{{ $jenisFilter === 'hari' ? 'date' : 'month' }}" wire:model.live="periodeAkhir"
+                min="{{ $jenisFilter === 'hari' ? now()->subYears(5)->format('Y-m-d') : now()->subYears(5)->format('Y-m') }}"
+                max="{{ $jenisFilter === 'hari' ? now()->addYear()->format('Y-m-d') : now()->addYear()->format('Y-m') }}"
                 class="w-full rounded-lg border border-gray-300 dark:border-gray-700
                        dark:bg-gray-800 dark:text-gray-200 text-sm px-4 py-2.5
-                       focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-200
+                       focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200
                        transition-colors cursor-pointer" />
         </div>
 
@@ -58,7 +76,7 @@
                     </svg>
                     <span>
                         <strong class="text-gray-700 dark:text-gray-300">{{ $this->jumlahPeriode() }}</strong>
-                        bulan ditampilkan
+                        data {{ $jenisFilter }}an ditampilkan
                     </span>
                 </div>
             @endif
@@ -66,12 +84,12 @@
     </div>
 
     <p class="mt-4 text-xs text-gray-400 dark:text-gray-600">
-        Maksimal 12 bulan. Jika rentang melebihi 12 bulan, sistem otomatis membatasi sampai bulan ke-12.
+        Maksimal 12 bulan (mode Bulanan) dan 31 hari berturut-turut (mode Harian).
     </p>
 </div>
 
 {{-- ══════════════════════════════════════════════════════════
-     TABEL
+     TABEL KONTEN
 ══════════════════════════════════════════════════════════ --}}
 @if(!$this->periodeValid())
     <div class="text-center py-16 text-gray-400 dark:text-gray-600">
@@ -82,7 +100,7 @@
 @php
     $r    = $ringkasanPerBulan;
     $buls = $bulanList;
-    $pKey = fn(array $p): string => $p['tahun'] . '-' . str_pad($p['bulan'], 2, '0', STR_PAD_LEFT);
+    $pKey = fn(array $p): string => $p['date_string'] ?? ($p['tahun'] . '-' . str_pad($p['bulan'], 2, '0', STR_PAD_LEFT));
 
     $lastPendapatanIdx = null;
     $lastReturIdx      = null;
@@ -204,8 +222,9 @@
         <th class="px-4 py-3 text-left text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider">Nama Akun</th>
         @foreach($buls as $periode)
             <th class="px-4 py-3 text-center text-[11px] font-semibold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-l border-gray-200 dark:border-gray-700"
-                colspan="3"> {{-- ← 3 kolom --}}
-                {{ $this->getNamaBulan($periode['bulan']) }} {{ $periode['tahun'] }}
+                colspan="3">
+                {{-- HEADER DINAMIS DARI PROPERTY 'LABEL' --}}
+                {{ $periode['label'] }}
             </th>
         @endforeach
     </tr>

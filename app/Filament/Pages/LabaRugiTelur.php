@@ -2,14 +2,14 @@
 
 namespace App\Filament\Pages;
 
-use App\Exports\LabaRugiExport;          // ← tambahan
+use App\Exports\LabaRugiExport;
 use App\Models\AkunGroup;
 use App\Models\SubAnakAkun;
 use App\Models\JurnalUmum;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Pages\Page;
 use Carbon\Carbon;
-use Maatwebsite\Excel\Facades\Excel;     // ← tambahan
+use Maatwebsite\Excel\Facades\Excel;
 use UnitEnum;
 
 class LabaRugiTelur extends Page
@@ -21,6 +21,8 @@ class LabaRugiTelur extends Page
     protected static ?string $navigationLabel = 'Laba Rugi Telur';
     protected string $view = 'filament.pages.laba-rugi-telur';
 
+    // ── PROPERTI FILTER DINAMIS ──
+    public string $jenisFilter = 'bulan'; // Default bulanan
     public string $periodeAwal;
     public string $periodeAkhir;
     public bool $tampilkanSaldoNol = false;
@@ -42,30 +44,79 @@ class LabaRugiTelur extends Page
     public function updatedPeriodeAkhir(): void { $this->generateLaporan(); }
     public function updatedTampilkanSaldoNol(): void {}
 
+    // ── FUNGSI RESET FILTER SAAT TOMBOL DIKLIK ──
+    public function ubahJenisFilter(string $jenis): void
+    {
+        $this->jenisFilter = $jenis;
+        $now = now();
+        
+        if ($jenis === 'hari') {
+            $this->periodeAwal  = $now->startOfMonth()->format('Y-m-d');
+            $this->periodeAkhir = $now->format('Y-m-d');
+        } else {
+            $this->periodeAwal  = $now->format('Y-m');
+            $this->periodeAkhir = $now->format('Y-m');
+        }
+        
+        // Render ulang laporan setiap ganti filter
+        $this->generateLaporan();
+    }
+
     public function buildPeriodeList(): array
     {
+        $list = [];
+
         try {
-            $awal  = Carbon::createFromFormat('Y-m', $this->periodeAwal)->startOfMonth();
-            $akhir = Carbon::createFromFormat('Y-m', $this->periodeAkhir)->startOfMonth();
+            if ($this->jenisFilter === 'hari') {
+                $awal  = Carbon::createFromFormat('Y-m-d', $this->periodeAwal)->startOfDay();
+                $akhir = Carbon::createFromFormat('Y-m-d', $this->periodeAkhir)->startOfDay();
+                
+                if ($awal->gt($akhir)) return [];
+
+                // Maksimal 31 hari
+                if ($awal->diffInDays($akhir) > 31) {
+                    $akhir = $awal->copy()->addDays(31);
+                }
+
+                $current = $awal->copy();
+                while ($current->lte($akhir)) {
+                    $list[] = [
+                        'date_string' => $current->format('Y-m-d'),
+                        'label'       => $current->locale('id')->isoFormat('DD MMM Y'),
+                        'start'       => $current->copy()->startOfDay(),
+                        'end'         => $current->copy()->endOfDay(),
+                        'tahun'       => (int) $current->format('Y'),
+                        'bulan'       => (int) $current->format('n'),
+                    ];
+                    $current->addDay();
+                }
+
+            } else {
+                $awal  = Carbon::createFromFormat('Y-m', $this->periodeAwal)->startOfMonth();
+                $akhir = Carbon::createFromFormat('Y-m', $this->periodeAkhir)->startOfMonth();
+
+                if ($awal->gt($akhir)) return [];
+
+                // Maksimal 12 bulan
+                if ($awal->diffInMonths($akhir) > 11) {
+                    $akhir = $awal->copy()->addMonths(11);
+                }
+
+                $current = $awal->copy();
+                while ($current->lte($akhir)) {
+                    $list[] = [
+                        'date_string' => $current->format('Y-m'),
+                        'label'       => $current->locale('id')->isoFormat('MMMM Y'),
+                        'start'       => $current->copy()->startOfMonth(),
+                        'end'         => $current->copy()->endOfMonth(),
+                        'tahun'       => (int) $current->format('Y'),
+                        'bulan'       => (int) $current->format('n'),
+                    ];
+                    $current->addMonth();
+                }
+            }
         } catch (\Exception $e) {
             return [];
-        }
-
-        if ($awal->gt($akhir)) return [];
-
-        if ($awal->diffInMonths($akhir) > 11) {
-            $akhir = $awal->copy()->addMonths(11);
-        }
-
-        $list    = [];
-        $current = $awal->copy();
-
-        while ($current->lte($akhir)) {
-            $list[] = [
-                'tahun' => (int) $current->format('Y'),
-                'bulan' => (int) $current->format('n'),
-            ];
-            $current->addMonth();
         }
 
         return $list;
@@ -79,8 +130,9 @@ class LabaRugiTelur extends Page
     public function periodeValid(): bool
     {
         try {
-            $awal  = Carbon::createFromFormat('Y-m', $this->periodeAwal);
-            $akhir = Carbon::createFromFormat('Y-m', $this->periodeAkhir);
+            $format = $this->jenisFilter === 'hari' ? 'Y-m-d' : 'Y-m';
+            $awal   = Carbon::createFromFormat($format, $this->periodeAwal);
+            $akhir  = Carbon::createFromFormat($format, $this->periodeAkhir);
             return $awal->lte($akhir);
         } catch (\Exception $e) {
             return false;
@@ -95,18 +147,13 @@ class LabaRugiTelur extends Page
         }
 
         $periodeList = $this->bulanList;
+        $first = $periodeList[0];
+        $last  = $periodeList[count($periodeList) - 1];
 
         if (count($periodeList) === 1) {
-            $p        = $periodeList[0];
-            $filename = 'LabaRugi_' . $p['tahun'] . '-' . str_pad($p['bulan'], 2, '0', STR_PAD_LEFT) . '.xlsx';
+            $filename = 'LabaRugi_' . $first['date_string'] . '.xlsx';
         } else {
-            $first    = $periodeList[0];
-            $last     = $periodeList[count($periodeList) - 1];
-            $filename = 'LabaRugi_'
-                . $first['tahun'] . '-' . str_pad($first['bulan'], 2, '0', STR_PAD_LEFT)
-                . '_sd_'
-                . $last['tahun'] . '-' . str_pad($last['bulan'], 2, '0', STR_PAD_LEFT)
-                . '.xlsx';
+            $filename = 'LabaRugi_' . $first['date_string'] . '_sd_' . $last['date_string'] . '.xlsx';
         }
 
         return Excel::download(
@@ -155,24 +202,12 @@ class LabaRugiTelur extends Page
             ->with([
                 'subAnakAkuns' => fn($q) => $q
                     ->orderBy('kode_sub_anak_akun')
-                    ->select([
-                        'sub_anak_akuns.id',
-                        'id_anak_akun',
-                        'kode_sub_anak_akun',
-                        'nama_sub_anak_akun',
-                        'saldo_normal',
-                    ])
+                    ->select(['sub_anak_akuns.id', 'id_anak_akun', 'kode_sub_anak_akun', 'nama_sub_anak_akun', 'saldo_normal'])
                     ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']),
 
                 'childrenRecursive.subAnakAkuns' => fn($q) => $q
                     ->orderBy('kode_sub_anak_akun')
-                    ->select([
-                        'sub_anak_akuns.id',
-                        'id_anak_akun',
-                        'kode_sub_anak_akun',
-                        'nama_sub_anak_akun',
-                        'saldo_normal',
-                    ])
+                    ->select(['sub_anak_akuns.id', 'id_anak_akun', 'kode_sub_anak_akun', 'nama_sub_anak_akun', 'saldo_normal'])
                     ->with(['anakAkun:id,kode_anak_akun,nama_anak_akun']),
 
                 'childrenRecursive.anakAkuns.subAnakAkuns',
@@ -227,14 +262,10 @@ class LabaRugiTelur extends Page
         $this->sudahFilter       = true;
     }
 
+    // Menggunakan key dinamis yang konsisten
     public function periodeKey(array $periode): string
     {
-        return $periode['tahun'] . '-' . str_pad($periode['bulan'], 2, '0', STR_PAD_LEFT);
-    }
-
-    public function labelPeriode(array $periode): string
-    {
-        return $this->getNamaBulan($periode['bulan']) . ' ' . $periode['tahun'];
+        return $periode['date_string'] ?? ($periode['tahun'] . '-' . str_pad($periode['bulan'], 2, '0', STR_PAD_LEFT));
     }
 
     private function getSaldoMapPerPeriode(array $periodeList): array
@@ -244,11 +275,11 @@ class LabaRugiTelur extends Page
 
         foreach ($periodeList as $periode) {
             $key   = $this->periodeKey($periode);
-            $start = Carbon::create($periode['tahun'], $periode['bulan'], 1)->startOfMonth();
-            $end   = Carbon::create($periode['tahun'], $periode['bulan'], 1)->endOfMonth();
+            $start = $periode['start']; // Menggunakan object Carbon dinamis
+            $end   = $periode['end'];
 
             $map     = [];
-            $jurnals = JurnalUmum::whereBetween('tgl', [$start, $end])->get();
+            $jurnals = JurnalUmum::whereBetween('tgl', [$start->format('Y-m-d'), $end->format('Y-m-d')])->get();
 
             foreach ($jurnals as $jurnal) {
                 $kode  = $jurnal->no_akun;
@@ -301,7 +332,7 @@ class LabaRugiTelur extends Page
                     'nama'              => $anakAkun->nama_anak_akun,
                     'children'          => $subChildren,
                     'nilai_per_periode' => $nilaiAnakAkun,
-                    'nilai_per_bulan'   => $nilaiAnakAkun,
+                    'nilai_per_bulan'   => $nilaiAnakAkun, // tetap butuh untuk kompatibilitas ke blade
                 ];
 
                 $children[] = $anakNode;
@@ -395,28 +426,18 @@ class LabaRugiTelur extends Page
         ];
     }
 
-    public function getNamaBulan(int $bulan): string
-    {
-        return [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret',
-            4 => 'April',   5 => 'Mei',       6 => 'Juni',
-            7 => 'Juli',    8 => 'Agustus',   9 => 'September',
-            10 => 'Oktober',11 => 'November', 12 => 'Desember',
-        ][$bulan] ?? '';
-    }
-
     private function getSaldoQtyPerPeriode(array $periodeList): array
     {
         $qtyPerPeriode = [];
 
         foreach ($periodeList as $periode) {
             $key   = $this->periodeKey($periode);
-            $start = Carbon::create($periode['tahun'], $periode['bulan'], 1)->startOfMonth();
-            $end   = Carbon::create($periode['tahun'], $periode['bulan'], 1)->endOfMonth();
+            $start = $periode['start'];
+            $end   = $periode['end'];
 
             $saldoNormalMap = SubAnakAkun::pluck('saldo_normal', 'kode_sub_anak_akun')->toArray();
 
-            $mutasiQty = JurnalUmum::whereBetween('tgl', [$start, $end])
+            $mutasiQty = JurnalUmum::whereBetween('tgl', [$start->format('Y-m-d'), $end->format('Y-m-d')])
                 ->whereNotNull('banyak')
                 ->where('banyak', '>', 0)
                 ->selectRaw("
@@ -448,6 +469,7 @@ class LabaRugiTelur extends Page
         return $qtyPerPeriode;
     }
 
+    // ─── TAMBAHKAN KODE INI DI BAGIAN PALING BAWAH CLASS ───
     public function formatRupiah(float $nilai): string
     {
         return 'Rp ' . number_format(abs($nilai), 0, ',', '.');
