@@ -356,8 +356,8 @@
                              }">
                             
                             @if($metode_pembayaran === 'TUNAI & TRANSFER')
-                                <div class="grid grid-cols-2 gap-3 mb-2">
-                                    <div class="space-y-1">
+                                <div class="flex flex-wrap gap-3 mb-2">
+                                    <div class="flex-1 min-w-[140px] space-y-1">
                                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Tunai (Cash)</label>
                                         <div class="flex items-center gap-1 border-b border-primary-500 pb-0.5">
                                             <span class="text-xs font-bold text-primary-600">Rp</span>
@@ -373,7 +373,7 @@
                                             />
                                         </div>
                                     </div>
-                                    <div class="space-y-1">
+                                    <div class="flex-1 min-w-[140px] space-y-1">
                                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Transfer</label>
                                         <div class="flex items-center gap-1 border-b border-primary-500 pb-0.5">
                                             <span class="text-xs font-bold text-primary-600">Rp</span>
