@@ -10,6 +10,7 @@ use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class BarangsTable
 {
@@ -57,6 +58,27 @@ class BarangsTable
                     ->label('Stok Min')
                     ->badge()
                     ->color(fn(int $state) => $state > 0 ? 'warning' : 'gray'),
+
+                TextColumn::make('subAnakAkun.kode_sub_anak_akun')
+                    ->label('Kode Akun')
+                    ->badge()
+                    ->color('warning')
+                    ->placeholder('Belum diset')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->orWhereHas('subAnakAkun', function (Builder $q) use ($search) {
+                            $q->where('kode_sub_anak_akun', 'like', "%{$search}%");
+                        });
+                    }),
+
+                // ── PERBAIKAN 2: CUSTOM SEARCH UNTUK NAMA AKUN ──────────────────
+                TextColumn::make('subAnakAkun.nama_sub_anak_akun')
+                    ->label('Nama Akun Jurnal')
+                    ->placeholder('—')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->orWhereHas('subAnakAkun', function (Builder $q) use ($search) {
+                            $q->where('nama_sub_anak_akun', 'like', "%{$search}%");
+                        });
+                    }),
 
                 IconColumn::make('is_active')
                     ->label('Status')
