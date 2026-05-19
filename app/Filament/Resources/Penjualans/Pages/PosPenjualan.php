@@ -200,7 +200,7 @@ class PosPenjualan extends Page
 
     protected function calculateTotal(): void
     {
-        $this->total = collect($this->cart)->sum(fn($i) => $i['subtotal'] ?? 0);
+        $this->total = max(0, collect($this->cart)->sum(fn($i) => $i['subtotal'] ?? 0));
     }
 
     /* ================= CART ================= */
@@ -280,7 +280,7 @@ class PosPenjualan extends Page
         if (!isset($this->cart[$id])) return;
 
         $item = $this->cart[$id];
-        $this->cart[$id]['subtotal'] = ($item['harga_jual'] * $item['qty']) - ($item['total_potongan'] ?? 0);
+        $this->cart[$id]['subtotal'] = max(0, ($item['harga_jual'] * $item['qty']) - ($item['total_potongan'] ?? 0));
     }
 
     /* ================= CUSTOMER SEARCH ================= */
