@@ -315,23 +315,129 @@ class StockOpnamePage extends Page implements HasForms
      |  APPROVE
      ========================= */
 
+    /* =========================
+     |  APPROVE & POST TO JURNAL PEMBANTU
+     ========================= */
+
     public function approve(): void
     {
-        if (!$this->opname)
+        if (!$this->opname) {
             return;
+        }
 
         try {
-            app(StockOpnameService::class)->approve(
-                $this->opname,
-                auth()->id(),
-                $this->catatan_approval ?: null
-            );
+            DB::transaction(function () {
+                // 1. Jalankan approval internal status dokumen opname melalui service logistik Anda
+                app(StockOpnameService::class)->approve(
+                    $this->opname,
+                    auth()->id(),
+                    $this->catatan_approval ?: null
+                );
 
+                // Load detail barang opname beserta relasi akun keuangannya
+                $this->opname->load('details.barang.subAnakAkun');
+
+                // Hitung nomor urut jurnal berikutnya (max + 1)
+                // Hitung nomor urut jurnal berikutnya (max + 1)
+                $nextJurnalNo = (int) (\App\Models\JurnalPembantuHeader::max('jurnal') ?? 0) + 1;
+
+                // 💡 HITUNG JUGA NOMOR URUT INTEGER UNTUK NO JURNAL PEMBANTU
+                // Karena tipenya di database adalah Integer, kita ambil nilai tertinggi lalu tambah 1
+                $nextNoJurnalPembantu = (int) (\App\Models\JurnalPembantuHeader::max('no_jurnal_pembantu') ?? 0) + 1;
+
+                // 2. TERBITKAN JURNAL PEMBANTU HEADER
+                $jurnalPembantuHeader = \App\Models\JurnalPembantuHeader::create([
+                    'no_jurnal_pembantu'  => $nextNoJurnalPembantu,
+                    'tgl_transaksi'       => now()->format('Y-m-d'),
+                    'jenis_transaksi'     => 'so',
+                    'modul_asal'          => 'stock_opname',
+                    'jurnal'              => $nextJurnalNo,
+                    'no_akun'             => '-',
+                    'nama_akun'           => 'Multi Akun Persediaan (Stock Opname)',
+                    'map'                 => 'd', // Default formal (Debet)
+                    'no_dokumen'          => $this->opname->no_opname ?? 'OPNAME_STOK',
+                    'keterangan'          => 'Stock Opname: ' . ($this->opname->catatan ?? 'Penyesuaian Fisik Gudang'),
+                    'status'              => \App\Models\JurnalPembantuHeader::STATUS_DIPOSTING,
+                    'adalah_jurnal_balik' => false,
+                    'dibuat_oleh'         => auth()->id(),
+                    'diposting_oleh'      => auth()->id(),
+                    'tgl_posting'         => now(),
+                ]);
+                // Variabel bantu untuk indexing nomor urut item di dalam loop
+                $loopIndex = 0;
+
+                foreach ($this->opname->details as $detail) {
+                    $barang = $detail->barang;
+                    $subAkun = $barang?->subAnakAkun;
+                    $kodeAkun = $subAkun?->kode_sub_anak_akun;
+                    $namaAkun = $subAkun?->nama_sub_anak_akun;
+
+                    // Lewati barang jika belum dikaitkan dengan nomor akun keuangan akuntansi
+                    if (!$kodeAkun) {
+                        continue;
+                    }
+
+                    // 🔍 HITUNG REAL-TIME STOK SEBELUMNYA DARI JURNAL PEMBANTU ITEM
+                    // Menghitung timbunan saldo berjalan (running balance) khusus untuk ID barang ini
+                    $transaksis = \App\Models\JurnalPembantuItem::where('barang_id', $barang->id)
+                        ->whereHas('header', function ($query) use ($kodeAkun) {
+                            $query->where('no_akun', $kodeAkun)->where('status', '!=', \App\Models\JurnalPembantuHeader::STATUS_DRAFT);
+                        })
+                        ->get();
+
+                    $stokBukuBesarTerkini = 0.0;
+
+                    foreach ($transaksis as $trx) {
+                        // Cari peta posisi (map) apakah dari item atau fallback ke header
+                        $isDebit = in_array(strtolower($trx->map ?? $trx->header?->map), ['d', 'debit']);
+                        $qtyTrx = (float) ($trx->banyak ?? 0);
+
+                        if ($isDebit) {
+                            $stokBukuBesarTerkini += $qtyTrx;
+                        } else {
+                            $stokBukuBesarTerkini -= $qtyTrx;
+                        }
+                    }
+
+                    // 🔍 CARI SELISIH NYATA: FISIK DI INPUT GUDANG VS TOTAL HITUNGAN BUKU BESAR
+                    $stokAktualFisik = (float) ($detail->stok_aktual ?? 0);
+                    $selisihOpname = $stokAktualFisik - $stokBukuBesarTerkini;
+
+                    // Jika fisik dan komputer sudah sama, lewati (tidak perlu penyesuaian stok)
+                    if ($selisihOpname == 0) {
+                        continue;
+                    }
+
+                    // Tentukan Debet (Barang Masuk/Nambah) atau Kredit (Barang Keluar/Kurang)
+                    $mapType = $selisihOpname > 0 ? 'debit' : 'kredit';
+                    $qtyPenyesuaian = abs($selisihOpname);
+
+                    // 3. MASUKKAN STOK MELALUI JURNAL PEMBANTU ITEM (TERIKAT HEADER)
+                    // Logika booting model Anda akan otomatis menghitung perkalian kolom 'jumlah'
+                    $jurnalPembantuHeader->items()->create([
+                        'urut'         => ++$loopIndex,
+                        'barang_id'    => $barang->id, // Kolom identitas baru logistik
+                        'no_akun'      => $kodeAkun,   // Kolom identitas baru logistik
+                        'nama_akun'    => $namaAkun,   // Kolom identitas baru logistik
+                        'map'          => $mapType,    // Mengunci arah pergerakan stok 'debit' / 'kredit'
+                        'nama_barang'  => $barang->nama_barang,
+                        'no_dokumen'   => $this->opname->no_opname ?? 'OPNAME_STOK',
+                        'banyak'       => $qtyPenyesuaian, // Disimpan presisi decimal:4 sesuai timbangan pakan Anda
+                        'harga'        => (float) ($barang->harga_pokok ?? 0),
+                        'status'       => true, // Item aktif
+                        'keterangan'   => 'Opname Penyesuaian Fisik: ' . $barang->nama_barang . ' (Selisih: ' . ($selisihOpname > 0 ? '+' : '') . $selisihOpname . ')',
+                        'created_by'   => auth()->id(),
+                    ]);
+                }
+            });
+
+            // Sampaikan notifikasi sukses jika transaction database berhasil tanpa rollback
             Notification::make()
-                ->title('Opname disetujui, stok berhasil disesuaikan')
+                ->title('Opname disetujui, Jurnal Pembantu & Stok Baru sukses tercatat')
                 ->success()
                 ->send();
 
+            // Bersihkan form halaman kustom Livewire kembali ke kondisi semula
             $this->reset(['opname', 'details', 'catatan_approval', 'toko_id', 'catatan']);
             $this->form->fill();
             $this->refreshDaftarOpname();

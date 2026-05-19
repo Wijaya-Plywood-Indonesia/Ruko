@@ -58,8 +58,7 @@
                 setBayarPas() {
                     this.bayar = this.grandTotal;
                 }
-            }"
-        >
+            }">
 
             <form wire:submit.prevent="simpan" class="pos-pro-dashboard flex flex-col gap-4 lg:gap-6">
 
@@ -100,7 +99,7 @@
                                     <x-heroicon-o-building-storefront class="w-4 h-4 text-primary-500" /> Informasi Supplier
                                 </h3>
                             </div>
-                            
+
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                                 <div class="md:col-span-2 flex flex-col gap-1.5 relative" wire:ignore
                                     x-data="{
@@ -138,12 +137,12 @@
                                         }
                                     }"
                                     @click.away="isOpen = false">
-                                    
+
                                     <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1 flex items-center justify-between">
                                         <span>Cari Supplier <span class="text-danger-500 font-bold">*</span></span>
                                         <span x-show="$wire.is_new_supplier" x-cloak class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 font-bold border border-amber-300 uppercase tracking-wider rounded">Input Manual</span>
                                     </label>
-                                    
+
                                     <div class="relative flex items-center">
                                         <input type="text" x-model="search" @focus="isOpen = true" placeholder="Ketik nama supplier..."
                                             class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-3 pr-8 py-1.5 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white transition-all outline-none">
@@ -151,7 +150,7 @@
                                             <x-heroicon-o-x-mark class="w-4 h-4" stroke-width="3" />
                                         </button>
                                     </div>
-                                    
+
                                     <div x-show="isOpen" x-transition x-cloak class="absolute top-[55px] z-50 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl max-h-48 overflow-y-auto p-1 rounded-lg">
                                         <template x-for="sup in filteredSuppliers" :key="sup.id">
                                             <button type="button" @click="selectSupplier(sup)" class="w-full text-left px-3 py-2 hover:bg-primary-50 dark:hover:bg-primary-900/40 rounded flex flex-col group border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors">
@@ -169,7 +168,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Nama Supplier</label>
                                     <div class="relative">
@@ -179,7 +178,7 @@
                                             class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white" />
                                     </div>
                                 </div>
-                                
+
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Telepon Supplier</label>
                                     <div class="relative">
@@ -190,7 +189,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Alamat Supplier</label>
                                 <textarea wire:model="supplier_address" rows="1" placeholder="Alamat..."
@@ -218,20 +217,20 @@
                                     wire:focus="openDropdown" />
 
                                 @if($showDropdown && !empty($searchResults))
-                                    <div class="absolute inset-x-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
-                                        @foreach($searchResults as $barang)
-                                            <div wire:click="selectBarang({{ $barang['id'] }})" class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
-                                                <div>
-                                                    <div class="font-semibold text-sm text-gray-900 dark:text-white">{{ $barang['nama_barang'] }}</div>
-                                                    <div class="text-[10px] text-gray-500 uppercase">{{ $barang['kode_barang'] }}</div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="font-bold text-sm text-primary-600">Rp{{ number_format($barang['harga_beli']) }}</div>
-                                                    <div class="text-[9px] text-gray-400">Satuan: {{ $barang['satuan'] }}</div>
-                                                </div>
-                                            </div>
-                                        @endforeach
+                                <div class="absolute inset-x-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                                    @foreach($searchResults as $barang)
+                                    <div wire:click="selectBarang({{ $barang['id'] }})" class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
+                                        <div>
+                                            <div class="font-semibold text-sm text-gray-900 dark:text-white">{{ $barang['nama_barang'] }}</div>
+                                            <div class="text-[10px] text-gray-500 uppercase">{{ $barang['kode_barang'] }}</div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-bold text-sm text-primary-600">Rp{{ number_format($barang['harga_beli']) }}</div>
+                                            <div class="text-[9px] text-gray-400">Satuan: {{ $barang['satuan'] }}</div>
+                                        </div>
                                     </div>
+                                    @endforeach
+                                </div>
                                 @endif
                             </div>
                         </div>
@@ -261,63 +260,62 @@
                                         </thead>
                                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                             @forelse($items as $index => $item)
-                                                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group">
-                                                    
-                                                    <td class="px-2 py-2 align-middle">
-                                                        <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">
-                                                            {{ $item['nama_barang'] }}
-                                                        </div>
-                                                    </td>
-                                                    
-                                                    <td class="px-2 py-2 align-middle">
-                                                        <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
-                                                            <button @click="items[{{ $index }}].qty = Math.max(0.01, parseFloat(items[{{ $index }}].qty || 1) - 1)" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
-                                                            <input type="number" step="any" x-model.number="items[{{ $index }}].qty" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
-                                                            <button @click="items[{{ $index }}].qty = parseFloat(items[{{ $index }}].qty || 1) + 1" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
-                                                        </div>
-                                                    </td>
-                                                    
-                                                    <td class="px-2 py-2 text-center align-middle">
-                                                        <span class="text-[10px] font-bold bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded uppercase border border-gray-100 dark:border-gray-700">
-                                                            {{ $item['satuan'] }}
-                                                        </span>
-                                                    </td>
-                                                    
-                                                    <td class="px-2 py-2 align-middle" x-data="{
+                                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group">
+
+                                                <td class="px-2 py-2 align-middle">
+                                                    <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">
+                                                        {{ $item['nama_barang'] }}
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-2 py-2 align-middle">
+                                                    <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
+                                                        <button @click="items[{{ $index }}].qty = Math.max(0.01, parseFloat(items[{{ $index }}].qty || 1) - 1)" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
+                                                        <input type="text" inputmode="number" step="any" x-model.number="items[{{ $index }}].qty" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
+                                                        <button @click="items[{{ $index }}].qty = parseFloat(items[{{ $index }}].qty || 1) + 1" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-2 py-2 text-center align-middle">
+                                                    <span class="text-[10px] font-bold bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-1 rounded uppercase border border-gray-100 dark:border-gray-700">
+                                                        {{ $item['satuan'] }}
+                                                    </span>
+                                                </td>
+
+                                                <td class="px-2 py-2 align-middle" x-data="{
                                                         get harga() { return items[{{ $index }}].harga_beli; },
                                                         set harga(v) { items[{{ $index }}].harga_beli = v; }
                                                     }">
-                                                        <input
-                                                            type="text"
-                                                            :value="format(harga)"
-                                                            @input="
+                                                    <input
+                                                        type="text"
+                                                        :value="format(harga)"
+                                                        @input="
                                                                 let raw = $event.target.value.replace(/\D/g, '');
                                                                 harga = raw ? parseInt(raw) : 0;
                                                                 $el.value = format(harga);
                                                             "
-                                                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white outline-none"
-                                                        />
-                                                    </td>
-                                                    
-                                                    <td class="px-2 py-2 text-right font-bold text-sm text-primary-600 dark:text-primary-400 align-middle">
-                                                        <span x-text="'Rp ' + fmt(parseFloat(items[{{ $index }}].qty || 0) * parseFloat(items[{{ $index }}].harga_beli || 0))"></span>
-                                                    </td>
-                                                    
-                                                    <td class="px-2 py-2 text-center align-middle">
-                                                        <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 transition-colors">
-                                                            <x-heroicon-o-trash class="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                                        class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white outline-none" />
+                                                </td>
+
+                                                <td class="px-2 py-2 text-right font-bold text-sm text-primary-600 dark:text-primary-400 align-middle">
+                                                    <span x-text="'Rp ' + fmt(parseFloat(items[{{ $index }}].qty || 0) * parseFloat(items[{{ $index }}].harga_beli || 0))"></span>
+                                                </td>
+
+                                                <td class="px-2 py-2 text-center align-middle">
+                                                    <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 transition-colors">
+                                                        <x-heroicon-o-trash class="w-3.5 h-3.5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
                                             @empty
-                                                <tr>
-                                                    <td colspan="6" class="py-12">
-                                                        <div class="flex flex-col items-center justify-center w-full">
-                                                            <x-heroicon-o-shopping-bag class="w-10 h-10 text-gray-200 dark:text-gray-750 mb-1" />
-                                                            <span class="text-[10px] font-black uppercase text-gray-400 dark:text-gray-600 tracking-[0.2em]">Belum ada barang</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                                            <tr>
+                                                <td colspan="6" class="py-12">
+                                                    <div class="flex flex-col items-center justify-center w-full">
+                                                        <x-heroicon-o-shopping-bag class="w-10 h-10 text-gray-200 dark:text-gray-750 mb-1" />
+                                                        <span class="text-[10px] font-black uppercase text-gray-400 dark:text-gray-600 tracking-[0.2em]">Belum ada barang</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                             @endforelse
                                         </tbody>
                                     </table>
@@ -326,7 +324,7 @@
                                 {{-- Mobile Cards --}}
                                 <div class="md:hidden divide-y divide-gray-50 dark:divide-gray-800">
                                     @foreach($items as $index => $item)
-                                        <div class="p-4 space-y-3" x-data="{
+                                    <div class="p-4 space-y-3" x-data="{
                                             qty: {{ $item['qty'] }},
                                             harga: {{ $item['harga_beli'] }},
                                             get subtotal() { return this.qty * this.harga; },
@@ -342,40 +340,40 @@
                                                 return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                             }
                                         }">
-                                            <div class="flex justify-between items-start gap-3">
-                                                <div class="flex-grow">
-                                                    <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight">{{ $item['nama_barang'] }}</div>
-                                                    <div class="text-[10px] text-gray-400 font-bold uppercase mt-1">{{ $item['satuan'] }}</div>
-                                                </div>
-                                                <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 p-1"><x-heroicon-o-trash class="w-4 h-4" /></button>
+                                        <div class="flex justify-between items-start gap-3">
+                                            <div class="flex-grow">
+                                                <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight">{{ $item['nama_barang'] }}</div>
+                                                <div class="text-[10px] text-gray-400 font-bold uppercase mt-1">{{ $item['satuan'] }}</div>
                                             </div>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div class="space-y-1">
-                                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qty</label>
-                                                    <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
-                                                        <button @click="qty = Math.max(0.01, qty - 1); updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
-                                                        <input type="text" inputmode="numeric" x-model.number="qty" @blur="updateVal()" class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0 dark:text-white" />
-                                                        <button @click="qty = qty + 1; updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
-                                                    </div>
+                                            <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 p-1"><x-heroicon-o-trash class="w-4 h-4" /></button>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="space-y-1">
+                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qty</label>
+                                                <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
+                                                    <button @click="qty = Math.max(0.01, qty - 1); updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
+                                                    <input type="text" inputmode="numeric" x-model.number="qty" @blur="updateVal()" class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0 dark:text-white" />
+                                                    <button @click="qty = qty + 1; updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
                                                 </div>
-                                                <div class="space-y-1">
-                                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Harga Beli</label>
-                                                    <input type="text"
-                                                        :value="format(harga)"
-                                                        @input="
+                                            </div>
+                                            <div class="space-y-1">
+                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Harga Beli</label>
+                                                <input type="text"
+                                                    :value="format(harga)"
+                                                    @input="
                                                             let raw = $event.target.value.replace(/\D/g, '');
                                                             harga = raw ? parseInt(raw) : 0;
                                                             $el.value = format(harga);
                                                         "
-                                                        @blur="updateVal()"
-                                                        class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white transition-all" />
-                                                </div>
-                                                <div class="space-y-1 text-right col-span-2 bg-gray-50 dark:bg-gray-800/30 p-2.5 rounded-xl">
-                                                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</label>
-                                                    <div class="text-sm font-black text-primary-600 dark:text-primary-400" x-text="'Rp ' + fmt(subtotal)"></div>
-                                                </div>
+                                                    @blur="updateVal()"
+                                                    class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white transition-all" />
+                                            </div>
+                                            <div class="space-y-1 text-right col-span-2 bg-gray-50 dark:bg-gray-800/30 p-2.5 rounded-xl">
+                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</label>
+                                                <div class="text-sm font-black text-primary-600 dark:text-primary-400" x-text="'Rp ' + fmt(subtotal)"></div>
                                             </div>
                                         </div>
+                                    </div>
                                     @endforeach
                                 </div>
                             </div>
@@ -460,8 +458,7 @@
                                                     ongkir = raw ? parseInt(raw) : 0;
                                                     $el.value = format(ongkir);
                                                 "
-                                                class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none"
-                                            />
+                                                class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" />
                                         </div>
                                     </div>
 
@@ -477,8 +474,7 @@
                                                     biayaLain = raw ? parseInt(raw) : 0;
                                                     $el.value = format(biayaLain);
                                                 "
-                                                class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none"
-                                            />
+                                                class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" />
                                         </div>
                                     </div>
                                 </div>
@@ -494,14 +490,14 @@
                                     {{-- Metode --}}
                                     <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" wire:ignore x-data="{ active: '{{ $payment_method }}' }">
                                         @foreach(\App\Models\PembelianMetodePembayaran::labelMetode() as $val => $label)
-                                            <button type="button"
-                                                @click="active = '{{ $val }}'; $wire.set('payment_method', '{{ $val }}', false)"
-                                                :class="active === '{{ $val }}'
+                                        <button type="button"
+                                            @click="active = '{{ $val }}'; $wire.set('payment_method', '{{ $val }}', false)"
+                                            :class="active === '{{ $val }}'
                                                     ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600'
                                                     : 'text-gray-500'"
-                                                class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all text-center">
-                                                {{ $label }}
-                                            </button>
+                                            class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all text-center">
+                                            {{ $label }}
+                                        </button>
                                         @endforeach
                                     </div>
 
@@ -520,7 +516,7 @@
 
                                     {{-- Nominal Bayar & Kurang/Kembali Card (Gaya POS) --}}
                                     <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
-                                         x-data="{
+                                        x-data="{
                                              get diff() {
                                                  return Math.abs(this.grandTotal - (parseInt(this.bayar) || 0));
                                              },
@@ -528,31 +524,30 @@
                                                  return (parseInt(this.bayar) || 0) < this.grandTotal;
                                              }
                                          }">
-                                        
+
                                         <div class="flex justify-between items-center">
                                             <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
                                             <button type="button" @click="setBayarPas()" class="text-[9px] font-bold text-primary-600 hover:underline uppercase tracking-wide">Bayar Pas</button>
                                         </div>
                                         <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
                                             <span class="text-lg font-bold text-primary-600">Rp</span>
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 :value="format(bayar)"
                                                 @input="
                                                     let raw = $event.target.value.replace(/\D/g, '');
                                                     bayar = raw ? parseInt(raw) : 0;
                                                     $el.value = format(bayar);
                                                 "
-                                                class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight dark:text-white" 
-                                                placeholder="0" 
-                                            />
+                                                class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight dark:text-white"
+                                                placeholder="0" />
                                         </div>
 
                                         <div class="pt-0.5 flex justify-between items-center">
                                             <span class="text-[9px] font-bold text-gray-400 uppercase ml-1" x-text="isKurang ? 'Kurang' : 'Kembali'"></span>
-                                            <span class="text-base lg:text-lg font-bold" 
-                                                  :class="isKurang ? 'text-red-500' : 'text-green-500'"
-                                                  x-text="fmt(diff)">
+                                            <span class="text-base lg:text-lg font-bold"
+                                                :class="isKurang ? 'text-red-500' : 'text-green-500'"
+                                                x-text="fmt(diff)">
                                             </span>
                                         </div>
                                     </div>
