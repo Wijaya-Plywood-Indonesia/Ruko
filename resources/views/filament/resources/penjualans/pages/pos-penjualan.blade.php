@@ -135,40 +135,70 @@
                             <table class="w-full text-left table-fixed border-collapse">
                                 <thead class="bg-gray-50/50 dark:bg-gray-800/50">
                                     <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                                        <th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[40%]">Item</th>
-                                        <th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
-                                        <th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[15%]">H. Jual</th>
-                                        <th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[10%]">Potongan</th>
-                                        <th class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[15%]">Total</th>
-                                        <th class="px-4 py-2 w-[5%]"></th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[30%]">Item</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[12%]">Qty</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[20%]">H. Jual</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[18%]">Potongan</th>
+                                        <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[17%]">Total</th>
+                                        <th class="px-2 py-2 w-[3%]"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                     @foreach($cart as $id => $item)
                                         <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
-                                            <td class="px-4 py-2">
+                                            <td class="px-2 py-2">
                                                 <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">
                                                     {{ $item['nama_barang'] }} 
                                                     <span class="text-[10px] text-gray-400 font-normal ml-1">• Rp{{ number_format($item['harga_awal']) }}</span>
                                                 </div>
                                             </td>
-                                            <td class="px-4 py-2">
+                                            <td class="px-2 py-2">
                                                 <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
                                                     <button wire:click="decrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
                                                     <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0" />
                                                     <button wire:click="incrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
                                                 </div>
                                             </td>
-                                            <td class="px-4 py-2">
-                                                <input type="number" wire:model.lazy="cart.{{ $id }}.harga_jual" wire:change="updateHargaJual({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right focus:ring-2 focus:ring-primary-500/10" />
+                                            <td class="px-2 py-2" x-data="{
+                                                harga: @entangle('cart.'.$id.'.harga_jual'),
+                                                format(val) {
+                                                    if (val === null || val === undefined || val === '') return '';
+                                                    let cleaned = val.toString().replace(/\D/g, '');
+                                                    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                }
+                                            }">
+                                                <input type="text"
+                                                    :value="format(harga)"
+                                                    @input="
+                                                        let raw = $event.target.value.replace(/\D/g, '');
+                                                        harga = raw ? parseInt(raw) : 0;
+                                                        $el.value = format(harga);
+                                                    "
+                                                    @change="$wire.updateHargaJual({{ $id }})"
+                                                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right focus:ring-2 focus:ring-primary-500/10" />
                                             </td>
-                                            <td class="px-4 py-2">
-                                                <input type="number" wire:model.lazy="cart.{{ $id }}.potongan" wire:change="updatePotongan({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right text-red-500 focus:ring-2 focus:ring-red-500/10" />
+                                            <td class="px-2 py-2" x-data="{
+                                                potongan: @entangle('cart.'.$id.'.potongan'),
+                                                format(val) {
+                                                    if (val === null || val === undefined || val === '') return '';
+                                                    let cleaned = val.toString().replace(/\D/g, '');
+                                                    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                }
+                                            }">
+                                                <input type="text"
+                                                    :value="format(potongan)"
+                                                    @input="
+                                                        let raw = $event.target.value.replace(/\D/g, '');
+                                                        potongan = raw ? parseInt(raw) : 0;
+                                                        $el.value = format(potongan);
+                                                    "
+                                                    @change="$wire.updatePotongan({{ $id }})"
+                                                    class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1 px-2 text-xs font-bold text-right text-red-500 focus:ring-2 focus:ring-red-500/10" />
                                             </td>
-                                            <td class="px-4 py-2 text-right font-bold text-sm text-primary-600">
+                                            <td class="px-2 py-2 text-right font-bold text-sm text-primary-600">
                                                 {{ number_format($item['subtotal']) }}
                                             </td>
-                                            <td class="px-4 py-2 text-center">
+                                            <td class="px-2 py-2 text-center">
                                                 <button wire:click="removeFromCart({{ $id }})" class="text-gray-300 hover:text-red-500 transition-colors">
                                                     <x-heroicon-o-trash class="w-3.5 h-3.5" />
                                                 </button>
@@ -199,13 +229,43 @@
                                                 <button wire:click="incrementQty({{ $id }})" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
                                             </div>
                                         </div>
-                                        <div class="space-y-1">
+                                        <div class="space-y-1" x-data="{
+                                            harga: @entangle('cart.'.$id.'.harga_jual'),
+                                            format(val) {
+                                                if (val === null || val === undefined || val === '') return '';
+                                                let cleaned = val.toString().replace(/\D/g, '');
+                                                return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                            }
+                                        }">
                                             <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">H. Jual</label>
-                                            <input type="number" wire:model.lazy="cart.{{ $id }}.harga_jual" wire:change="updateHargaJual({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 transition-all" />
+                                            <input type="text"
+                                                :value="format(harga)"
+                                                @input="
+                                                    let raw = $event.target.value.replace(/\D/g, '');
+                                                    harga = raw ? parseInt(raw) : 0;
+                                                    $el.value = format(harga);
+                                                "
+                                                @change="$wire.updateHargaJual({{ $id }})"
+                                                class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 transition-all" />
                                         </div>
-                                        <div class="space-y-1">
+                                        <div class="space-y-1" x-data="{
+                                            potongan: @entangle('cart.'.$id.'.potongan'),
+                                            format(val) {
+                                                if (val === null || val === undefined || val === '') return '';
+                                                let cleaned = val.toString().replace(/\D/g, '');
+                                                return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                            }
+                                        }">
                                             <label class="text-[10px] font-black text-red-400 uppercase tracking-widest ml-1">Diskon</label>
-                                            <input type="number" wire:model.lazy="cart.{{ $id }}.potongan" wire:change="updatePotongan({{ $id }})" class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right text-red-500 focus:ring-2 focus:ring-red-500/10 transition-all" />
+                                            <input type="text"
+                                                :value="format(potongan)"
+                                                @input="
+                                                    let raw = $event.target.value.replace(/\D/g, '');
+                                                    potongan = raw ? parseInt(raw) : 0;
+                                                    $el.value = format(potongan);
+                                                "
+                                                @change="$wire.updatePotongan({{ $id }})"
+                                                class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right text-red-500 focus:ring-2 focus:ring-red-500/10 transition-all" />
                                         </div>
                                         <div class="space-y-1 text-right">
                                             <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</label>
