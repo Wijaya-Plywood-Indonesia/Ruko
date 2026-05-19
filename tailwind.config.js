@@ -1,25 +1,25 @@
-// 1. Impor preset Filament di bagian atas
-import preset from "./vendor/filament/filament/tailwind.config.js";
+// 1. Impor preset resmi Filament v3 dengan path yang benar
+import preset from './vendor/filament/support/tailwind.config.preset'
 
 /** @type {import('tailwindcss').Config} */
 export default {
+    // 2. WAJIB DAFTARKAN PRESET DI SINI agar sistem warna Filament aktif
+    presets: [preset],
+
     content: [
         './resources/**/*.blade.php',
         './resources/**/*.js',
         './resources/**/*.vue',
-        // Tambahkan baris ini untuk memastikan Filament Page terbaca
+        
         './app/Filament/**/*.php',
         './resources/views/filament/**/*.blade.php',
         './vendor/filament/**/*.blade.php',
     ],
-    darkMode: 'class', // Penting agar dark: class berfungsi
+
     theme: {
         extend: {
-            colors: {
-                // Opsional: Jika Anda ingin mendefinisikan warna amber kustom
-            },
+            colors: {},
             borderRadius: {
-                // Opsional: Jika ingin membuat 4px sebagai standar
                 'accounting': '4px',
             }
         },

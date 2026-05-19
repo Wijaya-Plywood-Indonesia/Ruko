@@ -3,8 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Barang;
-use App\Models\IdentitasToko;
-use App\Models\StokBarangToko;
+use App\Models\JurnalUmum;
 use Filament\Pages\Page;
 use UnitEnum;
 
@@ -14,39 +13,59 @@ class StokMatrix extends Page
     protected static string|UnitEnum|null $navigationGroup = 'Matrix Barang';
     public static ?string $navigationLabel = 'Matrix Barang';
 
-    protected $tokos;
     protected $barangs;
     protected $stok;
-    protected int $pairs = 5;   // jumlah kolom pasangan "Barang + Banyak"
+    protected int $pairs = 5;
 
     public function mount(): void
     {
-        // ambil semua toko
-        $this->tokos = IdentitasToko::orderBy('nama_toko')->get();
+        $this->barangs = Barang::with('subAnakAkun')
+            ->whereHas('subAnakAkun', function ($query) {
+                $query->whereNotNull('kode_sub_anak_akun')
+                    ->where('kode_sub_anak_akun', '!=', '');
+            })
+            ->orderBy('nama_barang')
+            ->get();
 
-        // ambil semua barang (urut)
-        $this->barangs = Barang::orderBy('nama_barang')->get();
+        $matrixTemporaryStok = [];
 
-        // ambil stok (digroup berdasarkan toko -> barang)
-        $this->stok = StokBarangToko::get()
-            ->groupBy('toko_id')
-            ->map(fn($rows) => $rows->keyBy('barang_id'));
+        foreach ($this->barangs as $barang) {
+            $subAkun = $barang->subAnakAkun;
+            $kodeAkun = $subAkun->kode_sub_anak_akun;
+
+            $transaksis = JurnalUmum::where('no_akun', $kodeAkun)->get();
+            $totalQty = 0.0;
+
+            foreach ($transaksis as $trx) {
+                $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
+                $qty = (float) ($trx->banyak ?? 0);
+
+                if ($qty > 0) {
+                    if ($isDebit) {
+                        $totalQty += $qty;
+                    } else {
+                        $totalQty -= $qty;
+                    }
+                }
+            }
+
+            $matrixTemporaryStok[$barang->id] = (object) [
+                'stok' => $totalQty
+            ];
+        }
+
+        $this->stok = collect($matrixTemporaryStok);
     }
 
-    /** 
-     * Data yang dikirim ke Blade  
-     **/
     protected function getViewData(): array
     {
-        // Membagi barang ke dalam kelompok (chunks) per N-pairs
         $chunks = $this->barangs->chunk($this->pairs);
 
         return [
-            'tokos' => $this->tokos,
             'barangs' => $this->barangs,
-            'stok' => $this->stok,
-            'pairs' => $this->pairs,
-            'chunks' => $chunks,
+            'stok'    => $this->stok,
+            'pairs'   => $this->pairs,
+            'chunks'  => $chunks,
         ];
     }
 }
