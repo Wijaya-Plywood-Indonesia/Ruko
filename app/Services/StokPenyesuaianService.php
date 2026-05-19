@@ -72,8 +72,15 @@ class StokPenyesuaianService
                 ->where('penjualan_id', $id_penjualan)
                 ->select(['barang_id', 'qty', 'nama_barang'])
                 ->get();
-
             foreach ($details as $detail) {
+                $barang = \App\Models\Barang::find($detail->barang_id);
+                $stokBukuBesar = $barang ? $barang->stok_buku_besar : 0;
+
+                if ($stokBukuBesar - (float) $detail->qty < 0) {
+                    throw ValidationException::withMessages([
+                        'stok' => "Stok {$detail->nama_barang} tidak mencukupi"
+                    ]);
+                }
 
                 $stok = StokBarangToko::where('barang_id', $detail->barang_id)
                     ->where('toko_id', $tokoId)
@@ -81,19 +88,15 @@ class StokPenyesuaianService
                     ->first();
 
                 if (!$stok) {
-                    throw ValidationException::withMessages([
-                        'stok' => "Stok {$detail->nama_barang} tidak ditemukan"
+                    $stok = StokBarangToko::create([
+                        'barang_id' => $detail->barang_id,
+                        'toko_id' => $tokoId,
+                        'stok' => 0,
                     ]);
                 }
 
                 $stokSebelum = (float) $stok->stok;
                 $stokSesudah = $stokSebelum - (float) $detail->qty;
-
-                if ($stokSesudah < 0) {
-                    throw ValidationException::withMessages([
-                        'stok' => "Stok {$detail->nama_barang} tidak mencukupi"
-                    ]);
-                }
 
                 $stok->update([
                     'stok' => $stokSesudah,
@@ -145,8 +148,10 @@ class StokPenyesuaianService
                     ->first();
 
                 if (!$stok) {
-                    throw ValidationException::withMessages([
-                        'stok' => "Stok {$detail->nama_barang} tidak ditemukan"
+                    $stok = StokBarangToko::create([
+                        'barang_id' => $detail->barang_id,
+                        'toko_id' => $tokoId,
+                        'stok' => 0,
                     ]);
                 }
 
