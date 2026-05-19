@@ -19,14 +19,12 @@
                        text-white shadow-sm transition-colors
                        disabled:opacity-60 disabled:cursor-not-allowed">
 
-                {{-- Spinner saat loading --}}
                 <svg wire:loading wire:target="exportExcel"
                      class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
 
-                {{-- Icon unduh (default) --}}
                 <svg wire:loading.remove wire:target="exportExcel"
                      class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -35,7 +33,7 @@
 
                 <span wire:loading.remove wire:target="exportExcel">
                     Export Excel
-                    <span class="font-normal opacity-75">({{ $this->jumlahPeriode() }} bulan)</span>
+                    <span class="font-normal opacity-75">({{ $this->jumlahPeriode() }} {{ $jenisFilter }})</span>
                 </span>
                 <span wire:loading wire:target="exportExcel">Mengunduh...</span>
             </button>
@@ -54,21 +52,38 @@
     </div>
 
     {{-- ══════════════════════════════════════════════════════════
-         FILTER
+         FILTER (BARU: MENDUKUNG BULANAN & HARIAN)
     ══════════════════════════════════════════════════════════ --}}
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
 
-        <h3 class="text-base font-semibold text-gray-700 dark:text-gray-200 mb-5">
-            Pilih Periode Neraca
-        </h3>
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-5">
+            <h3 class="text-base font-semibold text-gray-700 dark:text-gray-200">
+                Pilih Periode Neraca
+            </h3>
+            
+            {{-- Tombol Toggle Pilihan Bulanan / Harian --}}
+            <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+                <button type="button" wire:click="ubahJenisFilter('bulan')"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all {{ $jenisFilter === 'bulan' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary-600 dark:text-white' : 'text-gray-500' }}">
+                    Bulanan
+                </button>
+                <button type="button" wire:click="ubahJenisFilter('hari')"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all {{ $jenisFilter === 'hari' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary-600 dark:text-white' : 'text-gray-500' }}">
+                    Harian
+                </button>
+            </div>
+        </div>
 
         <div class="flex flex-col sm:flex-row items-start sm:items-end gap-6">
 
+            {{-- Input Dari Periode / Tanggal --}}
             <div class="flex-1 w-full">
-                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Dari Periode</label>
-                <input type="month" wire:model.live="periodeAwal"
-                    min="{{ now()->subYears(5)->format('Y-m') }}"
-                    max="{{ now()->addYear()->format('Y-m') }}"
+                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                    Dari {{ $jenisFilter === 'hari' ? 'Tanggal' : 'Bulan' }}
+                </label>
+                <input type="{{ $jenisFilter === 'hari' ? 'date' : 'month' }}" wire:model.live="periodeAwal"
+                    min="{{ $jenisFilter === 'hari' ? now()->subYears(5)->format('Y-m-d') : now()->subYears(5)->format('Y-m') }}"
+                    max="{{ $jenisFilter === 'hari' ? now()->addYear()->format('Y-m-d') : now()->addYear()->format('Y-m') }}"
                     class="w-full rounded-xl border-2 border-gray-300 dark:border-gray-600
                            dark:bg-gray-700 dark:text-gray-200 text-base px-4 py-3 shadow-sm
                            focus:border-primary-500 focus:ring-2 focus:ring-primary-200
@@ -81,17 +96,21 @@
                 </svg>
             </div>
 
+            {{-- Input Sampai Periode / Tanggal --}}
             <div class="flex-1 w-full">
-                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Sampai Periode</label>
-                <input type="month" wire:model.live="periodeAkhir"
-                    min="{{ now()->subYears(5)->format('Y-m') }}"
-                    max="{{ now()->addYear()->format('Y-m') }}"
+                <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                    Sampai {{ $jenisFilter === 'hari' ? 'Tanggal' : 'Bulan' }}
+                </label>
+                <input type="{{ $jenisFilter === 'hari' ? 'date' : 'month' }}" wire:model.live="periodeAkhir"
+                    min="{{ $jenisFilter === 'hari' ? now()->subYears(5)->format('Y-m-d') : now()->subYears(5)->format('Y-m') }}"
+                    max="{{ $jenisFilter === 'hari' ? now()->addYear()->format('Y-m-d') : now()->addYear()->format('Y-m') }}"
                     class="w-full rounded-xl border-2 border-gray-300 dark:border-gray-600
                            dark:bg-gray-700 dark:text-gray-200 text-base px-4 py-3 shadow-sm
                            focus:border-primary-500 focus:ring-2 focus:ring-primary-200
                            transition-colors cursor-pointer" />
             </div>
 
+            {{-- Status Validasi Periode --}}
             <div class="flex-shrink-0 pb-1">
                 @if(!$this->periodeValid())
                     <div class="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700
@@ -99,7 +118,7 @@
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        "Dari" tidak boleh lebih akhir dari "Sampai"
+                        "Dari" tidak boleh melebihi "Sampai"
                     </div>
                 @else
                     <div class="flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700
@@ -107,14 +126,14 @@
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
-                        <span><strong>{{ $this->jumlahPeriode() }}</strong> neraca ditampilkan</span>
+                        <span><strong>{{ $this->jumlahPeriode() }}</strong> data {{ $jenisFilter }}an ditampilkan</span>
                     </div>
                 @endif
             </div>
         </div>
 
         <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">
-            * Maksimal 12 bulan sekaligus. Jika rentang melebihi 12 bulan, sistem otomatis membatasi sampai bulan ke-12.
+            * Maksimal 12 bulan untuk filter bulanan, dan maksimal 31 hari untuk filter harian.
         </p>
     </div>
 
@@ -144,7 +163,9 @@
             $isBalance = abs($neraca['totalAktiva'] - $neraca['totalPasiva']) < 1;
 
             $fmt    = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : '-';
-            $fmtQty = fn(?float $v) => $v !== null ? number_format($v, 0, ',', '.') : null;
+            
+            // Format QTY diubah agar lebih robust menolak null/string kosong
+            $fmtQty = fn($v) => (is_numeric($v) && $v != 0) ? number_format((float)$v, 0, ',', '.') : null;
 
             $flattenSections = null;
             $flattenSections = function(array $sections, int $depth = 0) use (&$flattenSections): array {
@@ -328,6 +349,7 @@
                             {{ $isItem ? 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20' : '' }}
                             transition-colors">
 
+                            {{-- ── AKTIVA ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $aPl : '' }}
@@ -355,7 +377,7 @@
                             </td>
 
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                                @if($aRow && $isItem && isset($aRow['qty']) && $aRow['qty'] !== null)
+                                @if($aRow && $isItem && !empty($aRow['qty']))
                                     <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
                                         {{ $fmtQty($aRow['qty']) }}
                                     </span>
@@ -371,6 +393,7 @@
                                 @endif
                             </td>
 
+                            {{-- ── PASIVA ── --}}
                             <td class="border border-gray-100 dark:border-gray-700 py-2
                                 {{ $isHdr  ? 'text-center font-bold text-gray-700 dark:text-gray-200 px-5' : '' }}
                                 {{ $isSub  ? 'font-semibold text-gray-600 dark:text-gray-300 ' . $pPl : '' }}
@@ -398,7 +421,7 @@
                             </td>
 
                             <td class="border border-gray-100 dark:border-gray-700 py-2 px-3 text-right tabular-nums whitespace-nowrap">
-                                @if($pRow && $isItem && isset($pRow['qty']) && $pRow['qty'] !== null)
+                                @if($pRow && $isItem && !empty($pRow['qty']))
                                     <span class="text-xs text-gray-400 dark:text-gray-500 font-normal">
                                         {{ $fmtQty($pRow['qty']) }}
                                     </span>
@@ -442,7 +465,7 @@
             {{-- Card Footer --}}
             <div class="px-6 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700
                         text-xs text-gray-400 dark:text-gray-500 flex justify-between">
-                <span>Data dari Buku Besar {{ $neraca['label'] }}</span>
+                <span>Data ditarik secara {{ $jenisFilter }}an</span>
                 @if(!$isBalance)
                     <span class="text-red-500 font-medium">
                         Selisih: {{ $fmt(abs($neraca['totalAktiva'] - $neraca['totalPasiva'])) }}
