@@ -267,6 +267,80 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $this->persistDraftState();
     }
 
+    public function editDraftAction(): Action
+    {
+        return Action::make('editDraft')
+            ->modalHeading('Edit Draft Transaksi')
+            ->modalSubmitActionLabel('Simpan Perubahan')
+            ->form([
+                Grid::make(2)->schema([
+                    DatePicker::make('tgl')->label('Tanggal')->required()->native(false),
+                    TextInput::make('jurnal')->label('No. Jurnal')->required(),
+                    Select::make('no_akun')
+                        ->label('Cari Nomor Akun')
+                        ->required()
+                        ->searchable()
+                        ->options(fn() => SubAnakAkun::all()->mapWithKeys(
+                            fn($item) => [$item->kode_sub_anak_akun => "{$item->kode_sub_anak_akun} - {$item->nama_sub_anak_akun}"]
+                        ))
+                        ->live()
+                        ->afterStateUpdated(function ($state, Set $set) {
+                            $set('nama_akun', SubAnakAkun::where('kode_sub_anak_akun', $state)->first()?->nama_sub_anak_akun
+                                ?? AnakAkun::where('kode_anak_akun', $state)->first()?->nama_anak_akun ?? '');
+                        }),
+                    TextInput::make('nama_akun')->label('Nama Akun')->required()->readOnly(),
+                    TextInput::make('nama')->label('Nama')->columnSpanFull(),
+                    TextInput::make('keterangan')->label('Keterangan')->columnSpanFull(),
+                    TextInput::make('banyak')->label('Kuantitas (kosongkan jika tidak perlu)')->numeric(),
+                    TextInput::make('harga')->label('Harga Satuan')->numeric()->prefix('Rp')->required(),
+                    Select::make('map')->label('Posisi')
+                        ->options(['d' => 'Debit', 'k' => 'Kredit'])->required(),
+                ])
+            ])
+            ->fillForm(function (array $arguments) {
+                $index = $arguments['index'] ?? null;
+                if ($index !== null && isset($this->items[$index])) {
+                    $item = $this->items[$index];
+                    return [
+                        'tgl'       => $item['tgl'],
+                        'jurnal'    => $item['jurnal'],
+                        'no_akun'   => $item['no_akun'],
+                        'nama_akun' => $item['nama_akun'],
+                        'nama'      => $item['nama'],
+                        'keterangan'=> $item['keterangan'],
+                        'banyak'    => $item['banyak'],
+                        'harga'     => $item['harga'],
+                        'map'       => $item['map'],
+                    ];
+                }
+                return [];
+            })
+            ->action(function (array $data, array $arguments): void {
+                $index = $arguments['index'] ?? null;
+                if ($index !== null && isset($this->items[$index])) {
+                    $harga = (float) $data['harga'];
+                    $total = $this->hitungTotal($data['banyak'], $harga);
+
+                    $this->items[$index] = [
+                        'tgl'        => $data['tgl'],
+                        'jurnal'     => $data['jurnal'],
+                        'no_akun'    => $data['no_akun'],
+                        'nama_akun'  => $data['nama_akun'],
+                        'nama'       => $data['nama'],
+                        'keterangan' => $data['keterangan'],
+                        'banyak'     => blank($data['banyak']) ? null : (float) $data['banyak'],
+                        'harga'      => $harga,
+                        'total'      => $total,
+                        'map'        => strtolower($data['map']),
+                    ];
+
+                    $this->syncJurnalNumber();
+                    $this->persistDraftState();
+                    Notification::make()->title('Entri draft berhasil diperbarui')->success()->send();
+                }
+            });
+    }
+
     public function saveJurnal(): void
     {
         if (empty($this->items) || !$this->isDraftBalanced()) return;
