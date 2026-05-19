@@ -33,10 +33,10 @@
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        <div class="flex flex-col xl:flex-row gap-4 xl:gap-6">
             
             {{-- LEFT SECTION: OPERATIONAL --}}
-            <div class="w-full lg:w-[68%] flex flex-col gap-4 lg:gap-6 order-1">
+            <div class="w-full xl:w-[68%] flex flex-col gap-4 xl:gap-6 order-1">
                 
                 {{-- SEARCH CARD --}}
                 <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
@@ -222,7 +222,7 @@
             </div>
 
             {{-- RIGHT SECTION: CHECKOUT --}}
-            <div id="checkout-section" class="w-full lg:w-[32%] order-2">
+            <div id="checkout-section" class="w-full xl:w-[32%] order-2">
                 <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-lg flex flex-col overflow-hidden">
                     <div class="p-4 lg:p-5 bg-primary-600 dark:bg-black text-white relative overflow-hidden shrink-0 transition-colors duration-300">
                         <div class="relative z-10">
