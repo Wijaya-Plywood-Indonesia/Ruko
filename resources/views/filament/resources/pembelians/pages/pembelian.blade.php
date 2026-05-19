@@ -94,7 +94,7 @@
                     <div class="w-full xl:w-[68%] flex flex-col gap-4 xl:gap-6 order-1">
 
                         {{-- CARD: INFORMASI SUPPLIER --}}
-                        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden p-4 sm:p-6 space-y-4">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="flex justify-between items-center border-b border-gray-50 dark:border-gray-800 pb-3 bg-transparent">
                                 <h3 class="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-2">
                                     <x-heroicon-o-building-storefront class="w-4 h-4 text-primary-500" /> Informasi Supplier
@@ -270,10 +270,26 @@
                                                     </td>
                                                     
                                                     <td class="px-2 py-2 align-middle">
-                                                        <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
-                                                            <button @click="items[{{ $index }}].qty = Math.max(0.01, parseFloat(items[{{ $index }}].qty || 1) - 1)" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
-                                                            <input type="number" step="any" x-model.number="items[{{ $index }}].qty" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
-                                                            <button @click="items[{{ $index }}].qty = parseFloat(items[{{ $index }}].qty || 1) + 1" type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
+                                                        <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700"
+                                                             x-data="{
+                                                                 localQty: '{{ str_replace('.', ',', floatval($item['qty'] ?? 1)) }}',
+                                                                 syncQty() {
+                                                                     let cleaned = this.localQty.replace(',', '.');
+                                                                     let parsed = parseFloat(cleaned);
+                                                                     items[{{ $index }}].qty = isNaN(parsed) ? 0 : parsed;
+                                                                 }
+                                                             }">
+                                                            <button @click="
+                                                                let q = Math.max(0.01, parseFloat(items[{{ $index }}].qty || 1) - 1);
+                                                                items[{{ $index }}].qty = q;
+                                                                localQty = q.toString().replace('.', ',');
+                                                            " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
+                                                            <input type="text" inputmode="decimal" x-model="localQty" @input="syncQty()" class="w-20 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
+                                                            <button @click="
+                                                                let q = parseFloat(items[{{ $index }}].qty || 1) + 1;
+                                                                items[{{ $index }}].qty = q;
+                                                                localQty = q.toString().replace('.', ',');
+                                                            " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
                                                         </div>
                                                     </td>
                                                     
