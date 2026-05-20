@@ -84,150 +84,143 @@ class JurnalPenjualanTelurService
     // ══════════════════════════════════════════════════════════════
 
     public function buatJurnalDariPenjualan(Penjualan $penjualan, int $userId): void
-    {
-        // Load relasi yang dibutuhkan termasuk rekening → subAnakAkun
-        $penjualan->loadMissing([
-            'details.barang',
-            'rekeningPerusahaan.subAnakAkun',
-        ]);
-        $itemTelur = collect();
-        foreach ($penjualan->details as $detail) {
-            if ($detail->barang) {
-                $itemTelur->push($detail);
-            }
+{
+    $penjualan->loadMissing([
+        'details.barang',
+        'rekeningPerusahaan.subAnakAkun',
+    ]);
+
+    // ── [FIX 1] Pisahkan item per kategori, bukan semua masuk itemTelur ──
+    $itemTelur = collect();
+    $itemLain  = collect(); // ayam, entog, rabok, lele, sak, dll
+
+    foreach ($penjualan->details as $detail) {
+        if (!$detail->barang) continue;
+
+        $nama = strtolower($detail->nama_barang ?? '');
+
+        if ($this->isTelur($nama)) {
+            $itemTelur->push($detail);
+        } else {
+            $itemLain->push($detail);
         }
+    }
 
-        if ($itemTelur->isEmpty()) {
-            return;
-        }
+    // Jika tidak ada item sama sekali → skip
+    if ($itemTelur->isEmpty() && $itemLain->isEmpty()) {
+        return;
+    }
 
-        DB::transaction(function () use ($penjualan, $itemTelur, $userId) {
+    DB::transaction(function () use ($penjualan, $itemTelur, $itemLain, $userId) {
 
-            $tgl      = $penjualan->tanggal->toDateString();
-            $nota     = $penjualan->no_nota;
-            $customer = $penjualan->nama_customer ?: 'Pelanggan';
+        $tgl      = $penjualan->tanggal->toDateString();
+        $nota     = $penjualan->no_nota;
+        $customer = $penjualan->nama_customer ?: 'Pelanggan';
+
+        $noJurnal = $this->nextNomorJurnal();
+
+        // ════════════════════════════════════════════════════════
+        // BAGIAN TELUR (jika ada)
+        // ════════════════════════════════════════════════════════
+        if ($itemTelur->isNotEmpty()) {
 
             $totalTelur = $itemTelur->sum('subtotal');
             $totalHpp   = $itemTelur->sum(
                 fn($d) => (float) $d->qty * (float) ($d->barang->harga_beli ?? 0)
             );
-
             $totalKiloan = $itemTelur
                 ->filter(fn($d) => $this->isKiloan(strtolower($d->nama_barang ?? '')))
                 ->sum('qty');
-
             $jumlahPeti = ($totalKiloan > 0 && $totalKiloan % self::KG_PER_PETI === 0)
-                ? (int) ($totalKiloan / self::KG_PER_PETI)
-                : 0;
+                ? (int) ($totalKiloan / self::KG_PER_PETI) : 0;
 
-            $noJurnal = $this->nextNomorJurnal();
-
-            // ── Resolve baris kas (tunai, transfer, atau split) ───────────────
+            $ketJual = $this->ket('Penjualan Telur', $nota, $customer);
             $barisKas = $this->resolveBarisKas($penjualan, $totalTelur);
 
-            // ─── D : Kas (satu atau dua baris jika split) ────────────────────
-            if ($totalTelur > 0) {
-                $ketJual = $this->ket('Penjualan Telur', $nota, $customer);
-
-                foreach ($barisKas as $kas) {
-                    // Nominal per baris kas = proporsional dari total telur
-                    $nominalKas = round($kas['nominal'], 2);
-
-                    $hKas = $this->buatHeader([
-                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
-                        'tgl_transaksi'      => $tgl,
-                        'jenis_transaksi'    => 'bk',
-                        'modul_asal'         => 'penjualan_telur',
-                        'jurnal'             => $noJurnal,
-                        'no_akun'            => $kas['kode'],
-                        'nama_akun'          => $kas['nama'],
-                        'map'                => 'd',
-                        'keterangan'         => $ketJual,
-                        'no_dokumen'         => $nota,
-                        'dibuat_oleh'        => $userId,
+            // D: Kas
+            foreach ($barisKas as $kas) {
+                $hKas = $this->buatHeader([
+                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                    'tgl_transaksi'      => $tgl,
+                    'jenis_transaksi'    => 'bk',
+                    'modul_asal'         => 'penjualan_telur',
+                    'jurnal'             => $noJurnal,
+                    'no_akun'            => $kas['kode'],
+                    'nama_akun'          => $kas['nama'],
+                    'map'                => 'd',
+                    'keterangan'         => $ketJual,
+                    'no_dokumen'         => $nota,
+                    'dibuat_oleh'        => $userId,
+                ]);
+                $urut = 1;
+                foreach ($itemTelur as $d) {
+                    $this->buatItem($hKas->id, [
+                        'urut'         => $urut++,
+                        'jenis_pihak'  => 'pelanggan',
+                        'nama_pihak'   => $customer,
+                        'nama_barang'  => $d->nama_barang,
+                        'no_dokumen'   => $nota,
+                        'no_referensi' => (string) $d->id,
+                        'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
+                        'banyak'       => $d->qty,
+                        'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
+                        'created_by'   => $userId,
+                        'updated_by'   => $userId,
                     ]);
-
-                    // Items: proporsional sesuai bayar_tunai / bayar_transfer
-                    $urut = 1;
-                    foreach ($itemTelur as $d) {
-                        $this->buatItem($hKas->id, [
-                            'urut'         => $urut++,
-                            'jenis_pihak'  => 'pelanggan',
-                            'nama_pihak'   => $customer,
-                            'nama_barang'  => $d->nama_barang,
-                            'no_dokumen'   => $nota,
-                            'no_referensi' => (string) $d->id,
-                            'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
-                            'banyak'       => $d->qty,
-                            // harga proporsional sesuai porsi pembayaran ini
-                            'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
-                            'created_by'   => $userId,
-                            'updated_by'   => $userId,
-                        ]);
-                    }
-                }
-
-                // ─── K : Pendapatan per jenis telur ──────────────────────────
-                $perPend = $itemTelur->groupBy(
-                    fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang)[0]
-                );
-
-                foreach ($perPend as $kodePend => $details) {
-                    $akunPend = $this->resolveAkun($kodePend);
-
-                    $hPend = $this->buatHeader([
-                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
-                        'tgl_transaksi'      => $tgl,
-                        'jenis_transaksi'    => 'bk',
-                        'modul_asal'         => 'penjualan_telur',
-                        'jurnal'             => $noJurnal,
-                        'no_akun'            => $akunPend['kode'],
-                        'nama_akun'          => $akunPend['nama'],
-                        'map'                => 'k',
-                        'keterangan'         => $ketJual,
-                        'no_dokumen'         => $nota,
-                        'dibuat_oleh'        => $userId,
-                    ]);
-
-                    $urut = 1;
-                    foreach ($details as $d) {
-                        $this->buatItem($hPend->id, [
-                            'urut'         => $urut++,
-                            'jenis_pihak'  => 'pelanggan',
-                            'nama_pihak'   => $customer,
-                            'nama_barang'  => $d->nama_barang,
-                            'no_dokumen'   => $nota,
-                            'no_referensi' => (string) $d->id,
-                            'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
-                            'banyak'       => $d->qty,
-                            'harga'        => $d->harga_jual,
-                            'created_by'   => $userId,
-                            'updated_by'   => $userId,
-                        ]);
-                    }
                 }
             }
 
-            // ─── D : HPP  &  K : Persediaan ──────────────────────────────────
+            // K: Pendapatan per jenis telur
+            $perPend = $itemTelur->groupBy(
+                fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang)[0]
+            );
+            foreach ($perPend as $kodePend => $details) {
+                $akunPend = $this->resolveAkun($kodePend);
+                $hPend = $this->buatHeader([
+                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                    'tgl_transaksi'      => $tgl,
+                    'jenis_transaksi'    => 'bk',
+                    'modul_asal'         => 'penjualan_telur',
+                    'jurnal'             => $noJurnal,
+                    'no_akun'            => $akunPend['kode'],
+                    'nama_akun'          => $akunPend['nama'],
+                    'map'                => 'k',
+                    'keterangan'         => $ketJual,
+                    'no_dokumen'         => $nota,
+                    'dibuat_oleh'        => $userId,
+                ]);
+                $urut = 1;
+                foreach ($details as $d) {
+                    $this->buatItem($hPend->id, [
+                        'urut'         => $urut++,
+                        'jenis_pihak'  => 'pelanggan',
+                        'nama_pihak'   => $customer,
+                        'nama_barang'  => $d->nama_barang,
+                        'no_dokumen'   => $nota,
+                        'no_referensi' => (string) $d->id,
+                        'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
+                        'banyak'       => $d->qty,
+                        'harga'        => $d->harga_jual,
+                        'created_by'   => $userId,
+                        'updated_by'   => $userId,
+                    ]);
+                }
+            }
+
+            // D: HPP & K: Persediaan
             if ($totalHpp > 0) {
                 $ketHpp = $this->ket('HPP Penjualan Telur', $nota);
-
                 $perJenis = $itemTelur->groupBy(function ($d) {
                     $kode = $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang);
                     return $kode[1] . '|' . $kode[2];
                 });
-
                 foreach ($perJenis as $pasangan => $details) {
                     [$kodeHpp, $kodePers] = explode('|', $pasangan);
-
-                    $adaHpp = $details->filter(
-                        fn($d) => (float) ($d->barang->harga_beli ?? 0) > 0
-                    );
+                    $adaHpp = $details->filter(fn($d) => (float) ($d->barang->harga_beli ?? 0) > 0);
                     if ($adaHpp->isEmpty()) continue;
 
-                    // D: HPP
                     $akunHpp = $this->resolveAkun($kodeHpp);
-                    $hHpp    = $this->buatHeader([
+                    $hHpp = $this->buatHeader([
                         'no_jurnal_pembantu' => $this->nextNomorPembantu(),
                         'tgl_transaksi'      => $tgl,
                         'jenis_transaksi'    => 'bk',
@@ -240,7 +233,6 @@ class JurnalPenjualanTelurService
                         'no_dokumen'         => $nota,
                         'dibuat_oleh'        => $userId,
                     ]);
-
                     $urut = 1;
                     foreach ($adaHpp as $d) {
                         $this->buatItem($hHpp->id, [
@@ -256,9 +248,8 @@ class JurnalPenjualanTelurService
                         ]);
                     }
 
-                    // K: Persediaan
                     $akunPers = $this->resolveAkun($kodePers);
-                    $hPers    = $this->buatHeader([
+                    $hPers = $this->buatHeader([
                         'no_jurnal_pembantu' => $this->nextNomorPembantu(),
                         'tgl_transaksi'      => $tgl,
                         'jenis_transaksi'    => 'bk',
@@ -271,7 +262,6 @@ class JurnalPenjualanTelurService
                         'no_dokumen'         => $nota,
                         'dibuat_oleh'        => $userId,
                     ]);
-
                     $urut = 1;
                     foreach ($adaHpp as $d) {
                         $this->buatItem($hPers->id, [
@@ -289,12 +279,10 @@ class JurnalPenjualanTelurService
                 }
             }
 
-            // ─── PETI OTOMATIS ────────────────────────────────────────────────
+            // Peti otomatis
             if ($jumlahPeti > 0) {
-                $hargaPeti = $this->hargaPetiDariDB();
-                $ketPeti   = $this->ket('Jual Peti', $nota, $customer);
-
-                // D: Kas Penjualan Lain (1122-00) — peti selalu tunai
+                $hargaPeti   = $this->hargaPetiDariDB();
+                $ketPeti     = $this->ket('Jual Peti', $nota, $customer);
                 $akunKasPeti = $this->resolveAkun(self::KODE_KAS_PETI);
                 $hKasPeti    = $this->buatHeader([
                     'no_jurnal_pembantu' => $this->nextNomorPembantu(),
@@ -309,7 +297,6 @@ class JurnalPenjualanTelurService
                     'no_dokumen'         => $nota,
                     'dibuat_oleh'        => $userId,
                 ]);
-
                 $this->buatItem($hKasPeti->id, [
                     'urut'        => 1,
                     'jenis_pihak' => 'pelanggan',
@@ -322,8 +309,6 @@ class JurnalPenjualanTelurService
                     'created_by'  => $userId,
                     'updated_by'  => $userId,
                 ]);
-
-                // K: Peti Kosong keluar (1600-01)
                 $akunPeti = $this->resolveAkun(self::KODE_PETI);
                 $hPetiK   = $this->buatHeader([
                     'no_jurnal_pembantu' => $this->nextNomorPembantu(),
@@ -338,7 +323,6 @@ class JurnalPenjualanTelurService
                     'no_dokumen'         => $nota,
                     'dibuat_oleh'        => $userId,
                 ]);
-
                 $this->buatItem($hPetiK->id, [
                     'urut'        => 1,
                     'nama_barang' => 'Peti Kosong',
@@ -350,8 +334,161 @@ class JurnalPenjualanTelurService
                     'updated_by'  => $userId,
                 ]);
             }
-        });
-    }
+        }
+
+        // ════════════════════════════════════════════════════════
+        // ── [FIX 2] BAGIAN BARANG LAIN (ayam, entog, dll)
+        // Keterangan menyesuaikan nama barang, bukan hardcode "Telur"
+        // ════════════════════════════════════════════════════════
+        if ($itemLain->isNotEmpty()) {
+
+            $totalLain = $itemLain->sum('subtotal');
+            $barisKas  = $this->resolveBarisKas($penjualan, $totalLain);
+
+            // Kelompok per jenis barang agar keterangan lebih spesifik
+            $perJenisLain = $itemLain->groupBy(
+                fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang)[0]
+            );
+
+            foreach ($perJenisLain as $kodePend => $details) {
+                $namaBarangPertama = $details->first()->nama_barang ?? 'Barang';
+                // ── [FIX 2] prefix keterangan dari nama barang, bukan hardcode ──
+                $ketLain  = $this->ket('Penjualan ' . $namaBarangPertama, $nota, $customer);
+                $akunPend = $this->resolveAkun($kodePend);
+
+                // D: Kas per metode bayar
+                foreach ($barisKas as $kas) {
+                    $nominalKelompok = $details->sum('subtotal') * $kas['proporsi'];
+                    $hKas = $this->buatHeader([
+                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                        'tgl_transaksi'      => $tgl,
+                        'jenis_transaksi'    => 'bk',
+                        'modul_asal'         => 'penjualan_telur',
+                        'jurnal'             => $noJurnal,
+                        'no_akun'            => $kas['kode'],
+                        'nama_akun'          => $kas['nama'],
+                        'map'                => 'd',
+                        'keterangan'         => $ketLain,
+                        'no_dokumen'         => $nota,
+                        'dibuat_oleh'        => $userId,
+                    ]);
+                    $urut = 1;
+                    foreach ($details as $d) {
+                        $this->buatItem($hKas->id, [
+                            'urut'         => $urut++,
+                            'jenis_pihak'  => 'pelanggan',
+                            'nama_pihak'   => $customer,
+                            'nama_barang'  => $d->nama_barang,
+                            'no_dokumen'   => $nota,
+                            'no_referensi' => (string) $d->id,
+                            'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
+                            'banyak'       => $d->qty,
+                            'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
+                            'created_by'   => $userId,
+                            'updated_by'   => $userId,
+                        ]);
+                    }
+                }
+
+                // K: Pendapatan
+                $hPend = $this->buatHeader([
+                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                    'tgl_transaksi'      => $tgl,
+                    'jenis_transaksi'    => 'bk',
+                    'modul_asal'         => 'penjualan_telur',
+                    'jurnal'             => $noJurnal,
+                    'no_akun'            => $akunPend['kode'],
+                    'nama_akun'          => $akunPend['nama'],
+                    'map'                => 'k',
+                    'keterangan'         => $ketLain,
+                    'no_dokumen'         => $nota,
+                    'dibuat_oleh'        => $userId,
+                ]);
+                $urut = 1;
+                foreach ($details as $d) {
+                    $this->buatItem($hPend->id, [
+                        'urut'         => $urut++,
+                        'jenis_pihak'  => 'pelanggan',
+                        'nama_pihak'   => $customer,
+                        'nama_barang'  => $d->nama_barang,
+                        'no_dokumen'   => $nota,
+                        'no_referensi' => (string) $d->id,
+                        'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
+                        'banyak'       => $d->qty,
+                        'harga'        => $d->harga_jual,
+                        'created_by'   => $userId,
+                        'updated_by'   => $userId,
+                    ]);
+                }
+
+                // D: HPP & K: Persediaan (jika ada harga_beli)
+                $adaHpp = $details->filter(fn($d) => (float) ($d->barang->harga_beli ?? 0) > 0);
+                if ($adaHpp->isNotEmpty()) {
+                    $kode     = $this->kodePerJenis(strtolower($details->first()->nama_barang ?? ''), $details->first()->barang);
+                    $ketHpp   = $this->ket('HPP ' . $namaBarangPertama, $nota);
+                    $akunHpp  = $this->resolveAkun($kode[1]);
+                    $akunPers = $this->resolveAkun($kode[2]);
+
+                    $hHpp = $this->buatHeader([
+                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                        'tgl_transaksi'      => $tgl,
+                        'jenis_transaksi'    => 'bk',
+                        'modul_asal'         => 'penjualan_telur',
+                        'jurnal'             => $noJurnal,
+                        'no_akun'            => $akunHpp['kode'],
+                        'nama_akun'          => $akunHpp['nama'],
+                        'map'                => 'd',
+                        'keterangan'         => $ketHpp,
+                        'no_dokumen'         => $nota,
+                        'dibuat_oleh'        => $userId,
+                    ]);
+                    $urut = 1;
+                    foreach ($adaHpp as $d) {
+                        $this->buatItem($hHpp->id, [
+                            'urut'         => $urut++,
+                            'nama_barang'  => $d->nama_barang,
+                            'no_dokumen'   => $nota,
+                            'no_referensi' => (string) $d->id,
+                            'keterangan'   => 'HPP ' . $d->nama_barang,
+                            'banyak'       => $d->qty,
+                            'harga'        => $d->barang->harga_beli,
+                            'created_by'   => $userId,
+                            'updated_by'   => $userId,
+                        ]);
+                    }
+
+                    $hPers = $this->buatHeader([
+                        'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                        'tgl_transaksi'      => $tgl,
+                        'jenis_transaksi'    => 'bk',
+                        'modul_asal'         => 'penjualan_telur',
+                        'jurnal'             => $noJurnal,
+                        'no_akun'            => $akunPers['kode'],
+                        'nama_akun'          => $akunPers['nama'],
+                        'map'                => 'k',
+                        'keterangan'         => $ketHpp,
+                        'no_dokumen'         => $nota,
+                        'dibuat_oleh'        => $userId,
+                    ]);
+                    $urut = 1;
+                    foreach ($adaHpp as $d) {
+                        $this->buatItem($hPers->id, [
+                            'urut'         => $urut++,
+                            'nama_barang'  => $d->nama_barang,
+                            'no_dokumen'   => $nota,
+                            'no_referensi' => (string) $d->id,
+                            'keterangan'   => 'Keluar stok ' . $d->nama_barang,
+                            'banyak'       => $d->qty,
+                            'harga'        => $d->barang->harga_beli,
+                            'created_by'   => $userId,
+                            'updated_by'   => $userId,
+                        ]);
+                    }
+                }
+            }
+        }
+    });
+}
 
     // ══════════════════════════════════════════════════════════════
     // RESOLVE KAS — support tunai, transfer, dan split
