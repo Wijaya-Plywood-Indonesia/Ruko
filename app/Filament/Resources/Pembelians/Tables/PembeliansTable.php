@@ -187,7 +187,7 @@ class PembeliansTable
                                         'jurnal'     => $nomorFinal,
                                         'no_akun'    => $header->no_akun,
                                         'nama_akun'  => $header->nama_akun,
-                                        'nama'       => $header->no_dokumen,
+                                        'nama'       => $record->supplier_name ?? $header->no_dokumen,
                                         'keterangan' => $header->keterangan . ' (Otomatis Terposting karena Pembatalan)',
                                         'banyak'     => $banyak,
                                         'harga'      => round($hargaRata, 2),

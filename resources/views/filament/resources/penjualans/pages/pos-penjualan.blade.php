@@ -39,7 +39,7 @@
             <div class="w-full xl:w-[68%] flex flex-col gap-4 xl:gap-6 order-1">
                 
                 {{-- SEARCH CARD --}}
-                <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm" @click.outside="$wire.set('showDropdown', false)">
                     <div class="space-y-3">
                         <div class="relative">
                             <div class="absolute inset-y-0 left-2 flex items-center pointer-events-none text-gray-400">
@@ -88,7 +88,7 @@
                             </div>
                             
                             @if($is_member)
-                            <div class="flex flex-col gap-1.5 relative">
+                            <div class="flex flex-col gap-1.5 relative" @click.outside="$wire.set('customerResults', [])">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Kode Member / Cari</label>
                                 <input 
                                     type="text" 
@@ -158,10 +158,35 @@
                                                 </div>
                                             </td>
                                             <td class="px-2 py-2">
-                                                <div class="flex items-center justify-center gap-1.5">
+                                                <div class="flex items-center justify-center gap-1.5" x-data="{
+                                                    qty: @entangle('cart.'.$id.'.qty'),
+                                                    format(val) {
+                                                        if (val === null || val === undefined || val === '') return '';
+                                                        let str = val.toString();
+                                                        if (typeof val === 'number') {
+                                                            let parts = str.split('.');
+                                                            let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                            return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                        }
+                                                        let clean = str.replace(/[^0-9,]/g, '');
+                                                        let parts = clean.split(',');
+                                                        let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                        return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                    }
+                                                }">
                                                     <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700">
                                                         <button wire:click="decrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
-                                                        <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-8 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0" />
+                                                        <input type="text"
+                                                            :value="format(qty)"
+                                                            @input="
+                                                                let inputVal = $event.target.value;
+                                                                let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                                let raw = clean.replace(',', '.');
+                                                                qty = raw ? parseFloat(raw) : 0;
+                                                                $el.value = format(clean);
+                                                            "
+                                                            @change="$wire.updateQty({{ $id }})"
+                                                            class="w-20 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0" />
                                                         <button wire:click="incrementQty({{ $id }})" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
                                                     </div>
                                                     <span class="text-xs text-gray-500 font-bold whitespace-nowrap">{{ $item['satuan'] }}</span>
@@ -231,9 +256,34 @@
                                     <div class="grid grid-cols-2 gap-4">
                                         <div class="space-y-1">
                                             <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qty</label>
-                                            <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
+                                            <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700" x-data="{
+                                                qty: @entangle('cart.'.$id.'.qty'),
+                                                format(val) {
+                                                    if (val === null || val === undefined || val === '') return '';
+                                                    let str = val.toString();
+                                                    if (typeof val === 'number') {
+                                                        let parts = str.split('.');
+                                                        let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                        return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                    }
+                                                    let clean = str.replace(/[^0-9,]/g, '');
+                                                    let parts = clean.split(',');
+                                                    let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                    return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                }
+                                            }">
                                                 <button wire:click="decrementQty({{ $id }})" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
-                                                <input type="number" wire:model.lazy="cart.{{ $id }}.qty" wire:change="updateQty({{ $id }})" class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0" />
+                                                <input type="text"
+                                                    :value="format(qty)"
+                                                    @input="
+                                                        let inputVal = $event.target.value;
+                                                        let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                        let raw = clean.replace(',', '.');
+                                                        qty = raw ? parseFloat(raw) : 0;
+                                                        $el.value = format(clean);
+                                                    "
+                                                    @change="$wire.updateQty({{ $id }})"
+                                                    class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0" />
                                                 <button wire:click="incrementQty({{ $id }})" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
                                             </div>
                                         </div>
@@ -291,7 +341,31 @@
 
             {{-- RIGHT SECTION: CHECKOUT --}}
             <div id="checkout-section" class="w-full xl:w-[32%] order-2">
-                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-lg flex flex-col overflow-hidden">
+                <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-lg flex flex-col overflow-hidden"
+                     x-data="{ 
+                        total: @entangle('total'),
+                        bayar: @entangle('bayar'),
+                        bayar_tunai: @entangle('bayar_tunai'),
+                        bayar_transfer: @entangle('bayar_transfer'),
+                        metode: @entangle('metode_pembayaran'),
+                        format(val) { 
+                            if (val === null || val === undefined || val === '' || val == 0) return '0';
+                            let cleaned = val.toString().replace(/\D/g, '');
+                            return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        },
+                        get currentTotalBayar() {
+                            if (this.metode === 'TUNAI & TRANSFER') {
+                                return (parseInt(this.bayar_tunai) || 0) + (parseInt(this.bayar_transfer) || 0);
+                            }
+                            return parseInt(this.bayar) || 0;
+                        },
+                        get diff() {
+                            return Math.abs(this.currentTotalBayar - this.total);
+                        },
+                        get isKurang() {
+                            return this.currentTotalBayar < this.total;
+                        }
+                     }">
                     <div class="p-4 lg:p-5 bg-primary-600 dark:bg-black text-white relative overflow-hidden shrink-0 transition-colors duration-300">
                         <div class="relative z-10">
                             <span class="text-[9px] font-bold uppercase tracking-widest text-primary-100 dark:text-primary-500 block mb-1">Grand Total</span>
@@ -337,31 +411,7 @@
                             @endif
                         </div>
 
-                        <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
-                             x-data="{ 
-                                total: @entangle('total'),
-                                bayar: @entangle('bayar'),
-                                bayar_tunai: @entangle('bayar_tunai'),
-                                bayar_transfer: @entangle('bayar_transfer'),
-                                metode: @entangle('metode_pembayaran'),
-                                format(val) { 
-                                    if (val === null || val === undefined || val === '' || val == 0) return '0';
-                                    let cleaned = val.toString().replace(/\D/g, '');
-                                    return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                                },
-                                get currentTotalBayar() {
-                                    if (this.metode === 'TUNAI & TRANSFER') {
-                                        return (parseInt(this.bayar_tunai) || 0) + (parseInt(this.bayar_transfer) || 0);
-                                    }
-                                    return parseInt(this.bayar) || 0;
-                                },
-                                get diff() {
-                                    return Math.abs(this.currentTotalBayar - this.total);
-                                },
-                                get isKurang() {
-                                    return this.currentTotalBayar < this.total;
-                                }
-                             }">
+                        <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                             
                             @if($metode_pembayaran === 'TUNAI & TRANSFER')
                                 <div class="flex flex-wrap gap-3 mb-2">
@@ -461,9 +511,19 @@
                     <div class="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/20">
                         <div class="flex gap-2">
                             <button 
-                                wire:click="simpanPenjualan" 
+                                @click="
+                                    $wire.set('bayar', bayar);
+                                    $wire.set('bayar_tunai', bayar_tunai);
+                                    $wire.set('bayar_transfer', bayar_transfer);
+                                    $wire.simpanPenjualan();
+                                "
                                 class="flex-grow py-2.5 btn-primary text-white rounded-lg font-bold text-sm active:translate-y-0.5 transition-all  tracking-wide"
-                                @keydown.window.f8.prevent="$wire.simpanPenjualan()"
+                                @keydown.window.f8.prevent="
+                                    $wire.set('bayar', bayar);
+                                    $wire.set('bayar_tunai', bayar_tunai);
+                                    $wire.set('bayar_transfer', bayar_transfer);
+                                    $wire.simpanPenjualan();
+                                "
                             >
                                Save
                             </button>

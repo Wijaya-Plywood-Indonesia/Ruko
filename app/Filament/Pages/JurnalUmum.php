@@ -61,6 +61,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $savedMap    = session()->get('jurnal_draft_map', 'd');
         $this->map   = in_array(strtolower($savedMap), ['d', 'k']) ? strtolower($savedMap) : 'd';
 
+        $this->sortDraftItems();
         $this->syncJurnalNumber();
     }
 
@@ -75,9 +76,9 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $kredit  = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'k')->sum('total');
             $balance = abs($debit - $kredit) < 0.01;
 
-            $this->jurnal = $balance
-                ? (int) $draft->max('jurnal') + 1
-                : (int) $draft->first()['jurnal'];
+            // $this->jurnal = $balance
+            //     ? (int) $draft->max('jurnal') + 1
+            //     : (int) $draft->first()['jurnal'];
         }
         session()->put('jurnal_draft_kode', $this->jurnal);
     }
@@ -106,9 +107,46 @@ class JurnalUmum extends Page implements HasActions, HasForms
         return (float) $banyak * $harga;
     }
 
+    protected function sortDraftItems(): void
+    {
+        if (empty($this->items)) return;
+
+        $this->items = collect($this->items)
+            ->sort(function ($a, $b) {
+                // 1. Sort by Date desc
+                $tglA = $a['tgl'] ?? '';
+                $tglB = $b['tgl'] ?? '';
+                if ($tglA !== $tglB) {
+                    return strcmp($tglB, $tglA); // desc
+                }
+
+                // 2. Sort by Journal number desc
+                $jurnalA = (int) ($a['jurnal'] ?? 0);
+                $jurnalB = (int) ($b['jurnal'] ?? 0);
+                if ($jurnalA !== $jurnalB) {
+                    return $jurnalB <=> $jurnalA; // desc
+                }
+
+                // 3. Sort by map asc (Debit ('d') before Kredit ('k'))
+                $mapA = strtolower($a['map'] ?? 'd');
+                $mapB = strtolower($b['map'] ?? 'd');
+                if ($mapA !== $mapB) {
+                    return $mapA === 'd' ? -1 : 1;
+                }
+
+                // 4. Sort by no_akun asc
+                return strcasecmp($a['no_akun'] ?? '', $b['no_akun'] ?? '');
+            })
+            ->values()
+            ->toArray();
+    }
+
     protected function getViewData(): array
     {
-        $query = JurnalModel::latest('id');
+        $query = JurnalModel::orderBy('tgl', 'desc')
+            ->orderBy('jurnal', 'desc')
+            ->orderBy('map', 'asc')
+            ->orderBy('no_akun', 'asc');
         if (!empty($this->filterTglDari))
             $query->whereDate('tgl', '>=', $this->filterTglDari);
         if (!empty($this->filterTglSampai))
@@ -235,6 +273,8 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $this->harga  = '';
         $this->banyak = '';
 
+        $this->sortDraftItems();
+
         if ($this->isDraftBalanced()) {
             $this->map         = 'd';
             $this->wasBalanced = true;
@@ -255,6 +295,8 @@ class JurnalUmum extends Page implements HasActions, HasForms
 
         $this->harga  = '';
         $this->banyak = '';
+
+        $this->sortDraftItems();
 
         if (empty($this->items)) {
             $this->map = 'd';
@@ -334,6 +376,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
                         'map'        => strtolower($data['map']),
                     ];
 
+                    $this->sortDraftItems();
                     $this->syncJurnalNumber();
                     $this->persistDraftState();
                     Notification::make()->title('Entri draft berhasil diperbarui')->success()->send();
