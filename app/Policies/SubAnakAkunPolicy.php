@@ -67,15 +67,4 @@ class SubAnakAkunPolicy
         return $authUser->can('Reorder:SubAnakAkun');
     }
 
-    public function detach(AuthUser $authUser, SubAnakAkun $subAnakAkun): bool
-    {
-        return $authUser->can('Detach:SubAnakAkun');
-    }
-
-    // ✅ Tambahan — wajib agar DetachBulkAction berfungsi
-    public function detachAny(AuthUser $authUser): bool
-    {
-        return $authUser->can('DetachAny:SubAnakAkun');
-    }
-
 }
