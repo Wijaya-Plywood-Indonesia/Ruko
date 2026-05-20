@@ -82,6 +82,7 @@ class PreviewExport extends Page
                     'plat_kendaraan' => $p->plat_kendaraan ?? '-',
                     'nama_sopir' => $p->nama_sopir,
                     'status_transaksi' => $p->status_transaksi,
+                    'keterangan' => $p->keterangan ?? '-',
                     // Load detail hanya jika dibutuhkan
                     'data_penjualan_detail' => $this->viewType === 'full' || $this->viewType === 'detail'  ? $this->data_detail($p->id) : [],
                 ];
@@ -122,6 +123,7 @@ class PreviewExport extends Page
                     'nama_customer' => $p->nama_customer,
                     'kasir' => $p->user?->name,
                     'status_transaksi' => $p->status_transaksi,
+                    'keterangan' => $p->keterangan ?? '-',
                     'data_penjualan_detail' => $this->data_detail($p->id),
                 ];
             })

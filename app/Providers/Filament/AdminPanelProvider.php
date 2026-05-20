@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarFullyCollapsibleOnDesktop()
             ->spa()
             ->id('admin')
+            ->brandName('Telur')
             ->path('admin')
             ->login()
             ->viteTheme('resources/css/app.css')
@@ -64,6 +65,9 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
             ])
             ->navigationGroups([
+                NavigationGroup::make(label: 'Kandang')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->collapsed(),
                 NavigationGroup::make(label: 'Master Data')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->collapsed(),

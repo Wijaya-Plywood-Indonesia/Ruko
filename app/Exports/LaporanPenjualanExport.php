@@ -48,6 +48,7 @@ class LaporanPenjualanExport implements
                 $row['kendaraan'] ?? 'ANGKUT SENDIRI',
                 $row['plat_kendaraan'] ?? '-',
                 $row['nama_sopir'] ?? '-',
+                $row['keterangan'] ?? '-',
             ];
         })->toArray();
     }
@@ -72,6 +73,7 @@ class LaporanPenjualanExport implements
             'Kendaraan',
             'Plat Kendaraan',
             'Nama Sopir',
+            'Keterangan',
         ];
     }
 
@@ -80,7 +82,7 @@ class LaporanPenjualanExport implements
         $lastRow = count($this->data) + 1;
 
         // Header
-        $sheet->getStyle('A1:Q1')->applyFromArray([
+        $sheet->getStyle('A1:R1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -101,7 +103,7 @@ class LaporanPenjualanExport implements
         ]);
 
         // Data
-        $sheet->getStyle("A2:Q{$lastRow}")->applyFromArray([
+        $sheet->getStyle("A2:R{$lastRow}")->applyFromArray([
             'alignment' => [
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
@@ -122,8 +124,9 @@ class LaporanPenjualanExport implements
         $sheet->getStyle("F2:F{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Metode Bayar
         $sheet->getStyle("G2:I{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle("J2:J{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
-        $sheet->getStyle("O2:O{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
-        $sheet->getStyle("P2:P{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
+        $sheet->getStyle("O2:O{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Kendaraan
+        $sheet->getStyle("P2:P{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Plat
+        $sheet->getStyle("R2:R{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT); // Keterangan
 
         // Format uang
         $sheet->getStyle("L2:N{$lastRow}")
@@ -134,7 +137,7 @@ class LaporanPenjualanExport implements
         $sheet->freezePane('A2');
 
         // Filter
-        $sheet->setAutoFilter("A1:Q{$lastRow}");
+        $sheet->setAutoFilter("A1:R{$lastRow}");
 
         return [];
     }
@@ -159,6 +162,7 @@ class LaporanPenjualanExport implements
             'O' => 18, // Kendaraan
             'P' => 18, // Plat
             'Q' => 22, // Sopir
+            'R' => 30, // Keterangan
         ];
         
     }

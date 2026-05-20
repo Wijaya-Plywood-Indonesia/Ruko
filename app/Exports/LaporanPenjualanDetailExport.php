@@ -42,11 +42,11 @@ class LaporanPenjualanDetailExport implements WithEvents,
             $headers = [
                 'No Nota','Tanggal','Customer','Tipe','Alamat','Metode Bayar',
                 'Total','Bayar','Kembalian','Status','Kasir','Validator',
-                'Bank','No Rekening','Kendaraan','Plat','Sopir'
+                'Bank','No Rekening','Kendaraan','Plat','Sopir','Keterangan'
             ];
 
             $sheet->getDelegate()->fromArray($headers, null, "A{$row}");
-            $sheet->getStyle("A{$row}:Q{$row}")
+            $sheet->getStyle("A{$row}:R{$row}")
                 ->applyFromArray($this->styleHeaderPenjualan());
             $row++;
 
@@ -72,6 +72,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                     $penjualan['kendaraan'] ?? 'ANGKUT SENDIRI',
                     $penjualan['plat_kendaraan'] ?? '-',
                     $penjualan['nama_sopir'] ?? '-',
+                    $penjualan['keterangan'] ?? '-',
                 ]
             ], null, "A{$row}");
 
@@ -165,6 +166,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 $row['kendaraan'] ?? 'ANGKUT SENDIRI',
                 $row['plat_kendaraan'] ?? '-',
                 $row['nama_sopir'] ?? '-',
+                $row['keterangan'] ?? '-',
             ];
         })->toArray();
     }
@@ -189,6 +191,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
             'Kendaraan',
             'Plat Kendaraan',
             'Nama Sopir',
+            'Keterangan',
         ];
     }
 
@@ -285,6 +288,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
             'O' => 18, // Kendaraan
             'P' => 18, // Plat
             'Q' => 22, // Sopir
+            'R' => 30, // Keterangan
         ];
         
     }

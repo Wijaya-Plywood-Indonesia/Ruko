@@ -45,6 +45,7 @@ class PenjualanExportController extends Controller
                     'jumlah' => (string) $detail->qty.' '.$detail->satuan,
                     'total_diskon' => (string) ($detail->potongan * $detail->qty),
                     'subtotal' => $detail->subtotal,
+                    'keterangan' => $detail->keterangan ?? '-',
                 ];
             })
             ->toArray();
@@ -78,6 +79,7 @@ class PenjualanExportController extends Controller
                     'plat_kendaraan' => $p->plat_kendaraan ?? '-',
                     'nama_sopir' => $p->nama_sopir,
                     'status_transaksi' => $p->status_transaksi,
+                    'keterangan' => $p->keterangan ?? '-',
                     'data_penjualan_detail' => $data_detail,
                 ];
             })
@@ -98,6 +100,7 @@ class PenjualanExportController extends Controller
                     'nama_customer' => $p->nama_customer,
                     'kasir' => $p->user?->name,
                     'status_transaksi' => $p->status_transaksi,
+                    'keterangan' => $p->keterangan ?? '-',
                     'data_penjualan_detail' => $this->data_detail($p->id),
                 ];
             })

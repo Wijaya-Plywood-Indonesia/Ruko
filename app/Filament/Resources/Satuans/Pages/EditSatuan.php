@@ -16,4 +16,14 @@ class EditSatuan extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    /**
+     * @return array<class-string>
+     */
+    public function getRelationManagers(): array
+    {
+        return [
+            \App\Filament\Resources\Satuans\RelationManagers\SatuanKonversiRelationManager::class,
+        ];
+    }
 }

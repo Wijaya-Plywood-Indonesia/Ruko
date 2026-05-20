@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Barang extends Model
 {
@@ -13,6 +14,7 @@ class Barang extends Model
         'kode_barang',
         'barcode',
         'nama_barang',
+        'id_sub_anak_akun',
         'id_kategori',
         'id_satuan',
         'harga_beli',
@@ -77,5 +79,39 @@ class Barang extends Model
     public function produksiPakanMentah()
     {
         return $this->hasMany(ProduksiPakanMentah::class);
+    }
+
+    public function subAnakAkun()
+    {
+        // Parameter kedua adalah nama kolom foreign key yang kita buat di migration tadi
+        return $this->belongsTo(SubAnakAkun::class, 'id_sub_anak_akun');
+    }
+
+    public function getStokBukuBesarAttribute()
+    {
+        $subAkun = $this->subAnakAkun;
+        $kodeAkun = $subAkun?->kode_sub_anak_akun;
+
+        if (!$kodeAkun) {
+            return 0.0;
+        }
+
+        $transaksis = JurnalUmum::where('no_akun', $kodeAkun)
+            ->select('map', DB::raw('SUM(COALESCE(banyak, 0)) as total_banyak'))
+            ->groupBy('map')
+            ->get();
+
+        $totalQty = 0.0;
+        foreach ($transaksis as $trx) {
+            $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
+            $qty = (float) $trx->total_banyak;
+            if ($isDebit) {
+                $totalQty += $qty;
+            } else {
+                $totalQty -= $qty;
+            }
+        }
+
+        return $totalQty;
     }
 }

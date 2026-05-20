@@ -90,11 +90,9 @@ class JurnalPenjualanTelurService
             'details.barang',
             'rekeningPerusahaan.subAnakAkun',
         ]);
-
         $itemTelur = collect();
         foreach ($penjualan->details as $detail) {
-            $nama = strtolower($detail->nama_barang ?? '');
-            if ($this->isTelur($nama)) {
+            if ($detail->barang) {
                 $itemTelur->push($detail);
             }
         }
@@ -171,7 +169,7 @@ class JurnalPenjualanTelurService
 
                 // ─── K : Pendapatan per jenis telur ──────────────────────────
                 $perPend = $itemTelur->groupBy(
-                    fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''))[0]
+                    fn($d) => $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang)[0]
                 );
 
                 foreach ($perPend as $kodePend => $details) {
@@ -215,7 +213,7 @@ class JurnalPenjualanTelurService
                 $ketHpp = $this->ket('HPP Penjualan Telur', $nota);
 
                 $perJenis = $itemTelur->groupBy(function ($d) {
-                    $kode = $this->kodePerJenis(strtolower($d->nama_barang ?? ''));
+                    $kode = $this->kodePerJenis(strtolower($d->nama_barang ?? ''), $d->barang);
                     return $kode[1] . '|' . $kode[2];
                 });
 
@@ -488,14 +486,57 @@ class JurnalPenjualanTelurService
             || str_contains($namaLower, 'telur_ruko');
     }
 
-    private function kodePerJenis(string $namaLower): array
+    private function kodePerJenis(string $namaLower, ?Barang $barang = null): array
     {
+        // 1. Tentukan Kode Persediaan (Inventory)
+        // Jika barang punya subAnakAkun, gunakan kodenya. Jika tidak, fallback.
+        $kodePers = $barang?->subAnakAkun?->kode_sub_anak_akun;
+        
+        // 2. Tentukan Kode Pendapatan (Revenue) & HPP
+        // Cek keywords terlebih dahulu
+        if (str_contains($namaLower, 'ayam')) {
+            $kodePend = '4500-00'; // penjualan ayam afkir
+            $kodeHpp  = '6000-00'; // hpp
+            if (!$kodePers) $kodePers = '1420-01'; // fallback persediaan ayam
+            return [$kodePend, $kodeHpp, $kodePers];
+        }
+        if (str_contains($namaLower, 'rabok')) {
+            $kodePend = '4500-01'; // penjualan rabok
+            $kodeHpp  = '6000-00';
+            if (!$kodePers) $kodePers = '1411-00';
+            return [$kodePend, $kodeHpp, $kodePers];
+        }
+        if (str_contains($namaLower, 'entog')) {
+            $kodePend = '4500-02'; // penjualan entog
+            $kodeHpp  = '6000-00';
+            if (!$kodePers) $kodePers = '1411-00';
+            return [$kodePend, $kodeHpp, $kodePers];
+        }
+        if (str_contains($namaLower, 'lele')) {
+            $kodePend = '4500-03'; // penjualan lele
+            $kodeHpp  = '6000-00';
+            if (!$kodePers) $kodePers = '1411-00';
+            return [$kodePend, $kodeHpp, $kodePers];
+        }
+        if (str_contains($namaLower, 'sak')) {
+            $kodePend = '4500-04'; // penjualan sak
+            $kodeHpp  = '6000-00';
+            if (!$kodePers) $kodePers = '1411-00';
+            return [$kodePend, $kodeHpp, $kodePers];
+        }
+
+        // Jika tidak match keyword non-telur di atas, jalankan pencarian keyword telur
         foreach (self::KODE_PER_JENIS as $keyword => $kode) {
             if (str_contains($namaLower, $keyword)) {
-                return $kode;
+                // Gunakan kode persediaan dari barang jika ada
+                $p = $kodePers ?: $kode[2];
+                return [$kode[0], $kode[1], $p];
             }
         }
-        return ['4100-01', '6000-01', '1411-00'];
+
+        // Fallback untuk telur/barang lain
+        $p = $kodePers ?: '1411-00';
+        return ['4100-01', '6000-01', $p];
     }
 
     private function hargaPetiDariDB(): float

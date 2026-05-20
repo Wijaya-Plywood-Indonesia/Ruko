@@ -34,7 +34,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
 
     public $tgl, $jurnal, $no_akun, $nama_akun, $nama, $keterangan;
     public $harga = '';
-    public $banyak = 1;
+    public $banyak = '';  // default kosong, bukan 1
     public $map = 'd';
     public $items = [];
 
@@ -47,36 +47,28 @@ class JurnalUmum extends Page implements HasActions, HasForms
     public bool $hasMorePages = true;
     public bool $isLoadingMore = false;
 
-    // ── BULK DELETE ──────────────────────────────────────────
     public array $selectedIds = [];
     public bool $selectAll = false;
-    // ─────────────────────────────────────────────────────────
 
-    // ---
-    // MOUNT
-    // ---
     public function mount(): void
     {
         $this->tgl    = session()->get('jurnal_draft_tgl', now()->format('Y-m-d'));
         $this->items  = session()->get('jurnal_draft_items', []);
-        $this->banyak = session()->get('jurnal_draft_banyak', 1);
+        $this->banyak = session()->get('jurnal_draft_banyak', '');  // default ''
         $this->harga  = session()->get('jurnal_draft_harga', '');
         $this->nama   = session()->get('jurnal_draft_nama', '');
 
         $savedMap    = session()->get('jurnal_draft_map', 'd');
         $this->map   = in_array(strtolower($savedMap), ['d', 'k']) ? strtolower($savedMap) : 'd';
 
+        $this->sortDraftItems();
         $this->syncJurnalNumber();
-        // $this->recalcAutoBalance(changemap: false);
     }
 
-    // ---
-    // SYNC NOMOR JURNAL
-    // ---
     protected function syncJurnalNumber(): void
     {
         if (empty($this->items)) {
-            $last        = JurnalModel::max('jurnal');
+            $last         = JurnalModel::max('jurnal');
             $this->jurnal = $last ? (int) $last + 1 : 1;
         } else {
             $draft   = collect($this->items);
@@ -84,46 +76,13 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $kredit  = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'k')->sum('total');
             $balance = abs($debit - $kredit) < 0.01;
 
-            $this->jurnal = $balance
-                ? (int) $draft->max('jurnal') + 1
-                : (int) $draft->first()['jurnal'];
+            // $this->jurnal = $balance
+            //     ? (int) $draft->max('jurnal') + 1
+            //     : (int) $draft->first()['jurnal'];
         }
         session()->put('jurnal_draft_kode', $this->jurnal);
     }
 
-    // ---
-    // AUTO BALANCE RECALCULATE
-    // total per item = banyak × harga
-    // ---
-    // private function recalcAutoBalance(bool $changemap = true): void
-    // {
-    //     if (empty($this->items)) {
-    //         $this->harga  = '';
-    //         $this->banyak = 1;
-    //         $this->map    = 'd';
-    //         return;
-    //     }
-
-    //     $draft   = collect($this->items);
-    //     $debit   = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'd')->sum('total');
-    //     $kredit  = (float) $draft->filter(fn($i) => strtolower($i['map']) === 'k')->sum('total');
-    //     $selisih = $debit - $kredit;
-
-    //     if (abs($selisih) > 0.01) {
-    //         $this->harga  = abs($selisih);
-    //         $this->banyak = 1;
-    //         if ($changemap) {
-    //             $this->map = ($selisih > 0) ? 'k' : 'd';
-    //         }
-    //     } else {
-    //         $this->harga  = '';
-    //         $this->banyak = 1;
-    //     }
-    // }
-
-    // ---
-    // PERSIST SESSION
-    // ---
     private function persistDraftState(): void
     {
         session()->put('jurnal_draft_items',  $this->items);
@@ -135,23 +94,67 @@ class JurnalUmum extends Page implements HasActions, HasForms
         session()->put('jurnal_draft_nama',   $this->nama);
     }
 
-    // ---
-    // VIEW DATA
-    // ---
+    /**
+     * Jika banyak diisi → total = banyak × harga
+     * Jika banyak kosong/null → total = harga langsung
+     */
+    private function hitungTotal($banyak, $harga): float
+    {
+        $harga = (float) $harga;
+        if ($banyak === null || $banyak === '' || (float) $banyak <= 0) {
+            return $harga;
+        }
+        return (float) $banyak * $harga;
+    }
+
+    protected function sortDraftItems(): void
+    {
+        if (empty($this->items)) return;
+
+        $this->items = collect($this->items)
+            ->sort(function ($a, $b) {
+                // 1. Sort by Date desc
+                $tglA = $a['tgl'] ?? '';
+                $tglB = $b['tgl'] ?? '';
+                if ($tglA !== $tglB) {
+                    return strcmp($tglB, $tglA); // desc
+                }
+
+                // 2. Sort by Journal number desc
+                $jurnalA = (int) ($a['jurnal'] ?? 0);
+                $jurnalB = (int) ($b['jurnal'] ?? 0);
+                if ($jurnalA !== $jurnalB) {
+                    return $jurnalB <=> $jurnalA; // desc
+                }
+
+                // 3. Sort by map asc (Debit ('d') before Kredit ('k'))
+                $mapA = strtolower($a['map'] ?? 'd');
+                $mapB = strtolower($b['map'] ?? 'd');
+                if ($mapA !== $mapB) {
+                    return $mapA === 'd' ? -1 : 1;
+                }
+
+                // 4. Sort by no_akun asc
+                return strcasecmp($a['no_akun'] ?? '', $b['no_akun'] ?? '');
+            })
+            ->values()
+            ->toArray();
+    }
+
     protected function getViewData(): array
     {
-        $sub  = SubAnakAkun::selectRaw("kode_sub_anak_akun as no, nama_sub_anak_akun as nama");
-        $anak = AnakAkun::selectRaw("kode_anak_akun as no, nama_anak_akun as nama");
-
-        $query = JurnalModel::latest('id');
+        $query = JurnalModel::orderBy('tgl', 'desc')
+            ->orderBy('jurnal', 'desc')
+            ->orderBy('map', 'asc')
+            ->orderBy('no_akun', 'asc');
         if (!empty($this->filterTglDari))
             $query->whereDate('tgl', '>=', $this->filterTglDari);
         if (!empty($this->filterTglSampai))
             $query->whereDate('tgl', '<=', $this->filterTglSampai);
 
-        $data             = $query->limit($this->perPage + 1)->get();
+        $data               = $query->limit($this->perPage + 1)->get();
         $this->hasMorePages = $data->count() > $this->perPage;
-        $historyJurnals   = $data->take($this->perPage);
+        $historyJurnals     = $data->take($this->perPage);
 
         $totalsQuery = JurnalModel::query();
         if (!empty($this->filterTglDari))
@@ -160,13 +163,18 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $totalsQuery->whereDate('tgl', '<=', $this->filterTglSampai);
         $allForTotals = $totalsQuery->get(['map', 'banyak', 'harga']);
 
-        $totalDebitDB    = $allForTotals->filter(fn($j) => strtolower($j->map) === 'd')->sum(fn($j) => $j->banyak * $j->harga);
-        $totalKreditDB   = $allForTotals->filter(fn($j) => strtolower($j->map) === 'k')->sum(fn($j) => $j->banyak * $j->harga);
+        $totalDebitDB  = $allForTotals
+            ->filter(fn($j) => strtolower($j->map) === 'd')
+            ->sum(fn($j) => $this->hitungTotal($j->banyak, $j->harga));
+        $totalKreditDB = $allForTotals
+            ->filter(fn($j) => strtolower($j->map) === 'k')
+            ->sum(fn($j) => $this->hitungTotal($j->banyak, $j->harga));
+
         $isHistoryBalanced = abs($totalDebitDB - $totalKreditDB) < 0.01;
-        $selisihDB       = abs($totalDebitDB - $totalKreditDB);
+        $selisihDB         = abs($totalDebitDB - $totalKreditDB);
 
         return [
-            'accounts'          => $sub->unionAll($anak)->get(),
+            'accounts'          => SubAnakAkun::selectRaw("kode_sub_anak_akun as no, nama_sub_anak_akun as nama")->get(),
             'historyJurnals'    => $historyJurnals,
             'totalDebitDB'      => $totalDebitDB,
             'totalKreditDB'     => $totalKreditDB,
@@ -175,9 +183,6 @@ class JurnalUmum extends Page implements HasActions, HasForms
         ];
     }
 
-    // ---
-    // FILTER
-    // ---
     public function applyFilter(): void
     {
         $this->filterTglDari   = $this->filterTglDariInput;
@@ -207,9 +212,6 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $this->selectAll = false;
     }
 
-    // ---
-    // BALANCE CHECK
-    // ---
     protected function isDraftBalanced(): bool
     {
         if (empty($this->items)) return false;
@@ -221,9 +223,6 @@ class JurnalUmum extends Page implements HasActions, HasForms
         return abs($debit - $kredit) < 0.01;
     }
 
-    // ---
-    // UPDATED NO AKUN
-    // ---
     public function updatedNoAkun($value): void
     {
         if (blank($value)) {
@@ -231,42 +230,31 @@ class JurnalUmum extends Page implements HasActions, HasForms
             $this->persistDraftState();
             return;
         }
-
-        $this->nama_akun = SubAnakAkun::where('kode_sub_anak_akun', $value)->first()?->nama_sub_anak_akun
-            ?? AnakAkun::where('kode_anak_akun', $value)->first()?->nama_anak_akun
-            ?? '';
-
-        // $this->recalcAutoBalance(changemap: false);
+        $this->nama_akun = SubAnakAkun::where('kode_sub_anak_akun', $value)->first()?->nama_sub_anak_akun ?? '';
         $this->persistDraftState();
     }
 
-    // ---
-    // ADD ITEM
-    // total = banyak × harga (tidak ada m3 / hit_kbk)
-    // ---
     public function addItem(): void
     {
         $errors = [];
 
-        if (blank($this->no_akun)) {
-            $errors[] = 'No. Akun wajib dipilih.';
-        }
-        if (blank($this->nama_akun)) {
-            $errors[] = 'Nama Akun belum terisi.';
-        }
-        if (blank($this->harga) || (float) $this->harga < 0.01) {
+        if (blank($this->no_akun))   $errors[] = 'No. Akun wajib dipilih.';
+        if (blank($this->nama_akun)) $errors[] = 'Nama Akun belum terisi.';
+        if (blank($this->harga) || (float) $this->harga < 0.01)
             $errors[] = 'Harga wajib diisi (minimal Rp 1).';
-        }
+
+        // banyak opsional — validasi hanya jika diisi tapi nilainya tidak valid
+        if (!blank($this->banyak) && (float) $this->banyak <= 0)
+            $errors[] = 'Kuantitas harus lebih dari 0 jika diisi.';
 
         if (!empty($errors)) {
-            foreach ($errors as $err) {
+            foreach ($errors as $err)
                 $this->dispatch('toast', type: 'error', title: 'Field Wajib Kosong', msg: $err);
-            }
             return;
         }
 
         $harga = (float) $this->harga;
-        $total = (float) $this->banyak * $harga;
+        $total = $this->hitungTotal($this->banyak, $harga);
 
         $this->items[] = [
             'tgl'        => $this->tgl,
@@ -275,49 +263,45 @@ class JurnalUmum extends Page implements HasActions, HasForms
             'nama_akun'  => $this->nama_akun,
             'nama'       => $this->nama,
             'keterangan' => $this->keterangan,
-            'banyak'     => (float) $this->banyak,
+            'banyak'     => blank($this->banyak) ? null : (float) $this->banyak,
             'harga'      => $harga,
             'total'      => $total,
             'map'        => strtolower($this->map),
         ];
 
         $this->reset(['no_akun', 'nama_akun', 'nama', 'keterangan']);
-
         $this->harga  = '';
-        $this->banyak = 1;
+        $this->banyak = '';
+
+        $this->sortDraftItems();
 
         if ($this->isDraftBalanced()) {
-            $this->harga     = '';
-            $this->banyak    = 1;
-            $this->map       = 'd';
+            $this->map         = 'd';
             $this->wasBalanced = true;
             $this->syncJurnalNumber();
             $this->dispatch('toast', type: 'success', title: 'Jurnal Balanced!', msg: 'Draft selesai — siap diposting.');
         } else {
-            // $this->recalcAutoBalance(changemap: true);
             $this->dispatch('toast', type: 'info', title: 'Item Ditambahkan', msg: 'Jurnal belum balance — tambah entri penyeimbang.');
         }
 
         $this->persistDraftState();
     }
 
-    // ---
-    // REMOVE ITEM
-    // ---
     public function removeItem(int $index): void
     {
         if (!isset($this->items[$index])) return;
 
         array_splice($this->items, $index, 1);
 
+        $this->harga  = '';
+        $this->banyak = '';
+
+        $this->sortDraftItems();
+
         if (empty($this->items)) {
-            $this->harga  = '';
-            $this->banyak = 1;
-            $this->map    = 'd';
+            $this->map = 'd';
             $this->dispatch('toast', type: 'error', title: 'Draft Dikosongkan', msg: 'Semua item berhasil dihapus.');
         } else {
-            $this->harga  = '';
-            $this->banyak = 1;
             $this->dispatch('toast', type: 'error', title: 'Item Dihapus', msg: 'Item berhasil dihapus dari draft.');
         }
 
@@ -325,9 +309,81 @@ class JurnalUmum extends Page implements HasActions, HasForms
         $this->persistDraftState();
     }
 
-    // ---
-    // SAVE JURNAL
-    // ---
+    public function editDraftAction(): Action
+    {
+        return Action::make('editDraft')
+            ->modalHeading('Edit Draft Transaksi')
+            ->modalSubmitActionLabel('Simpan Perubahan')
+            ->form([
+                Grid::make(2)->schema([
+                    DatePicker::make('tgl')->label('Tanggal')->required()->native(false),
+                    TextInput::make('jurnal')->label('No. Jurnal')->required(),
+                    Select::make('no_akun')
+                        ->label('Cari Nomor Akun')
+                        ->required()
+                        ->searchable()
+                        ->options(fn() => SubAnakAkun::all()->mapWithKeys(
+                            fn($item) => [$item->kode_sub_anak_akun => "{$item->kode_sub_anak_akun} - {$item->nama_sub_anak_akun}"]
+                        ))
+                        ->live()
+                        ->afterStateUpdated(function ($state, Set $set) {
+                            $set('nama_akun', SubAnakAkun::where('kode_sub_anak_akun', $state)->first()?->nama_sub_anak_akun
+                                ?? AnakAkun::where('kode_anak_akun', $state)->first()?->nama_anak_akun ?? '');
+                        }),
+                    TextInput::make('nama_akun')->label('Nama Akun')->required()->readOnly(),
+                    TextInput::make('nama')->label('Nama')->columnSpanFull(),
+                    TextInput::make('keterangan')->label('Keterangan')->columnSpanFull(),
+                    TextInput::make('banyak')->label('Kuantitas (kosongkan jika tidak perlu)')->numeric(),
+                    TextInput::make('harga')->label('Harga Satuan')->numeric()->prefix('Rp')->required(),
+                    Select::make('map')->label('Posisi')
+                        ->options(['d' => 'Debit', 'k' => 'Kredit'])->required(),
+                ])
+            ])
+            ->fillForm(function (array $arguments) {
+                $index = $arguments['index'] ?? null;
+                if ($index !== null && isset($this->items[$index])) {
+                    $item = $this->items[$index];
+                    return [
+                        'tgl'       => $item['tgl'],
+                        'jurnal'    => $item['jurnal'],
+                        'no_akun'   => $item['no_akun'],
+                        'nama_akun' => $item['nama_akun'],
+                        'nama'      => $item['nama'],
+                        'keterangan'=> $item['keterangan'],
+                        'banyak'    => $item['banyak'],
+                        'harga'     => $item['harga'],
+                        'map'       => $item['map'],
+                    ];
+                }
+                return [];
+            })
+            ->action(function (array $data, array $arguments): void {
+                $index = $arguments['index'] ?? null;
+                if ($index !== null && isset($this->items[$index])) {
+                    $harga = (float) $data['harga'];
+                    $total = $this->hitungTotal($data['banyak'], $harga);
+
+                    $this->items[$index] = [
+                        'tgl'        => $data['tgl'],
+                        'jurnal'     => $data['jurnal'],
+                        'no_akun'    => $data['no_akun'],
+                        'nama_akun'  => $data['nama_akun'],
+                        'nama'       => $data['nama'],
+                        'keterangan' => $data['keterangan'],
+                        'banyak'     => blank($data['banyak']) ? null : (float) $data['banyak'],
+                        'harga'      => $harga,
+                        'total'      => $total,
+                        'map'        => strtolower($data['map']),
+                    ];
+
+                    $this->sortDraftItems();
+                    $this->syncJurnalNumber();
+                    $this->persistDraftState();
+                    Notification::make()->title('Entri draft berhasil diperbarui')->success()->send();
+                }
+            });
+    }
+
     public function saveJurnal(): void
     {
         if (empty($this->items) || !$this->isDraftBalanced()) return;
@@ -342,7 +398,8 @@ class JurnalUmum extends Page implements HasActions, HasForms
                         'nama_akun'  => $item['nama_akun'],
                         'nama'       => $item['nama'],
                         'keterangan' => $item['keterangan'],
-                        'banyak'     => $item['banyak'],
+                        'banyak'     => isset($item['banyak']) && $item['banyak'] !== null && $item['banyak'] !== ''
+                                            ? $item['banyak'] : null,
                         'harga'      => $item['harga'],
                         'map'        => $item['map'],
                     ]);
@@ -354,43 +411,31 @@ class JurnalUmum extends Page implements HasActions, HasForms
         }
 
         session()->forget([
-            'jurnal_draft_items',
-            'jurnal_draft_kode',
-            'jurnal_draft_tgl',
-            'jurnal_draft_map',
-            'jurnal_draft_harga',
-            'jurnal_draft_banyak',
-            'jurnal_draft_nama',
+            'jurnal_draft_items', 'jurnal_draft_kode', 'jurnal_draft_tgl',
+            'jurnal_draft_map', 'jurnal_draft_harga', 'jurnal_draft_banyak', 'jurnal_draft_nama',
         ]);
 
-        $this->items       = [];
-        $this->wasBalanced = false;
+        $this->items        = [];
+        $this->wasBalanced  = false;
         $this->reset(['no_akun', 'nama_akun', 'nama', 'keterangan']);
-        $this->harga    = '';
-        $this->banyak   = 1;
-        $this->map      = 'd';
-        $this->perPage  = 50;
+        $this->harga        = '';
+        $this->banyak       = '';
+        $this->map          = 'd';
+        $this->perPage      = 50;
         $this->hasMorePages = true;
 
         $this->syncJurnalNumber();
         $this->dispatch('toast', type: 'success', title: 'Jurnal Diposting!', msg: 'Semua entri berhasil disimpan ke database.');
     }
 
-    // ---
-    // RESET FORM
-    // ---
     public function resetForm(): void
     {
         $this->reset(['no_akun', 'nama_akun', 'nama', 'keterangan']);
         $this->harga  = '';
-        $this->banyak = 1;
+        $this->banyak = '';
         $this->map    = 'd';
         $this->persistDraftState();
     }
-
-    // ══════════════════════════════════════════════════════════
-    // BULK DELETE
-    // ══════════════════════════════════════════════════════════
 
     public function toggleSelectAll(array $ids): void
     {
@@ -406,10 +451,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
     public function toggleSelected(int $id): void
     {
         if (in_array($id, $this->selectedIds)) {
-            $this->selectedIds = array_values(array_filter(
-                $this->selectedIds,
-                fn($i) => $i !== $id
-            ));
+            $this->selectedIds = array_values(array_filter($this->selectedIds, fn($i) => $i !== $id));
         } else {
             $this->selectedIds[] = $id;
         }
@@ -434,16 +476,10 @@ class JurnalUmum extends Page implements HasActions, HasForms
 
         $this->selectedIds = [];
         $this->selectAll   = false;
-
         $this->dispatch('toast', type: 'success', title: 'Berhasil Dihapus', msg: "{$count} transaksi berhasil dihapus.");
         $this->dispatch('bulk-delete-done');
     }
 
-    // ══════════════════════════════════════════════════════════
-
-    // ---
-    // EDIT HISTORY
-    // ---
     public function editHistoryAction(): Action
     {
         return Action::make('editHistory')
@@ -457,46 +493,35 @@ class JurnalUmum extends Page implements HasActions, HasForms
                         ->label('Cari Nomor Akun')
                         ->required()
                         ->searchable()
-                        ->options(function () {
-                            $sub  = SubAnakAkun::all()->mapWithKeys(fn($item) => [
-                                $item->kode_sub_anak_akun => "{$item->kode_sub_anak_akun} - {$item->nama_sub_anak_akun}"
-                            ]);
-                            $anak = AnakAkun::all()->mapWithKeys(fn($item) => [
-                                $item->kode_anak_akun => "{$item->kode_anak_akun} - {$item->nama_anak_akun}"
-                            ]);
-                            return $sub->merge($anak);
-                        })
+                        ->options(fn() => SubAnakAkun::all()->mapWithKeys(
+                            fn($item) => [$item->kode_sub_anak_akun => "{$item->kode_sub_anak_akun} - {$item->nama_sub_anak_akun}"]
+                        ))
                         ->live()
                         ->afterStateUpdated(function ($state, Set $set) {
-                            $name = SubAnakAkun::where('kode_sub_anak_akun', $state)->first()?->nama_sub_anak_akun
-                                ?? AnakAkun::where('kode_anak_akun', $state)->first()?->nama_anak_akun
-                                ?? '';
-                            $set('nama_akun', $name);
+                            $set('nama_akun', SubAnakAkun::where('kode_sub_anak_akun', $state)->first()?->nama_sub_anak_akun
+                                ?? AnakAkun::where('kode_anak_akun', $state)->first()?->nama_anak_akun ?? '');
                         }),
                     TextInput::make('nama_akun')->label('Nama Akun')->required()->readOnly(),
                     TextInput::make('nama')->label('Nama')->columnSpanFull(),
                     TextInput::make('keterangan')->label('Keterangan')->columnSpanFull(),
-                    TextInput::make('banyak')->label('Kuantitas')->numeric()->required(),
+                    TextInput::make('banyak')->label('Kuantitas (kosongkan jika tidak perlu)')->numeric(),
                     TextInput::make('harga')->label('Harga Satuan')->numeric()->prefix('Rp')->required(),
-                    Select::make('map')
-                        ->label('Posisi')
-                        ->options(['d' => 'Debit', 'k' => 'Kredit'])
-                        ->required(),
+                    Select::make('map')->label('Posisi')
+                        ->options(['d' => 'Debit', 'k' => 'Kredit'])->required(),
                 ])
             ])
             ->fillForm(fn(array $arguments) => JurnalModel::find($arguments['id'])?->toArray() ?? [])
             ->action(function (array $data, array $arguments): void {
                 $record = JurnalModel::find($arguments['id']);
                 if ($record) {
+                    $data['banyak'] = (isset($data['banyak']) && $data['banyak'] !== '' && (float) $data['banyak'] > 0)
+                        ? $data['banyak'] : null;
                     $record->update($data);
                     Notification::make()->title('Data riwayat berhasil diperbarui')->success()->send();
                 }
             });
     }
 
-    // ---
-    // DELETE HISTORY
-    // ---
     public function deleteHistoryAction(): Action
     {
         return Action::make('deleteHistory')
