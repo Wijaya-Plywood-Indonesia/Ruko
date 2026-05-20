@@ -250,11 +250,11 @@
                                     <table class="w-full text-left table-fixed border-collapse">
                                         <thead class="bg-gray-50/50 dark:bg-gray-800/50">
                                             <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[30%]">Item</th>
-                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
-                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[10%]">Satuan</th>
-                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[20%]">Harga Beli</th>
-                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[22%]">Total</th>
+                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-[25%]">Item</th>
+                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[22%]">Qty</th>
+                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center w-[8%]">Satuan</th>
+                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[22%]">Harga Beli</th>
+                                                <th class="px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right w-[20%]">Total</th>
                                                 <th class="px-2 py-2 w-[3%]"></th>
                                             </tr>
                                         </thead>
@@ -270,26 +270,50 @@
 
                                                 <td class="px-2 py-2 align-middle">
                                                     <div class="flex items-center justify-center bg-gray-100/50 dark:bg-gray-800 rounded-md p-0.5 border border-gray-200 dark:border-gray-700"
-                                                        x-data="{
-                                                                 localQty: '{{ str_replace('.', ',', floatval($item['qty'] ?? 1)) }}',
-                                                                 syncQty() {
-                                                                     let cleaned = this.localQty.replace(',', '.');
-                                                                     let parsed = parseFloat(cleaned);
-                                                                     items[{{ $index }}].qty = isNaN(parsed) ? 0 : parsed;
-                                                                 }
-                                                             }">
-                                                        <button @click="
-                                                                let q = Math.max(0.01, parseFloat(items[{{ $index }}].qty || 1) - 1);
-                                                                items[{{ $index }}].qty = q;
-                                                                localQty = q.toString().replace('.', ',');
-                                                            " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-minus class="w-3 h-3" /></button>
-                                                        <input type="text" inputmode="decimal" x-model="localQty" @input="syncQty()" class="w-20 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
-                                                        <button @click="
-                                                                let q = parseFloat(items[{{ $index }}].qty || 1) + 1;
-                                                                items[{{ $index }}].qty = q;
-                                                                localQty = q.toString().replace('.', ',');
-                                                            " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600"><x-heroicon-o-plus class="w-3 h-3" /></button>
-                                                    </div>
+                                                         x-data="{
+                                                             get qty() {
+                                                                return items[{{ $index }}].qty;
+                                                             },
+                                                             set qty(val) {
+                                                                items[{{ $index }}].qty = val;
+                                                             },
+                                                             format(val) {
+                                                                if (val === null || val === undefined || val === '') return '';
+                                                                let str = val.toString();
+                                                                if (typeof val === 'number') {
+                                                                    let parts = str.split('.');
+                                                                    let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                                    return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                                }
+                                                                let clean = str.replace(/[^0-9,]/g, '');
+                                                                let parts = clean.split(',');
+                                                                let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                                return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                             }
+                                                         }">
+                                                         <button @click="
+                                                                 let q = Math.max(0.01, parseFloat(qty || 1) - 1);
+                                                                 qty = q;
+                                                             " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600">
+                                                             <x-heroicon-o-minus class="w-3 h-3" />
+                                                         </button>
+                                                         <input type="text"
+                                                             :value="format(qty)"
+                                                             @input="
+                                                                 let inputVal = $event.target.value;
+                                                                 let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                                 let raw = clean.replace(',', '.');
+                                                                 qty = raw ? parseFloat(raw) : 0;
+                                                                 $el.value = format(clean);
+                                                             "
+                                                             class="w-28 text-center border-none bg-transparent p-0 text-xs font-bold focus:ring-0 dark:text-white" />
+                                                         <button @click="
+                                                                 let q = parseFloat(qty || 1) + 1;
+                                                                 qty = q;
+                                                             " type="button" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-primary-600">
+                                                             <x-heroicon-o-plus class="w-3 h-3" />
+                                                         </button>
+                                                     </div>
                                                 </td>
 
                                                 <td class="px-2 py-2 text-center align-middle">
@@ -340,56 +364,83 @@
                                 {{-- Mobile Cards --}}
                                 <div class="md:hidden divide-y divide-gray-50 dark:divide-gray-800">
                                     @foreach($items as $index => $item)
-                                    <div class="p-4 space-y-3" x-data="{
-                                            qty: {{ $item['qty'] }},
-                                            harga: {{ $item['harga_beli'] }},
-                                            get subtotal() { return this.qty * this.harga; },
-                                            updateVal() {
-                                                $wire.set('items.{{ $index }}.qty', this.qty, false);
-                                                $wire.set('items.{{ $index }}.harga_beli', this.harga, false);
-                                                $wire.set('items.{{ $index }}.subtotal', this.subtotal, false);
-                                            },
-                                            fmt(n) { return Math.round(n).toLocaleString('id-ID'); },
-                                            format(val) {
+                                     <div class="p-4 space-y-3" x-data="{
+                                             get qty() {
+                                                return items[{{ $index }}].qty;
+                                             },
+                                             set qty(val) {
+                                                items[{{ $index }}].qty = val;
+                                             },
+                                             get harga() {
+                                                return items[{{ $index }}].harga_beli;
+                                             },
+                                             set harga(val) {
+                                                items[{{ $index }}].harga_beli = val;
+                                             },
+                                             get subtotal() {
+                                                return parseFloat(this.qty || 0) * parseFloat(this.harga || 0);
+                                             },
+                                             formatQty(val) {
+                                                if (val === null || val === undefined || val === '') return '';
+                                                let str = val.toString();
+                                                if (typeof val === 'number') {
+                                                    let parts = str.split('.');
+                                                    let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                    return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                                }
+                                                let clean = str.replace(/[^0-9,]/g, '');
+                                                let parts = clean.split(',');
+                                                let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                                return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+                                             },
+                                             formatHarga(val) {
                                                 if (val === null || val === undefined || val === '') return '';
                                                 let cleaned = val.toString().replace(/\D/g, '');
                                                 return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                                            }
-                                        }">
-                                        <div class="flex justify-between items-start gap-3">
-                                            <div class="flex-grow">
-                                                <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight">{{ $item['nama_barang'] }}</div>
-                                                <div class="text-[10px] text-gray-400 font-bold uppercase mt-1">{{ $item['satuan'] }}</div>
-                                            </div>
-                                            <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 p-1"><x-heroicon-o-trash class="w-4 h-4" /></button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-4">
-                                            <div class="space-y-1">
-                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qty</label>
-                                                <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
-                                                    <button @click="qty = Math.max(0.01, qty - 1); updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
-                                                    <input type="text" inputmode="numeric" x-model.number="qty" @blur="updateVal()" class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0 dark:text-white" />
-                                                    <button @click="qty = qty + 1; updateVal()" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-1">
-                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Harga Beli</label>
-                                                <input type="text"
-                                                    :value="format(harga)"
-                                                    @input="
-                                                            let raw = $event.target.value.replace(/\D/g, '');
-                                                            harga = raw ? parseInt(raw) : 0;
-                                                            $el.value = format(harga);
-                                                        "
-                                                    @blur="updateVal()"
-                                                    class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white transition-all" />
-                                            </div>
-                                            <div class="space-y-1 text-right col-span-2 bg-gray-50 dark:bg-gray-800/30 p-2.5 rounded-xl">
-                                                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</label>
-                                                <div class="text-sm font-black text-primary-600 dark:text-primary-400" x-text="'Rp ' + fmt(subtotal)"></div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                             }
+                                         }">
+                                         <div class="flex justify-between items-start gap-3">
+                                             <div class="flex-grow">
+                                                 <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight">{{ $item['nama_barang'] }}</div>
+                                                 <div class="text-[10px] text-gray-400 font-bold uppercase mt-1">{{ $item['satuan'] }}</div>
+                                             </div>
+                                             <button wire:click="removeItem({{ $index }})" type="button" class="text-gray-300 hover:text-red-500 p-1"><x-heroicon-o-trash class="w-4 h-4" /></button>
+                                         </div>
+                                         <div class="grid grid-cols-2 gap-4">
+                                             <div class="space-y-1">
+                                                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Qty</label>
+                                                 <div class="flex items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
+                                                     <button @click="qty = Math.max(0.01, parseFloat(qty || 1) - 1)" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-minus class="w-3.5 h-3.5" /></button>
+                                                     <input type="text"
+                                                         :value="formatQty(qty)"
+                                                         @input="
+                                                             let inputVal = $event.target.value;
+                                                             let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                             let raw = clean.replace(',', '.');
+                                                             qty = raw ? parseFloat(raw) : 0;
+                                                             $el.value = formatQty(clean);
+                                                         "
+                                                         class="w-full text-center border-none bg-transparent p-0 text-xs font-black focus:ring-0 dark:text-white" />
+                                                     <button @click="qty = parseFloat(qty || 1) + 1" type="button" class="w-8 h-8 flex items-center justify-center text-gray-400"><x-heroicon-o-plus class="w-3.5 h-3.5" /></button>
+                                                 </div>
+                                             </div>
+                                             <div class="space-y-1">
+                                                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Harga Beli</label>
+                                                 <input type="text"
+                                                     :value="formatHarga(harga)"
+                                                     @input="
+                                                         let raw = $event.target.value.replace(/\D/g, '');
+                                                         harga = raw ? parseInt(raw) : 0;
+                                                         $el.value = formatHarga(harga);
+                                                     "
+                                                     class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 px-3 text-sm font-black text-right focus:ring-2 focus:ring-primary-500/10 dark:text-white transition-all outline-none" />
+                                             </div>
+                                             <div class="space-y-1 text-right col-span-2 bg-gray-50 dark:bg-gray-800/30 p-2.5 rounded-xl">
+                                                 <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</label>
+                                                 <div class="text-sm font-black text-primary-600 dark:text-primary-400" x-text="'Rp ' + fmt(subtotal)"></div>
+                                             </div>
+                                         </div>
+                                     </div>
                                     @endforeach
                                 </div>
                             </div>
