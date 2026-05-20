@@ -243,12 +243,17 @@ class JurnalPembantuHeadersTable
                                         ? $totalJumlah / $totalBanyak
                                         : $header->total_nilai;
 
+                                    // Ekstrak nama pihak dari keterangan (format: "Keterangan | No.Nota: XXX | Nama Pihak")
+                                    $parts = explode('|', $header->keterangan);
+                                    $parsedNama = isset($parts[2]) ? trim($parts[2]) : null;
+
                                     JurnalUmum::create([
                                         'tgl'        => $tgl,
                                         'jurnal'     => $nomorFinal, // ← nomor yang sudah benar
                                         'no_akun'    => $header->no_akun,
                                         'nama_akun'  => $header->nama_akun,
-                                        'nama'       => $header->no_dokumen
+                                        'nama'       => $parsedNama
+                                            ?? $header->no_dokumen
                                             ?? JurnalPembantuHeader::JENIS[$header->jenis_transaksi]
                                             ?? null,
                                         'keterangan' => $header->keterangan,
