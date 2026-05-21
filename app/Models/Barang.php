@@ -21,6 +21,8 @@ class Barang extends Model
         'harga_jual',
         'stok_minimum',
         'is_active',
+        'akun_pendapatan_id',
+        'akun_hpp_id',
     ];
 
     protected $casts = [
@@ -85,6 +87,18 @@ class Barang extends Model
     {
         // Parameter kedua adalah nama kolom foreign key yang kita buat di migration tadi
         return $this->belongsTo(SubAnakAkun::class, 'id_sub_anak_akun');
+    }
+
+    /** Relasi BARU: Akun Pendapatan */
+    public function akunPendapatan()
+    {
+        return $this->belongsTo(SubAnakAkun::class, 'akun_pendapatan_id');
+    }
+
+    /** Relasi BARU: Akun HPP */
+    public function akunHpp()
+    {
+        return $this->belongsTo(SubAnakAkun::class, 'akun_hpp_id');
     }
 
     public function getStokBukuBesarAttribute()

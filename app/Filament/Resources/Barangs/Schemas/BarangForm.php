@@ -46,6 +46,7 @@ class BarangForm
                     ->numeric()
                     ->prefix('Rp')
                     ->required(),
+
                 TextInput::make('harga_jual')
                     ->numeric()
                     ->prefix('Rp')
@@ -56,9 +57,66 @@ class BarangForm
                     ->numeric()
                     ->default(0),
 
+                // ── AKUN PERSEDIAAN ──────────────────────────────────────────
                 Select::make('id_sub_anak_akun')
-                    ->label('Akun Jurnal (untuk Transfer)')
-                    ->helperText('Akun kas/bank yang akan di-debit saat pembayaran transfer ke rekening ini.')
+                    ->label('Akun Persediaan (Inventory)')
+                    ->helperText('Akun jurnal untuk mencatat masuk/keluarnya stok barang ini.')
+                    ->searchable()
+                    ->nullable()
+                    ->options(
+                        fn() => SubAnakAkun::orderBy('kode_sub_anak_akun')
+                            ->get()
+                            ->mapWithKeys(fn($a) => [
+                                $a->id => "{$a->kode_sub_anak_akun} — {$a->nama_sub_anak_akun}"
+                            ])
+                    )
+                    ->getSearchResultsUsing(
+                        fn(string $search) => SubAnakAkun::where('kode_sub_anak_akun', 'like', "%{$search}%")
+                            ->orWhere('nama_sub_anak_akun', 'like', "%{$search}%")
+                            ->limit(30)
+                            ->get()
+                            ->mapWithKeys(fn($a) => [
+                                $a->id => "{$a->kode_sub_anak_akun} — {$a->nama_sub_anak_akun}"
+                            ])
+                    )
+                    ->getOptionLabelUsing(
+                        fn($value) => SubAnakAkun::find($value) !== null
+                            ? SubAnakAkun::find($value)->kode_sub_anak_akun . ' — ' . SubAnakAkun::find($value)->nama_sub_anak_akun
+                            : null
+                    ),
+
+                // ── AKUN PENDAPATAN BARU ─────────────────────────────────────
+                Select::make('akun_pendapatan_id')
+                    ->label('Akun Pendapatan (Sales/Revenue)')
+                    ->helperText('Akun jurnal untuk mencatat pendapatan saat barang ini terjual.')
+                    ->searchable()
+                    ->nullable()
+                    ->options(
+                        fn() => SubAnakAkun::orderBy('kode_sub_anak_akun')
+                            ->get()
+                            ->mapWithKeys(fn($a) => [
+                                $a->id => "{$a->kode_sub_anak_akun} — {$a->nama_sub_anak_akun}"
+                            ])
+                    )
+                    ->getSearchResultsUsing(
+                        fn(string $search) => SubAnakAkun::where('kode_sub_anak_akun', 'like', "%{$search}%")
+                            ->orWhere('nama_sub_anak_akun', 'like', "%{$search}%")
+                            ->limit(30)
+                            ->get()
+                            ->mapWithKeys(fn($a) => [
+                                $a->id => "{$a->kode_sub_anak_akun} — {$a->nama_sub_anak_akun}"
+                            ])
+                    )
+                    ->getOptionLabelUsing(
+                        fn($value) => SubAnakAkun::find($value) !== null
+                            ? SubAnakAkun::find($value)->kode_sub_anak_akun . ' — ' . SubAnakAkun::find($value)->nama_sub_anak_akun
+                            : null
+                    ),
+
+                // ── AKUN HPP BARU ────────────────────────────────────────────
+                Select::make('akun_hpp_id')
+                    ->label('Akun HPP (COGS)')
+                    ->helperText('Akun jurnal untuk mencatat Beban Pokok Penjualan saat barang ini terjual.')
                     ->searchable()
                     ->nullable()
                     ->options(
