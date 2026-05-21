@@ -59,8 +59,9 @@ class BarangsTable
                     ->badge()
                     ->color(fn(int $state) => $state > 0 ? 'warning' : 'gray'),
 
+                // ── TAMPILAN AKUN PERSEDIAAN ────────────────────────────────
                 TextColumn::make('subAnakAkun.kode_sub_anak_akun')
-                    ->label('Kode Akun')
+                    ->label('Akun Persediaan')
                     ->badge()
                     ->color('warning')
                     ->placeholder('Belum diset')
@@ -70,15 +71,29 @@ class BarangsTable
                         });
                     }),
 
-                // ── PERBAIKAN 2: CUSTOM SEARCH UNTUK NAMA AKUN ──────────────────
                 TextColumn::make('subAnakAkun.nama_sub_anak_akun')
-                    ->label('Nama Akun Jurnal')
+                    ->label('Nama Akun Persediaan')
                     ->placeholder('—')
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->orWhereHas('subAnakAkun', function (Builder $q) use ($search) {
                             $q->where('nama_sub_anak_akun', 'like', "%{$search}%");
                         });
-                    }),
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // ── TAMPILAN AKUN PENDAPATAN ────────────────────────────────
+                TextColumn::make('akunPendapatan.kode_sub_anak_akun')
+                    ->label('Akun Pendapatan')
+                    ->badge()
+                    ->color('success')
+                    ->placeholder('Belum diset'),
+                
+                // ── TAMPILAN AKUN HPP ───────────────────────────────────────
+                TextColumn::make('akunHpp.kode_sub_anak_akun')
+                    ->label('Akun HPP')
+                    ->badge()
+                    ->color('danger')
+                    ->placeholder('Belum diset'),
 
                 IconColumn::make('is_active')
                     ->label('Status')
