@@ -158,7 +158,7 @@ class BukuBesarExport implements FromView, ShouldAutoSize, WithStyles, WithColum
     public function columnFormats(): array
     {
         return [
-            'E' => '#,##0', // Qty
+            'E' => '#,##0.####', // Qty
             'F' => '"Rp" #,##0', // Harga
             'G' => '"Rp" #,##0', // Debit
             'H' => '"Rp" #,##0', // Kredit
