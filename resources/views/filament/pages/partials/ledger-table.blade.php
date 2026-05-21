@@ -149,7 +149,7 @@ $saldoClass = $saldoAkhir < 0 ? 'lgt-neg' : '';
             </td>
             <td class="lgt-qty r">
                 @if($row->trx->banyak !== null && (float)$row->trx->banyak > 0)
-                    {{ number_format((float)$row->trx->banyak, 0, ',', '.') }}
+                    {{ (float)$row->trx->banyak == (int)$row->trx->banyak ? number_format((float)$row->trx->banyak, 0, ',', '.') : rtrim(rtrim(number_format((float)$row->trx->banyak, 4, ',', '.'), '0'), ',') }}
                 @else
                     —
                 @endif
@@ -196,7 +196,7 @@ $saldoClass = $saldoAkhir < 0 ? 'lgt-neg' : '';
             <td class="lgt-qty r">
                 @if($totalQty != 0)
                     <span class="{{ $totalQty < 0 ? 'lgt-neg' : '' }}">
-                        {{ number_format(abs($totalQty), 0, ',', '.') }}
+                        {{ (float)$totalQty == (int)$totalQty ? number_format(abs($totalQty), 0, ',', '.') : rtrim(rtrim(number_format(abs($totalQty), 4, ',', '.'), '0'), ',') }}
                     </span>
                 @else
                     —

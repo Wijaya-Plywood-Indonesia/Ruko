@@ -55,10 +55,10 @@
                                 wire:focus="openDropdown"
                             />
 
-                            @if($showDropdown)
-                                <div class="absolute inset-x-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                             @if($showDropdown)
+                                <div wire:key="search-dropdown-results" class="absolute inset-x-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
                                     @foreach($searchResults as $barang)
-                                        <div wire:click="selectBarang({{ $barang->id }})" class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
+                                        <div wire:key="search-item-{{ $barang->id }}" wire:click="selectBarang({{ $barang->id }})" class="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
                                             <div>
                                                 <div class="font-semibold text-sm text-gray-900 dark:text-white">
                                                     {{ $barang->nama_barang }}
@@ -79,16 +79,16 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <div class="flex flex-col gap-1.5">
+                            <div wire:key="col-tipe-pelanggan" class="flex flex-col gap-1.5">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Tipe Pelanggan</label>
                                 <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                    <button wire:click="$set('is_member', 0)" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ !$is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 dark:text-gray-400' }}">Umum</button>
-                                    <button wire:click="$set('is_member', 1)" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 dark:text-gray-400' }}">Member</button>
+                                    <button type="button" wire:click="toggleMember(0)" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ !$is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 dark:text-gray-400' }}">Umum</button>
+                                    <button type="button" wire:click="toggleMember(1)" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $is_member ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 dark:text-gray-400' }}">Member</button>
                                 </div>
                             </div>
                             
                             @if($is_member)
-                            <div class="flex flex-col gap-1.5 relative" @click.outside="$wire.set('customerResults', [])">
+                            <div wire:key="col-kode-member" class="flex flex-col gap-1.5 relative" @click.outside="$wire.set('customerResults', [])">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Kode Member / Cari</label>
                                 <input 
                                     type="text" 
@@ -99,10 +99,12 @@
                                 
                                 {{-- Customer Search Results Dropdown --}}
                                 @if(!empty($customerResults))
-                                    <div class="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                    <div wire:key="col-customer-results-dropdown" class="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                                         @foreach($customerResults as $res)
                                             <button 
+                                                type="button"
                                                 wire:click="selectCustomer({{ $res->id }})"
+                                                wire:key="cust-res-{{ $res->id }}"
                                                 class="w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-50 dark:border-gray-800 last:border-0 transition-colors"
                                             >
                                                 <div class="flex flex-col">
@@ -116,7 +118,7 @@
                             </div>
                             @endif
 
-                            <div class="{{ $is_member ? 'md:col-span-2' : 'md:col-span-3' }} flex flex-col gap-1.5">
+                            <div wire:key="col-customer-info-{{ $is_member ? 'member' : 'umum' }}" class="{{ $is_member ? 'md:col-span-2' : 'md:col-span-3' }} flex flex-col gap-1.5">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Nama & Alamat Terpilih</label>
                                 <div class="grid grid-cols-2 gap-2">
                                     <input type="text" wire:model.live="nama_customer" placeholder="Nama..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/20 dark:text-white" />
@@ -150,7 +152,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                                     @foreach($cart as $id => $item)
-                                        <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <tr wire:key="cart-item-desktop-{{ $id }}" class="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
                                             <td class="px-2 py-2">
                                                 <div class="font-medium text-sm text-gray-900 dark:text-white line-clamp-1">
                                                     {{ $item['nama_barang'] }} 
@@ -245,7 +247,7 @@
                         {{-- Mobile Cards --}}
                         <div class="md:hidden divide-y divide-gray-50 dark:divide-gray-800">
                             @forelse($cart as $id => $item)
-                                <div class="p-4 space-y-3">
+                                <div wire:key="cart-item-mobile-{{ $id }}" class="p-4 space-y-3">
                                     <div class="flex justify-between items-start gap-3">
                                         <div class="flex-grow">
                                             <div class="font-bold text-sm text-gray-900 dark:text-white leading-tight">{{ $item['nama_barang'] }}</div>
@@ -386,7 +388,7 @@
                                 <button wire:click="$set('metode_pembayaran', 'TUNAI & TRANSFER')" class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all {{ $metode_pembayaran === 'TUNAI & TRANSFER' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500' }}">Tunai & Transfer</button>
                             </div>
                             @if($metode_pembayaran === 'TRANSFER' || $metode_pembayaran === 'TUNAI & TRANSFER')
-                                <div class="space-y-2">
+                                <div wire:key="payment-bank-selector" class="space-y-2">
                                     <div class="relative">
                                         <select wire:model.live="rekening_perusahaan_id" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 pr-8 text-sm focus:ring-2 focus:ring-primary-500/10 cursor-pointer">
                                             <option value="">Pilih Bank...</option>
@@ -396,7 +398,7 @@
                                         </select>
                                     </div>
                                     @if($selectedBank)
-                                        <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-100 dark:border-primary-800/50">
+                                        <div wire:key="payment-selected-bank-details" class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-100 dark:border-primary-800/50">
                                             <div class="flex flex-col">
                                                 <span class="text-[8px] font-bold text-primary-600 dark:text-primary-400 uppercase">Rekening Atas Nama</span>
                                                 <span class="text-xs font-bold text-gray-700 dark:text-gray-200">{{ $selectedBank->atas_nama }}</span>
@@ -414,7 +416,7 @@
                         <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                             
                             @if($metode_pembayaran === 'TUNAI & TRANSFER')
-                                <div class="flex flex-wrap gap-3 mb-2">
+                                <div wire:key="payment-split-fields" class="flex flex-wrap gap-3 mb-2">
                                     <div class="flex-1 min-w-[140px] space-y-1">
                                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Tunai (Cash)</label>
                                         <div class="flex items-center gap-1 border-b border-primary-500 pb-0.5">
@@ -449,22 +451,24 @@
                                     </div>
                                 </div>
                             @else
-                                <div class="flex justify-between items-center">
-                                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
-                                </div>
-                                <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
-                                    <span class="text-lg font-bold text-primary-600">Rp</span>
-                                    <input 
-                                        type="text" 
-                                        :value="format(bayar)"
-                                        @input="
-                                            let raw = $event.target.value.replace(/\D/g, '');
-                                            bayar = raw ? parseInt(raw) : 0;
-                                            $el.value = format(bayar);
-                                        "
-                                        class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight" 
-                                        placeholder="0" 
-                                    />
+                                <div wire:key="payment-single-fields" class="space-y-1">
+                                    <div class="flex justify-between items-center">
+                                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide ml-1">Nominal Bayar</label>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 border-b border-primary-500 pb-0.5">
+                                        <span class="text-lg font-bold text-primary-600">Rp</span>
+                                        <input 
+                                            type="text" 
+                                            :value="format(bayar)"
+                                            @input="
+                                                let raw = $event.target.value.replace(/\D/g, '');
+                                                bayar = raw ? parseInt(raw) : 0;
+                                                $el.value = format(bayar);
+                                            "
+                                            class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight" 
+                                            placeholder="0" 
+                                        />
+                                    </div>
                                 </div>
                             @endif
 
@@ -491,19 +495,21 @@
                         </div>
 
                         @if($metode_pengiriman === 'DIKIRIM')
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="flex flex-col gap-1.5">
-                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Kendaraan</label>
-                                    <input type="text" wire:model.live="kendaraan" placeholder="Kendaraan..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                            <div wire:key="shipping-fields-container" class="space-y-3 pt-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Kendaraan</label>
+                                        <input type="text" wire:model.live="kendaraan" placeholder="Kendaraan..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                                    </div>
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Plat Kendaraan</label>
+                                        <input type="text" wire:model.live="plat_kendaraan" placeholder="Plat..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                                    </div>
                                 </div>
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Plat Kendaraan</label>
-                                    <input type="text" wire:model.live="plat_kendaraan" placeholder="Plat..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
+                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Nama Sopir</label>
+                                    <input type="text" wire:model.live="nama_sopir" placeholder="Nama Sopir..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
                                 </div>
-                            </div>
-                            <div class="flex flex-col gap-1.5">
-                                <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide block ml-1">Nama Sopir</label>
-                                <input type="text" wire:model.live="nama_sopir" placeholder="Nama Sopir..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-sm focus:ring-2 focus:ring-primary-500/10 dark:text-white" />
                             </div>
                         @endif
                     </div>

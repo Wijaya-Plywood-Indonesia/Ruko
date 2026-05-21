@@ -371,9 +371,17 @@ class PosPenjualan extends Page
     }
 
     /* ================= MEMBER ================= */
+    public function toggleMember($value): void
+    {
+        $this->updatedIsMember($value);
+    }
+
     public function updatedIsMember($value): void
     {
         $this->is_member = (int) $value;
+
+        // Reset customer info on any toggle to prevent mixed/dirty state
+        $this->reset(['searchCustomer', 'customerResults', 'pembeli_id', 'nama_customer', 'alamat', 'telepon', 'kode_member']);
 
         // Apply/Remove retroactive discount for items already in cart
         foreach ($this->cart as $id => $item) {
@@ -396,10 +404,6 @@ class PosPenjualan extends Page
             $this->updateSubtotal($id);
         }
         $this->calculateTotal();
-
-        if (!$this->is_member) {
-            $this->reset(['searchCustomer', 'customerResults', 'pembeli_id', 'nama_customer', 'alamat', 'telepon']);
-        }
     }
 
     /* ================= PENGIRIMAN ================= */
