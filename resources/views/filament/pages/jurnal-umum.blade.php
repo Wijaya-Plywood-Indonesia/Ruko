@@ -1024,9 +1024,25 @@
                                     </tr>
                                 </template>
                             </template>
-
+                            
                             @forelse($historyJurnals as $index => $hj)
                             @php
+                             $namaPelanggan = '-';
+                             if (!empty($hj->keterangan)) {
+
+                                $parts = explode('|', $hj->keterangan);
+
+                                // ambil bagian terakhir
+                                $lastPart = trim(end($parts));
+
+                                // hindari teks HPP
+                                if (
+                                    !str_contains(strtolower($hj->keterangan), 'hpp')
+                                    && !empty($lastPart)
+                                ) {
+                                    $namaPelanggan = $lastPart;
+                                }
+                            }
                             /* Helper: format angka desimal PHP — buang trailing ,00 */
                             $fmt = function(float $n): string {
                             $f = number_format($n, 2, ',', '.');
@@ -1036,6 +1052,8 @@
                             ? $hj->banyak * $hj->harga
                             : $hj->harga;
                             @endphp
+
+                            
                             <tr data-row-id="{{ $hj->id }}"
                                 :class="isSelected({{ $hj->id }}) ? 'row-selected' : ''"
                                 class="hover:bg-gray-50 dark:hover:bg-gray-800/50 align-top transition-none row-fadein"
@@ -1050,7 +1068,7 @@
                                 <td class="px-4 py-4 font-mono font-bold text-amber-600 dark:text-amber-500">{{ $hj->no_akun }}</td>
                                 <td class="px-4 py-4 font-bold text-gray-800 dark:text-gray-100">{{ $hj->nama_akun }}</td>
                                 <td class="px-4 py-4 text-center text-gray-400 font-medium">{{ $hj->jurnal }}</td>
-                                <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ $hj->nama ?? '-' }}</td>
+                                <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">{{ $namaPelanggan ?? '-' }}</td>
                                 <td class="px-4 py-4 text-[12px] leading-relaxed text-gray-500 dark:text-gray-400 break-words whitespace-normal">{{ $hj->keterangan }}</td>
                                 <td class="px-4 py-4 text-right font-medium text-gray-400 dark:text-gray-500">
                                     {{ ($hj->banyak !== null && $hj->banyak > 0) ? $fmt($hj->banyak) : '-' }}
