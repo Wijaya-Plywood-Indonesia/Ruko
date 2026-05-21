@@ -422,10 +422,19 @@ class PosPenjualan extends Page
             ? ($this->bayar_tunai + $this->bayar_transfer) 
             : ($this->bayar ?? 0);
 
-        if ($totalBayar < $this->total || $this->total <= 0) {
+        if (!$this->is_member && $totalBayar < $this->total) {
             Notification::make()
                 ->title('Pembayaran Kurang')
                 ->body('Nominal pembayaran kurang.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        if ($this->total <= 0) {
+            Notification::make()
+                ->title('Transaksi Tidak Valid')
+                ->body('Total transaksi harus lebih dari 0.')
                 ->danger()
                 ->send();
             return;
