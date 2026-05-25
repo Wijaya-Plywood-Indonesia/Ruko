@@ -10,7 +10,8 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class LaporanPenjualanDetailExport implements WithEvents, 
+class LaporanPenjualanDetailExport implements
+    WithEvents,
     WithColumnWidths,
     WithTitle
 {
@@ -40,9 +41,24 @@ class LaporanPenjualanDetailExport implements WithEvents,
             // HEADER PENJUALAN
             // =========================
             $headers = [
-                'No Nota','Tanggal','Customer','Tipe','Alamat','Metode Bayar',
-                'Total','Bayar','Kembalian','Status','Kasir','Validator',
-                'Bank','No Rekening','Kendaraan','Plat','Sopir','Keterangan'
+                'No Nota',
+                'Tanggal',
+                'Customer',
+                'Tipe',
+                'Alamat',
+                'Metode Bayar',
+                'Total',
+                'Bayar',
+                'Kembalian',
+                'Status',
+                'Kasir',
+                'Validator',
+                'Bank',
+                'No Rekening',
+                'Kendaraan',
+                'Plat',
+                'Sopir',
+                'Keterangan'
             ];
 
             $sheet->getDelegate()->fromArray($headers, null, "A{$row}");
@@ -77,7 +93,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
             ], null, "A{$row}");
 
             $sheet->getStyle("G{$row}:I{$row}")->getNumberFormat()->setFormatCode('_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)');
-            
+
             $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No Nota
             $sheet->getStyle("B{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Tanggal
             $sheet->getStyle("C{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
@@ -88,7 +104,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
             $sheet->getStyle("J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
             $sheet->getStyle("M{$row}:P{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
 
-            
+
             $row++;
 
             // =========================
@@ -103,8 +119,13 @@ class LaporanPenjualanDetailExport implements WithEvents,
             // HEADER DETAIL
             // =========================
             $detailHeaders = [
-                'Nama Produk','Harga Awal','Harga Jual',
-                'Diskon','Jumlah','Total Diskon','Subtotal'
+                'Nama Produk',
+                'Harga Awal',
+                'Harga Jual',
+                'Diskon',
+                'Jumlah',
+                'Total Diskon',
+                'Subtotal'
             ];
 
             $sheet->getDelegate()->fromArray($detailHeaders, null, "A{$row}");
@@ -152,7 +173,7 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 $row['no_nota'],
                 $row['tanggal'],
                 $row['nama_customer'],
-                $row['member'] ? 'MEMBER' : 'REGULAR',
+                ($row['member'] === 'MEMBER' || $row['member'] === true || $row['member'] === 1) ? 'MEMBER' : 'REGULAR',
                 $row['alamat'],
                 $row['metode_pembayaran'],
                 $row['total'],
@@ -232,9 +253,9 @@ class LaporanPenjualanDetailExport implements WithEvents,
                 'startColor' => ['rgb' => 'E5E7EB'],
             ],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                        'alignment' => [
-            'horizontal' => Alignment::HORIZONTAL_CENTER,
-            'vertical' => Alignment::VERTICAL_CENTER,
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
             ],
 
         ];
@@ -290,7 +311,6 @@ class LaporanPenjualanDetailExport implements WithEvents,
             'Q' => 22, // Sopir
             'R' => 30, // Keterangan
         ];
-        
     }
 
     public function title(): string

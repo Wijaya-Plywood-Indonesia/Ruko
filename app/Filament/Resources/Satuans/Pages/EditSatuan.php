@@ -17,13 +17,13 @@ class EditSatuan extends EditRecord
         ];
     }
 
-    /**
-     * @return array<class-string>
-     */
-    public function getRelationManagers(): array
-    {
-        return [
-            \App\Filament\Resources\Satuans\RelationManagers\SatuanKonversiRelationManager::class,
-        ];
-    }
+    // /**
+    //  * @return array<class-string>
+    //  */
+    // public function getRelationManagers(): array
+    // {
+    //     return [
+    //         \App\Filament\Resources\Satuans\RelationManagers\SatuanKonversiRelationManager::class,
+    //     ];
+    // }
 }

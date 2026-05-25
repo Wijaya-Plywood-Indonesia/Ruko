@@ -34,7 +34,7 @@ class LaporanPenjualanExport implements
                 $row['no_nota'],
                 $row['tanggal'],
                 $row['nama_customer'],
-                $row['member'] ? 'MEMBER' : 'REGULAR',
+                ($row['member'] === 'MEMBER' || $row['member'] === true || $row['member'] === 1) ? 'MEMBER' : 'REGULAR',
                 $row['alamat'],
                 $row['metode_pembayaran'],
                 (float)$row['total'],
@@ -164,7 +164,6 @@ class LaporanPenjualanExport implements
             'Q' => 22, // Sopir
             'R' => 30, // Keterangan
         ];
-        
     }
 
     public function title(): string

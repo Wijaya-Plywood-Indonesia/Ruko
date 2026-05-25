@@ -19,12 +19,14 @@ use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Illuminate\Support\Facades\Log;
+use UnitEnum;
 
 class ProduksiPakanLaporan extends Page
 {
     use HasPageShield;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string|UnitEnum|null $navigationGroup = 'Kandang';
     protected static ?string $navigationLabel  = 'Produksi Pakan';
     protected static ?string $title            = 'Laporan Produksi Pakan';
     protected static ?string $slug             = 'produksi-pakan-laporan';
