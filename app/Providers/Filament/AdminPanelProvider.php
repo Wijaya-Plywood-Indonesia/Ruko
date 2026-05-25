@@ -65,7 +65,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
             ])
             ->navigationGroups([
-                NavigationGroup::make(label: 'Kandang')
+                NavigationGroup::make(label: 'Transaksi')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->collapsed(),
                 NavigationGroup::make(label: 'Master Data')
@@ -75,6 +75,9 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-archive-box-arrow-down')
                     ->collapsed(),
                 NavigationGroup::make(label: 'Akuntansi')
+                    ->icon('heroicon-o-calculator')
+                    ->collapsed(),
+                NavigationGroup::make(label: 'Kandang')
                     ->icon('heroicon-o-calculator')
                     ->collapsed(),
             ])

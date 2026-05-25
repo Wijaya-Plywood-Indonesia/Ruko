@@ -20,12 +20,15 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class PenjualanResource extends Resource
 {
     protected static ?string $model = Penjualan::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Transaksi';
 
     public static function form(Schema $schema): Schema
     {
@@ -49,12 +52,12 @@ class PenjualanResource extends Resource
     public static function getRelations(): array
     {
         return [
-                //
+            //
             DetailsRelationManager::class,
         ];
     }
 
-    
+
     public static function getPages(): array
     {
         return [
