@@ -33,6 +33,11 @@ class SatuansTable
             ])
             ->recordActions([
                 EditAction::make(),
+                \Filament\Actions\Action::make('konversi')
+                    ->label('Konversi')
+                    ->icon('heroicon-o-arrows-right-left')
+                    ->color('warning')
+                    ->url(fn (\App\Models\Satuan $record): string => \App\Filament\Resources\Satuans\SatuanResource::getUrl('edit', ['record' => $record])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
