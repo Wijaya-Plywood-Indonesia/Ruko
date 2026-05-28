@@ -647,4 +647,58 @@
 
     </div>
 
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            // 1. Restore the full state from localStorage if it exists
+            const savedState = localStorage.getItem('pembelian_state');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    if (state && state.items && Object.keys(state.items).length > 0) {
+                        @this.dispatch('restoreState', { state: state });
+                    }
+                } catch (e) {
+                    console.error('Failed to parse Pembelian state:', e);
+                }
+            }
+
+            // 2. Automatically save the full state to localStorage on every Livewire update/render
+            Livewire.hook('commit', ({ component, succeed }) => {
+                succeed(() => {
+                    if (component.id === @this.id) {
+                        const state = {
+                            items: @this.items,
+                            nomor_nota: @this.nomor_nota,
+                            tanggal: @this.tanggal,
+                            supplier_id: @this.supplier_id,
+                            supplier_name: @this.supplier_name,
+                            supplier_phone: @this.supplier_phone,
+                            supplier_address: @this.supplier_address,
+                            is_new_supplier: @this.is_new_supplier,
+                            catatan: @this.catatan,
+                            sub_total: @this.sub_total,
+                            total_diskon: @this.total_diskon,
+                            total_ppn: @this.total_ppn,
+                            ongkir: @this.ongkir,
+                            biaya_lain: @this.biaya_lain,
+                            payment_method: @this.payment_method,
+                            payment_amount: @this.payment_amount,
+                            tanggal_bayar: @this.tanggal_bayar,
+                            payment_reference: @this.payment_reference,
+                            payment_catatan: @this.payment_catatan
+                        };
+                        localStorage.setItem('pembelian_state', JSON.stringify(state));
+                    }
+                });
+            });
+
+            // 3. Clear state on form submit to prevent loading completed transactions next time
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', () => {
+                    localStorage.removeItem('pembelian_state');
+                });
+            }
+        });
+    </script>
 </x-filament-panels::page>

@@ -524,4 +524,30 @@ class Pembelian extends Page
                 ->send();
         }
     }
+
+    #[\Livewire\Attributes\On('restoreState')]
+    public function restoreState(array $state): void
+    {
+        $this->items             = $state['items'] ?? [];
+        $this->nomor_nota        = $state['nomor_nota'] ?? null;
+        $this->tanggal           = $state['tanggal'] ?? now()->format('Y-m-d');
+        $this->supplier_id       = $state['supplier_id'] ?? '';
+        $this->supplier_name     = $state['supplier_name'] ?? null;
+        $this->supplier_phone    = $state['supplier_phone'] ?? null;
+        $this->supplier_address  = $state['supplier_address'] ?? null;
+        $this->is_new_supplier   = (bool) ($state['is_new_supplier'] ?? false);
+        $this->catatan           = $state['catatan'] ?? null;
+        $this->sub_total         = $state['sub_total'] ?? 0;
+        $this->total_diskon      = $state['total_diskon'] ?? null;
+        $this->total_ppn         = $state['total_ppn'] ?? null;
+        $this->ongkir            = $state['ongkir'] ?? null;
+        $this->biaya_lain        = $state['biaya_lain'] ?? null;
+        $this->payment_method    = $state['payment_method'] ?? PembelianMetodePembayaran::METODE_TUNAI;
+        $this->payment_amount    = $state['payment_amount'] ?? null;
+        $this->tanggal_bayar     = $state['tanggal_bayar'] ?? now()->format('Y-m-d');
+        $this->payment_reference = $state['payment_reference'] ?? '';
+        $this->payment_catatan   = $state['payment_catatan'] ?? '';
+
+        $this->recalculateSubTotal();
+    }
 }

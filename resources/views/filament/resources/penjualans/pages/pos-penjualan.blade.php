@@ -88,7 +88,7 @@
                             </div>
                             
                             @if($is_member)
-                            <div wire:key="col-kode-member" class="flex flex-col gap-1.5 relative" @click.outside="$wire.set('customerResults', [])">
+                            <div wire:key="col-kode-member" class="flex flex-col gap-1.5 relative" @click.outside="if ($wire.customerResults && $wire.customerResults.length) $wire.set('customerResults', [])">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Kode Member / Cari</label>
                                 <input 
                                     type="text" 
@@ -571,9 +571,47 @@
 
     <script>
         document.addEventListener('livewire:initialized', () => {
-            const cart = localStorage.getItem('pos_cart');
-            if (cart) { @this.dispatch('restoreCart', { cart: JSON.parse(cart) }); }
-            @this.on('cartUpdated', () => { localStorage.setItem('pos_cart', JSON.stringify(@this.cart)); });
+            // 1. Restore the full state from localStorage if it exists
+            const savedState = localStorage.getItem('pos_state');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    if (state && state.cart && Object.keys(state.cart).length > 0) {
+                        @this.dispatch('restoreState', { state: state });
+                    }
+                } catch (e) {
+                    console.error('Failed to parse POS state:', e);
+                }
+            }
+
+            // 2. Automatically save the full state to localStorage on every Livewire update/render
+            Livewire.hook('commit', ({ component, succeed }) => {
+                succeed(() => {
+                    if (component.id === @this.id) {
+                        const state = {
+                            cart: @this.cart,
+                            is_member: @this.is_member,
+                            pembeli_id: @this.pembeli_id,
+                            nama_customer: @this.nama_customer,
+                            alamat: @this.alamat,
+                            telepon: @this.telepon,
+                            kode_member: @this.kode_member,
+                            metode_pembayaran: @this.metode_pembayaran,
+                            bayar: @this.bayar,
+                            bayar_tunai: @this.bayar_tunai,
+                            bayar_transfer: @this.bayar_transfer,
+                            rekening_perusahaan_id: @this.rekening_perusahaan_id,
+                            keterangan_pembayaran: @this.keterangan_pembayaran,
+                            keterangan_nota: @this.keterangan_nota,
+                            metode_pengiriman: @this.metode_pengiriman,
+                            kendaraan: @this.kendaraan,
+                            plat_kendaraan: @this.plat_kendaraan,
+                            nama_sopir: @this.nama_sopir
+                        };
+                        localStorage.setItem('pos_state', JSON.stringify(state));
+                    }
+                });
+            });
         });
     </script>
 </x-filament::page>
