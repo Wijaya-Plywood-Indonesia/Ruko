@@ -23,7 +23,7 @@ class PembeliansResource extends Resource
 {
     protected static ?string $model = Pembelian::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static string|UnitEnum|null $navigationGroup = 'Transaksi';
 

@@ -22,18 +22,15 @@ class SatuanKonversiPolicy
         return $authUser->can('View:SatuanKonversi');
     }
 
-    // public function before($user, $ability)
-    // {
-    //     // Jika user punya email ini, abaikan semua pengecekan permission dan kembalikan TRUE
-    //     if ($user->email === 'email-admin-anda@domain.com') {
-    //         return true;
-    //     }
+    public function before(AuthUser $user, string $ability): ?bool
+    {
+        // Atau jika Anda menggunakan role super_admin
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
 
-    //     // Atau jika Anda menggunakan role super_admin
-    //     if ($user->hasRole('super_admin')) {
-    //         return true;
-    //     }
-    // }
+        return null;
+    }
 
     public function create(AuthUser $authUser): bool
     {
