@@ -11,6 +11,15 @@ use Illuminate\Auth\Access\HandlesAuthorization;
 class SatuanPolicy
 {
     use HandlesAuthorization;
+
+    public function before(AuthUser $user, string $ability): ?bool
+    {
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        return null;
+    }
     
     public function viewAny(AuthUser $authUser): bool
     {
