@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+
 return [
 
     /*
@@ -23,7 +24,7 @@ return [
             'pages' => true,
             'widgets' => true,
             'resources' => true,
-            'custom_permissions' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -237,20 +238,17 @@ return [
     |
     */
 
-    // 'custom_permissions' => [
-    //     SatuanKonversi::class => [
-    //         'View:SatuanKonversi',
-    //         'Create:SatuanKonversi',
-    //         'Update:SatuanKonversi',
-    //         'Delete:SatuanKonversi',
-    //         'Restore:SatuanKonversi',
-    //         'ForceDelete:SatuanKonversi',
-    //         'ForceDeleteAny:SatuanKonversi',
-    //         'RestoreAny:SatuanKonversi',
-    //         'Replicate:SatuanKonversi',
-    //     ],
-    // ],
-
+    'custom_permissions' => [
+        'View:SatuanKonversi'         => \App\Models\SatuanKonversi::class,
+        'Create:SatuanKonversi'       => \App\Models\SatuanKonversi::class,
+        'Update:SatuanKonversi'       => \App\Models\SatuanKonversi::class,
+        'Delete:SatuanKonversi'       => \App\Models\SatuanKonversi::class,
+        'Restore:SatuanKonversi'      => \App\Models\SatuanKonversi::class,
+        'ForceDelete:SatuanKonversi'  => \App\Models\SatuanKonversi::class,
+        'ForceDeleteAny:SatuanKonversi' => \App\Models\SatuanKonversi::class,
+        'RestoreAny:SatuanKonversi'   => \App\Models\SatuanKonversi::class,
+        'Replicate:SatuanKonversi'    => \App\Models\SatuanKonversi::class,
+    ],
     /*
     |--------------------------------------------------------------------------
     | Entity Discovery
