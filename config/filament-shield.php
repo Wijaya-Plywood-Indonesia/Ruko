@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Models\SatuanKonversi;
-
 return [
 
     /*
@@ -69,7 +67,7 @@ return [
     'super_admin' => [
         'enabled' => true,
         'name' => 'super_admin',
-        'define_via_gate' => false,
+        'define_via_gate' => true,
         'intercept_gate' => 'before',
     ],
 
@@ -239,19 +237,19 @@ return [
     |
     */
 
-    'custom_permissions' => [
-        SatuanKonversi::class => [
-            'View:SatuanKonversi',
-            'Create:SatuanKonversi',
-            'Update:SatuanKonversi',
-            'Delete:SatuanKonversi',
-            'Restore:SatuanKonversi',
-            'ForceDelete:SatuanKonversi',
-            'ForceDeleteAny:SatuanKonversi',
-            'RestoreAny:SatuanKonversi',
-            'Replicate:SatuanKonversi',
-        ],
-    ],
+    // 'custom_permissions' => [
+    //     SatuanKonversi::class => [
+    //         'View:SatuanKonversi',
+    //         'Create:SatuanKonversi',
+    //         'Update:SatuanKonversi',
+    //         'Delete:SatuanKonversi',
+    //         'Restore:SatuanKonversi',
+    //         'ForceDelete:SatuanKonversi',
+    //         'ForceDeleteAny:SatuanKonversi',
+    //         'RestoreAny:SatuanKonversi',
+    //         'Replicate:SatuanKonversi',
+    //     ],
+    // ],
 
     /*
     |--------------------------------------------------------------------------
