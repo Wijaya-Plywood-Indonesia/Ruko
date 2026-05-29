@@ -1,18 +1,4 @@
 <x-filament::page>
-    {{-- Custom CSS Styles --}}
-    <style>
-        .hover-card-anim {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .hover-card-anim:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px -6px rgba(0, 0, 0, 0.05);
-        }
-        html.dark .hover-card-anim:hover {
-            box-shadow: 0 8px 16px -6px rgba(0, 0, 0, 0.3);
-        }
-    </style>
-
     {{-- Main Container with Alpine.js --}}
     <div x-data="{
         search: '',
@@ -42,7 +28,7 @@
     }" class="space-y-4">
 
         {{-- Minimal Search & Filter Bar --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-3 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 shadow-sm">
             
             {{-- Live Search Input --}}
             <div class="relative flex-grow max-w-md">
@@ -73,7 +59,7 @@
                 <button 
                     @click="filterStatus = 'all'"
                     :class="filterStatus === 'all' ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
-                    class="px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
+                    class="px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
                 >
                     Semua
                     <span class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[9px] font-mono text-gray-600 dark:text-gray-300" x-text="items.length"></span>
@@ -81,7 +67,7 @@
                 <button 
                     @click="filterStatus = 'available'"
                     :class="filterStatus === 'available' ? 'bg-white dark:bg-gray-900 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
-                    class="px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
+                    class="px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
                 >
                     Tersedia
                     <span class="bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded text-[9px] font-mono text-emerald-600 dark:text-emerald-400" x-text="items.filter(i => i.qty > 0).length"></span>
@@ -89,7 +75,7 @@
                 <button 
                     @click="filterStatus = 'empty'"
                     :class="filterStatus === 'empty' ? 'bg-white dark:bg-gray-900 shadow-sm text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'"
-                    class="px-3.5 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
+                    class="px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5"
                 >
                     Habis
                     <span class="bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded text-[9px] font-mono text-rose-600 dark:text-rose-400" x-text="items.filter(i => i.qty <= 0).length"></span>
@@ -98,23 +84,20 @@
 
         </div>
 
-        {{-- Ultra Compact Horizontal Card Grid --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {{-- High Density Responsive Grid Table with Borders (Desktop: 5, Tablet: 4, Handphone: 3) --}}
+        <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0 border-t border-l border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm">
             <template x-for="item in filteredItems" :key="item.id">
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3.5 shadow-sm hover-card-anim flex items-center justify-between gap-4">
+                <div class="bg-white dark:bg-gray-900 border-r border-b border-gray-200 dark:border-gray-800 p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-gray-50/50 dark:hover:bg-gray-950/30 transition-colors duration-150">
                     
-                    {{-- Left Side: Product Name and Account Code --}}
-                    <div class="flex-grow min-w-0">
-                        <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate" x-text="item.nama" :title="item.nama"></h3>
-                        <div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-400 dark:text-gray-500 font-mono">
-                            <span>Akun:</span>
-                            <span class="font-semibold" x-text="item.akun"></span>
-                        </div>
+                    {{-- Product Name and Account Code --}}
+                    <div class="min-w-0 pr-2">
+                        <span class="font-bold text-gray-800 dark:text-gray-200 block truncate text-xs" x-text="item.nama" :title="item.nama"></span>
+                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono" x-text="item.akun"></span>
                     </div>
                     
-                    {{-- Right Side: Quantities and Units --}}
+                    {{-- Quantities and Units --}}
                     <div class="text-right flex-shrink-0">
-                        <span class="text-lg font-black tracking-tight" :class="item.qty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" x-text="formatQty(item.qty)"></span>
+                        <span class="font-mono font-bold text-xs" :class="item.qty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" x-text="formatQty(item.qty)"></span>
                         <span class="text-[9px] font-bold text-gray-400 dark:text-gray-500 block uppercase tracking-wider" x-text="item.satuan"></span>
                     </div>
 
@@ -122,8 +105,8 @@
             </template>
             
             {{-- Empty Results State --}}
-            <div x-show="filteredItems.length === 0" class="col-span-full py-10 text-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl">
-                <svg class="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <div x-show="filteredItems.length === 0" class="col-span-full py-8 text-center bg-white dark:bg-gray-900 border-r border-b border-gray-200 dark:border-gray-800">
+                <svg class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.008 1.24l.885 1.77a2.25 2.25 0 002.007 1.24h1.98a2.25 2.25 0 002.007-1.24l.885-1.77a2.25 2.25 0 012.007-1.24h3.86m-18 0h18" />
                 </svg>
                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">Tidak ada barang yang cocok dengan kriteria pencarian.</p>
