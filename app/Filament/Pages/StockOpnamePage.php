@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\IdentitasToko;
+use App\Models\Barang;
 use App\Models\StockOpname;
 use App\Models\StockOpnameDetail;
 use App\Models\StokBarangToko;
@@ -218,16 +219,23 @@ class StockOpnamePage extends Page implements HasForms
                 'created_by' => auth()->id(),
             ]);
 
-            // Load semua barang yang punya stok di toko ini
-            $stoks = StokBarangToko::with('barang')
-                ->where('toko_id', $tokoId)
+            // Load semua barang aktif yang terhubung dengan akun jurnal (sama seperti Stok Matrix)
+            $barangs = Barang::with(['subAnakAkun', 'satuan'])
+                ->whereHas('subAnakAkun', function ($query) {
+                    $query->whereNotNull('kode_sub_anak_akun')
+                        ->where('kode_sub_anak_akun', '!=', '');
+                })
+                ->orderBy('nama_barang')
                 ->get();
 
-            foreach ($stoks as $stok) {
+            foreach ($barangs as $barang) {
+                // Sisa Stok dihitung dari total saldo berjalan (debet - kredit) Buku Besar JurnalUmum
+                $qtyJurnal = (float) ($barang->stok_buku_besar ?? 0.0);
+
                 StockOpnameDetail::create([
                     'stock_opname_id' => $this->opname->id,
-                    'barang_id' => $stok->barang_id,
-                    'stok_sistem' => $stok->stok,
+                    'barang_id' => $barang->id,
+                    'stok_sistem' => $qtyJurnal,
                     'stok_aktual' => null,
                     'selisih' => null,
                 ]);
@@ -246,18 +254,57 @@ class StockOpnamePage extends Page implements HasForms
         if (!$this->opname)
             return;
 
-        $this->opname->load('details.barang');
+        // 💡 JIKA MASIH DRAFT: Sinkronkan barang-barang baru yang baru dihubungkan ke Jurnal secara dinamis
+        if ($this->opname->isDraft()) {
+            DB::transaction(function () {
+                $barangs = Barang::whereHas('subAnakAkun', function ($query) {
+                        $query->whereNotNull('kode_sub_anak_akun')
+                            ->where('kode_sub_anak_akun', '!=', '');
+                    })
+                    ->get();
+
+                $existingBarangIds = $this->opname->details()->pluck('barang_id')->toArray();
+
+                foreach ($barangs as $barang) {
+                    if (!in_array($barang->id, $existingBarangIds)) {
+                        $qtyJurnal = (float) ($barang->stok_buku_besar ?? 0.0);
+
+                        StockOpnameDetail::create([
+                            'stock_opname_id' => $this->opname->id,
+                            'barang_id'       => $barang->id,
+                            'stok_sistem'     => $qtyJurnal,
+                            'stok_aktual'     => null,
+                            'selisih'         => null,
+                        ]);
+                    }
+                }
+            });
+        }
+
+        // Muat ulang detail relasi barang terbaru dari database
+        $this->opname->load(['details.barang.subAnakAkun']);
 
         $this->details = $this->opname->details
-            ->map(fn($d) => [
-                'id' => $d->id,
-                'barang_id' => $d->barang_id,
-                'barang' => $d->barang->nama_barang ?? '-',
-                'kode' => $d->barang->kode_barang ?? '-',
-                'stok_sistem' => $d->stok_sistem,
-                'stok_aktual' => $d->stok_aktual !== null ? (string) $d->stok_aktual : '',
-                'catatan' => $d->catatan ?? '',
-            ])
+            ->filter(function ($d) {
+                // Hanya tampilkan barang yang terhubung ke Jurnal (sama seperti Stok Matrix)
+                return $d->barang && $d->barang->subAnakAkun && !empty($d->barang->subAnakAkun->kode_sub_anak_akun);
+            })
+            ->map(function ($d) {
+                // Jika masih draft, pastikan stok_sistem dinamis mengikuti saldo JurnalUmum (stok_buku_besar) real-time
+                $stokSistem = $this->opname->isDraft()
+                    ? (float) ($d->barang?->stok_buku_besar ?? 0.0)
+                    : (float) $d->stok_sistem;
+
+                return [
+                    'id' => $d->id,
+                    'barang_id' => $d->barang_id,
+                    'barang' => $d->barang->nama_barang ?? '-',
+                    'kode' => $d->barang->kode_barang ?? '-',
+                    'stok_sistem' => $stokSistem,
+                    'stok_aktual' => $d->stok_aktual !== null ? (string) $d->stok_aktual : '',
+                    'catatan' => $d->catatan ?? '',
+                ];
+            })
             ->values()
             ->toArray();
     }
@@ -274,6 +321,7 @@ class StockOpnamePage extends Page implements HasForms
         DB::transaction(function () {
             foreach ($this->details as $item) {
                 StockOpnameDetail::where('id', $item['id'])->update([
+                    'stok_sistem' => (float) $item['stok_sistem'], // Simpan stok_sistem terbaru dari jurnal
                     'stok_aktual' => $item['stok_aktual'] !== '' ? (float) $item['stok_aktual'] : null,
                     'catatan' => $item['catatan'] ?: null,
                 ]);
@@ -327,7 +375,7 @@ class StockOpnamePage extends Page implements HasForms
 
         try {
             DB::transaction(function () {
-                // 1. Jalankan approval internal status dokumen opname melalui service logistik Anda
+                // 1. Jalankan approval internal status dokumen opname melalui service logistik
                 app(StockOpnameService::class)->approve(
                     $this->opname,
                     auth()->id(),
@@ -338,33 +386,9 @@ class StockOpnamePage extends Page implements HasForms
                 $this->opname->load('details.barang.subAnakAkun');
 
                 // Hitung nomor urut jurnal berikutnya (max + 1)
-                // Hitung nomor urut jurnal berikutnya (max + 1)
-                $nextJurnalNo = (int) (\App\Models\JurnalPembantuHeader::max('jurnal') ?? 0) + 1;
-
-                // 💡 HITUNG JUGA NOMOR URUT INTEGER UNTUK NO JURNAL PEMBANTU
-                // Karena tipenya di database adalah Integer, kita ambil nilai tertinggi lalu tambah 1
-                $nextNoJurnalPembantu = (int) (\App\Models\JurnalPembantuHeader::max('no_jurnal_pembantu') ?? 0) + 1;
-
-                // 2. TERBITKAN JURNAL PEMBANTU HEADER
-                $jurnalPembantuHeader = \App\Models\JurnalPembantuHeader::create([
-                    'no_jurnal_pembantu'  => $nextNoJurnalPembantu,
-                    'tgl_transaksi'       => now()->format('Y-m-d'),
-                    'jenis_transaksi'     => 'so',
-                    'modul_asal'          => 'stock_opname',
-                    'jurnal'              => $nextJurnalNo,
-                    'no_akun'             => '-',
-                    'nama_akun'           => 'Multi Akun Persediaan (Stock Opname)',
-                    'map'                 => 'd', // Default formal (Debet)
-                    'no_dokumen'          => $this->opname->no_opname ?? 'OPNAME_STOK',
-                    'keterangan'          => 'Stock Opname: ' . ($this->opname->catatan ?? 'Penyesuaian Fisik Gudang'),
-                    'status'              => \App\Models\JurnalPembantuHeader::STATUS_DIPOSTING,
-                    'adalah_jurnal_balik' => false,
-                    'dibuat_oleh'         => auth()->id(),
-                    'diposting_oleh'      => auth()->id(),
-                    'tgl_posting'         => now(),
-                ]);
-                // Variabel bantu untuk indexing nomor urut item di dalam loop
-                $loopIndex = 0;
+                $nextJurnalNo = (int) (\App\Models\JurnalUmum::max('jurnal') ?? 0) + 1;
+                $maxJP = (int) (\App\Models\JurnalPembantuHeader::max('jurnal') ?? 0);
+                $nextJurnalNo = max($nextJurnalNo, $maxJP) + 1;
 
                 foreach ($this->opname->details as $detail) {
                     $barang = $detail->barang;
@@ -377,27 +401,8 @@ class StockOpnamePage extends Page implements HasForms
                         continue;
                     }
 
-                    // 🔍 HITUNG REAL-TIME STOK SEBELUMNYA DARI JURNAL PEMBANTU ITEM
-                    // Menghitung timbunan saldo berjalan (running balance) khusus untuk ID barang ini
-                    $transaksis = \App\Models\JurnalPembantuItem::where('barang_id', $barang->id)
-                        ->whereHas('header', function ($query) use ($kodeAkun) {
-                            $query->where('no_akun', $kodeAkun)->where('status', '!=', \App\Models\JurnalPembantuHeader::STATUS_DRAFT);
-                        })
-                        ->get();
-
-                    $stokBukuBesarTerkini = 0.0;
-
-                    foreach ($transaksis as $trx) {
-                        // Cari peta posisi (map) apakah dari item atau fallback ke header
-                        $isDebit = in_array(strtolower($trx->map ?? $trx->header?->map), ['d', 'debit']);
-                        $qtyTrx = (float) ($trx->banyak ?? 0);
-
-                        if ($isDebit) {
-                            $stokBukuBesarTerkini += $qtyTrx;
-                        } else {
-                            $stokBukuBesarTerkini -= $qtyTrx;
-                        }
-                    }
+                    // 🔍 HITUNG REAL-TIME STOK SEBELUMNYA DARI JURNAL UMUM (LEDGER)
+                    $stokBukuBesarTerkini = (float) ($barang->stok_buku_besar ?? 0.0);
 
                     // 🔍 CARI SELISIH NYATA: FISIK DI INPUT GUDANG VS TOTAL HITUNGAN BUKU BESAR
                     $stokAktualFisik = (float) ($detail->stok_aktual ?? 0);
@@ -409,21 +414,43 @@ class StockOpnamePage extends Page implements HasForms
                     }
 
                     // Tentukan Debet (Barang Masuk/Nambah) atau Kredit (Barang Keluar/Kurang)
-                    $mapType = $selisihOpname > 0 ? 'debit' : 'kredit';
+                    $mapHeaderType = $selisihOpname > 0 ? 'd' : 'k';
+                    $mapItemType = $selisihOpname > 0 ? 'debit' : 'kredit';
                     $qtyPenyesuaian = abs($selisihOpname);
 
-                    // 3. MASUKKAN STOK MELALUI JURNAL PEMBANTU ITEM (TERIKAT HEADER)
-                    // Logika booting model Anda akan otomatis menghitung perkalian kolom 'jumlah'
+                    // 💡 HITUNG NOMOR URUT INTEGER UNTUK NO JURNAL PEMBANTU
+                    $nextNoJurnalPembantu = (int) (\App\Models\JurnalPembantuHeader::max('no_jurnal_pembantu') ?? 0) + 1;
+
+                    // 2. TERBITKAN JURNAL PEMBANTU HEADER UNTUK PRODUK INI (STATUS DRAFT - SELARAS DENGAN YANG LAIN)
+                    $jurnalPembantuHeader = \App\Models\JurnalPembantuHeader::create([
+                        'no_jurnal_pembantu'  => $nextNoJurnalPembantu,
+                        'tgl_transaksi'       => now()->format('Y-m-d'),
+                        'jenis_transaksi'     => 'so',
+                        'modul_asal'          => 'stock_opname',
+                        'jurnal'              => $nextJurnalNo,
+                        'no_akun'             => $kodeAkun, // Akun persediaan produk ini!
+                        'nama_akun'           => $namaAkun,
+                        'map'                 => $mapHeaderType,
+                        'no_dokumen'          => $this->opname->no_opname ?? 'OPNAME_STOK',
+                        'keterangan'          => 'Opname Penyesuaian Fisik: ' . $barang->nama_barang . ' (Selisih: ' . ($selisihOpname > 0 ? '+' : '') . $selisihOpname . ')',
+                        'total_nilai'         => 0.0, // Harga 0, total_nilai 0 agar tidak mempengaruhi balance
+                        'status'              => \App\Models\JurnalPembantuHeader::STATUS_DRAFT, // Disimpan sebagai Draft
+                        'adalah_jurnal_balik' => false,
+                        'dibuat_oleh'         => auth()->id(),
+                    ]);
+
+                    // 3. MASUKKAN STOK MELALUI JURNAL PEMBANTU ITEM (TERIKAT HEADER) DENGAN HARGA 0
                     $jurnalPembantuHeader->items()->create([
-                        'urut'         => ++$loopIndex,
-                        'barang_id'    => $barang->id, // Kolom identitas baru logistik
-                        'no_akun'      => $kodeAkun,   // Kolom identitas baru logistik
-                        'nama_akun'    => $namaAkun,   // Kolom identitas baru logistik
-                        'map'          => $mapType,    // Mengunci arah pergerakan stok 'debit' / 'kredit'
+                        'urut'         => 1,
+                        'barang_id'    => $barang->id,
+                        'no_akun'      => $kodeAkun,
+                        'nama_akun'    => $namaAkun,
+                        'map'          => $mapItemType,
                         'nama_barang'  => $barang->nama_barang,
                         'no_dokumen'   => $this->opname->no_opname ?? 'OPNAME_STOK',
-                        'banyak'       => $qtyPenyesuaian, // Disimpan presisi decimal:4 sesuai timbangan pakan Anda
-                        'harga'        => (float) ($barang->harga_pokok ?? 0),
+                        'banyak'       => $qtyPenyesuaian,
+                        'harga'        => 0.0, // Harga 0 agar tidak mempengaruhi balance
+                        'jumlah'       => 0.0, // Jumlah 0 agar tidak mempengaruhi balance
                         'status'       => true, // Item aktif
                         'keterangan'   => 'Opname Penyesuaian Fisik: ' . $barang->nama_barang . ' (Selisih: ' . ($selisihOpname > 0 ? '+' : '') . $selisihOpname . ')',
                         'created_by'   => auth()->id(),
