@@ -13,6 +13,18 @@
                 ongkir: @entangle('ongkir'),
                 biayaLain: @entangle('biaya_lain'),
                 bayar: @entangle('payment_amount'),
+                nomorNota: @entangle('nomor_nota'),
+                tanggal: @entangle('tanggal'),
+                supplierId: @entangle('supplier_id'),
+                supplierName: @entangle('supplier_name'),
+                supplierPhone: @entangle('supplier_phone'),
+                supplierAddress: @entangle('supplier_address'),
+                isNewSupplier: @entangle('is_new_supplier'),
+                catatan: @entangle('catatan'),
+                paymentMethod: @entangle('payment_method'),
+                tanggalBayar: @entangle('tanggal_bayar'),
+                paymentReference: @entangle('payment_reference'),
+                paymentCatatan: @entangle('payment_catatan'),
 
                 get subTotal() {
                     return this.items.reduce((acc, item) => acc + (parseFloat(item.qty || 0) * parseFloat(item.harga_beli || 0)), 0);
@@ -57,22 +69,64 @@
 
                 setBayarPas() {
                     this.bayar = this.grandTotal;
+                },
+
+                saveToLocalStorage() {
+                    const state = {
+                        items: this.items,
+                        nomor_nota: this.nomorNota,
+                        tanggal: this.tanggal,
+                        supplier_id: this.supplierId,
+                        supplier_name: this.supplierName,
+                        supplier_phone: this.supplierPhone,
+                        supplier_address: this.supplierAddress,
+                        is_new_supplier: this.isNewSupplier,
+                        catatan: this.catatan,
+                        sub_total: this.subTotal,
+                        ongkir: this.ongkir,
+                        biaya_lain: this.biayaLain,
+                        payment_method: this.paymentMethod,
+                        payment_amount: this.bayar,
+                        tanggal_bayar: this.tanggalBayar,
+                        payment_reference: this.paymentReference,
+                        payment_catatan: this.paymentCatatan
+                    };
+                    localStorage.setItem('pembelian_state', JSON.stringify(state));
+                },
+
+                init() {
+                    // State will be saved dynamically via form-level input/change bubbling
+                    // and after successful Livewire commits. No active watches needed,
+                    // which completely prevents reactivity conflicts and field lockups.
                 }
             }">
 
-            <form wire:submit.prevent="simpan" class="pos-pro-dashboard flex flex-col gap-4 lg:gap-6">
+            <form wire:submit.prevent="simpan" 
+                @input.debounce.500ms="saveToLocalStorage()"
+                @change="saveToLocalStorage()"
+                class="pos-pro-dashboard flex flex-col gap-4 lg:gap-6">
 
                 {{-- MAIN INFO BAR --}}
                 <div class="flex flex-wrap lg:flex-nowrap items-center justify-between bg-white dark:bg-gray-900 px-4 py-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm gap-x-6 gap-y-2">
                     <div class="flex flex-wrap lg:flex-nowrap items-center gap-4 lg:gap-6 w-full lg:w-auto">
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Nomor Nota:</span>
-                            <input type="text" wire:model="nomor_nota" required class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-sm font-black text-primary-600 font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 w-36 transition-all" />
+                            <div class="flex flex-col">
+                                <input type="text" x-model="nomorNota" required class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-sm font-black text-primary-600 font-mono focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 w-36 transition-all" />
+                                @error('nomor_nota')
+                                    <span class="text-[10px] text-red-500 font-bold mt-0.5">{{ $message }}</span>
+                                @enderror
+                            </div>
                         </div>
                         <div class="h-8 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Tanggal:</span>
-                            <input type="date" wire:model="tanggal" required class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-xs font-medium text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all" />
+                            <div class="flex flex-col">
+                                <input type="date" x-model="tanggal" required class="px-2 py-1 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded text-xs font-medium text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all" />
+                                @error('tanggal')
+                                    <span class="text-[10px] text-red-500 font-bold mt-0.5">{{ $message }}</span>
+                                @enderror
+                            </div>
                         </div>
                         <div class="h-8 w-px bg-gray-100 dark:bg-gray-800 hidden sm:block"></div>
                         <div class="flex items-center gap-2">
@@ -101,90 +155,105 @@
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                <div class="md:col-span-2 flex flex-col gap-1.5 relative" wire:ignore
-                                    x-data="{
-                                        isOpen: false,
-                                        search: '',
-                                        suppliers: @js(\App\Models\Supplier::select('id', 'nama', 'telepon', 'alamat')->get()),
-                                        get filteredSuppliers() {
-                                            if (this.search === '') return this.suppliers;
-                                            return this.suppliers.filter(s => s.nama.toLowerCase().includes(this.search.toLowerCase()));
-                                        },
-                                        selectSupplier(sup) {
-                                            $wire.supplier_id = sup.id;
-                                            $wire.supplier_name = sup.nama;
-                                            $wire.supplier_phone = sup.telepon;
-                                            $wire.supplier_address = sup.alamat;
-                                            $wire.is_new_supplier = false;
-                                            this.search = sup.nama;
-                                            this.isOpen = false;
-                                        },
-                                        createNewSupplier() {
-                                            $wire.supplier_id = null;
-                                            $wire.supplier_name = this.search;
-                                            $wire.supplier_phone = '';
-                                            $wire.supplier_address = '';
-                                            $wire.is_new_supplier = true;
-                                            this.isOpen = false;
-                                        },
-                                        clearSearch() {
-                                            this.search = '';
-                                            $wire.supplier_id = null;
-                                            $wire.supplier_name = '';
-                                            $wire.supplier_phone = '';
-                                            $wire.supplier_address = '';
-                                            $wire.is_new_supplier = false;
-                                        }
-                                    }"
-                                    @click.away="isOpen = false">
+                                <div class="md:col-span-2 flex flex-col gap-1.5 relative">
+                                    <div wire:ignore
+                                        x-data="{
+                                            isOpen: false,
+                                            search: '',
+                                            suppliers: @js(\App\Models\Supplier::select('id', 'nama', 'telepon', 'alamat')->get()),
+                                            init() {
+                                                this.search = $wire.supplier_name || '';
+                                                this.$watch('$wire.supplier_name', value => {
+                                                    this.search = value || '';
+                                                });
+                                            },
+                                            get filteredSuppliers() {
+                                                if (this.search === '') return this.suppliers;
+                                                return this.suppliers.filter(s => s.nama.toLowerCase().includes(this.search.toLowerCase()));
+                                            },
+                                            selectSupplier(sup) {
+                                                $wire.supplier_id = sup.id;
+                                                $wire.supplier_name = sup.nama;
+                                                $wire.supplier_phone = sup.telepon;
+                                                $wire.supplier_address = sup.alamat;
+                                                $wire.is_new_supplier = false;
+                                                this.search = sup.nama;
+                                                this.isOpen = false;
+                                            },
+                                            createNewSupplier() {
+                                                $wire.supplier_id = null;
+                                                $wire.supplier_name = this.search;
+                                                $wire.supplier_phone = '';
+                                                $wire.supplier_address = '';
+                                                $wire.is_new_supplier = true;
+                                                this.isOpen = false;
+                                            },
+                                            clearSearch() {
+                                                this.search = '';
+                                                $wire.supplier_id = null;
+                                                $wire.supplier_name = '';
+                                                $wire.supplier_phone = '';
+                                                $wire.supplier_address = '';
+                                                $wire.is_new_supplier = false;
+                                            }
+                                        }"
+                                        @click.away="isOpen = false"
+                                        class="flex flex-col gap-1.5 relative">
 
-                                    <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1 flex items-center justify-between">
-                                        <span>Cari Supplier <span class="text-danger-500 font-bold">*</span></span>
-                                        <span x-show="$wire.is_new_supplier" x-cloak class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 font-bold border border-amber-300 uppercase tracking-wider rounded">Input Manual</span>
-                                    </label>
+                                        <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1 flex items-center justify-between">
+                                            <span>Cari Supplier <span class="text-danger-500 font-bold">*</span></span>
+                                            <span x-show="isNewSupplier" x-cloak class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 font-bold border border-amber-300 uppercase tracking-wider rounded">Input Manual</span>
+                                        </label>
 
-                                    <div class="relative flex items-center">
-                                        <input type="text" x-model="search" @focus="isOpen = true" placeholder="Ketik nama supplier..."
-                                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-3 pr-8 py-1.5 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white transition-all outline-none">
-                                        <button type="button" x-show="search.length > 0" @click="clearSearch()" x-cloak class="absolute right-2 text-gray-400 hover:text-rose-500 p-0.5 transition-colors">
-                                            <x-heroicon-o-x-mark class="w-4 h-4" stroke-width="3" />
-                                        </button>
-                                    </div>
-
-                                    <div x-show="isOpen" x-transition x-cloak class="absolute top-[55px] z-50 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl max-h-48 overflow-y-auto p-1 rounded-lg">
-                                        <template x-for="sup in filteredSuppliers" :key="sup.id">
-                                            <button type="button" @click="selectSupplier(sup)" class="w-full text-left px-3 py-2 hover:bg-primary-50 dark:hover:bg-primary-900/40 rounded flex flex-col group border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors">
-                                                <span class="font-bold text-gray-800 dark:text-gray-200 text-xs group-hover:text-primary-700" x-text="sup.nama"></span>
-                                                <span class="text-[10px] text-gray-500 dark:text-gray-400" x-text="sup.telepon ? sup.telepon : '-'"></span>
+                                        <div class="relative flex items-center">
+                                            <input type="text" x-model="search" @focus="isOpen = true" placeholder="Ketik nama supplier..."
+                                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-3 pr-8 py-1.5 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white transition-all outline-none">
+                                            <button type="button" x-show="search.length > 0" @click="clearSearch()" x-cloak class="absolute right-2 text-gray-400 hover:text-rose-500 p-0.5 transition-colors">
+                                                <x-heroicon-o-x-mark class="w-4 h-4" stroke-width="3" />
                                             </button>
-                                        </template>
-                                        <button type="button" @click="createNewSupplier()" class="w-full text-left px-3 py-2 mt-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-700 rounded flex items-center gap-2 transition-colors group">
-                                            <div class="p-1 bg-amber-200 dark:bg-amber-800 rounded-full group-hover:bg-amber-300 dark:group-hover:bg-amber-700 transition-colors">
-                                                <x-heroicon-o-plus class="w-3.5 h-3.5 text-amber-800 dark:text-amber-200 font-bold" />
-                                            </div>
-                                            <div>
-                                                <span class="font-bold text-amber-800 dark:text-amber-200 text-xs">Tambah "<span x-text="search || 'Baru'"></span>"</span>
-                                            </div>
-                                        </button>
+                                        </div>
+
+                                        <div x-show="isOpen" x-transition x-cloak class="absolute top-[55px] z-50 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl max-h-48 overflow-y-auto p-1 rounded-lg">
+                                            <template x-for="sup in filteredSuppliers" :key="sup.id">
+                                                <button type="button" @click="selectSupplier(sup)" class="w-full text-left px-3 py-2 hover:bg-primary-50 dark:hover:bg-primary-900/40 rounded flex flex-col group border-b border-gray-100 dark:border-gray-700 last:border-0 transition-colors">
+                                                    <span class="font-bold text-gray-800 dark:text-gray-200 text-xs group-hover:text-primary-700" x-text="sup.nama"></span>
+                                                    <span class="text-[10px] text-gray-500 dark:text-gray-400" x-text="sup.telepon ? sup.telepon : '-'"></span>
+                                                </button>
+                                            </template>
+                                            <button type="button" @click="createNewSupplier()" class="w-full text-left px-3 py-2 mt-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-700 rounded flex items-center gap-2 transition-colors group">
+                                                <div class="p-1 bg-amber-200 dark:bg-amber-800 rounded-full group-hover:bg-amber-300 dark:group-hover:bg-amber-700 transition-colors">
+                                                    <x-heroicon-o-plus class="w-3.5 h-3.5 text-amber-800 dark:text-amber-200 font-bold" />
+                                                </div>
+                                                <div>
+                                                    <span class="font-bold text-amber-800 dark:text-amber-200 text-xs">Tambah "<span x-text="search || 'Baru'"></span>"</span>
+                                                </div>
+                                            </button>
+                                        </div>
                                     </div>
+                                    @error('supplier_id')
+                                        <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span>
+                                    @enderror
                                 </div>
 
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Nama Supplier</label>
                                     <div class="relative">
-                                        <input type="text" wire:model="supplier_name" placeholder="Nama..."
-                                            x-bind:disabled="!$wire.is_new_supplier"
-                                            x-bind:class="$wire.is_new_supplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
+                                        <input type="text" x-model="supplierName" placeholder="Nama..."
+                                            x-bind:disabled="!isNewSupplier"
+                                            x-bind:class="isNewSupplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
                                             class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white" />
                                     </div>
+                                    @error('supplier_name')
+                                        <span class="text-xs text-red-500 font-bold mt-1 block">{{ $message }}</span>
+                                    @enderror
                                 </div>
 
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Telepon Supplier</label>
                                     <div class="relative">
-                                        <input type="text" wire:model="supplier_phone" placeholder="Telepon..."
-                                            x-bind:disabled="!$wire.is_new_supplier"
-                                            x-bind:class="$wire.is_new_supplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
+                                        <input type="text" x-model="supplierPhone" placeholder="Telepon..."
+                                            x-bind:disabled="!isNewSupplier"
+                                            x-bind:class="isNewSupplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
                                             class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white" />
                                     </div>
                                 </div>
@@ -192,9 +261,9 @@
 
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Alamat Supplier</label>
-                                <textarea wire:model="supplier_address" rows="1" placeholder="Alamat..."
-                                    x-bind:disabled="!$wire.is_new_supplier"
-                                    x-bind:class="$wire.is_new_supplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
+                                <textarea x-model="supplierAddress" rows="1" placeholder="Alamat..."
+                                    x-bind:disabled="!isNewSupplier"
+                                    x-bind:class="isNewSupplier ? 'bg-white dark:bg-gray-950 border-amber-300 dark:border-amber-700 focus:ring-2 focus:ring-amber-500/20 dark:text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-90'"
                                     class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white resize-none"></textarea>
                             </div>
                         </div>
@@ -243,6 +312,19 @@
                                 </h3>
                                 <span class="text-[10px] font-black text-primary-600 bg-primary-50 dark:bg-primary-900/40 px-3 py-1 rounded-full uppercase">{{ count($items) }} Items</span>
                             </div>
+
+                            @error('items')
+                            <div class="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-4 m-4 rounded-r-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <x-heroicon-s-x-circle class="h-5 w-5 text-red-500" />
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-xs font-bold text-red-700 dark:text-red-400">{{ $message }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            @enderror
 
                             <div>
                                 {{-- Desktop Table --}}
@@ -483,7 +565,7 @@
 
                             <div class="flex flex-col gap-1.5">
                                 <label class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide ml-1">Catatan Transaksi</label>
-                                <textarea wire:model="catatan" rows="4" placeholder="Tulis catatan di sini..."
+                                <textarea x-model="catatan" rows="4" placeholder="Tulis catatan di sini..."
                                     class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-primary-500/20 dark:text-white resize-none h-[100px] outline-none"></textarea>
                             </div>
                         </div>
@@ -510,43 +592,57 @@
                                 <div class="space-y-3 border-b-2 border-dashed border-gray-100 dark:border-gray-800 pb-4">
                                     <div class="flex justify-between items-center">
                                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Subtotal Barang</span>
-                                        <span class="font-black text-sm text-gray-950 dark:text-white" x-text="'Rp ' + fmt(subTotal)"></span>
+                                        <span class="font-black text-sm text-gray-955 dark:text-white" x-text="'Rp ' + fmt(subTotal)"></span>
                                     </div>
 
                                     {{-- Ongkir --}}
-                                    <div class="flex justify-between items-center">
+                                    <div class="flex justify-between items-center"
+                                         x-data="{
+                                             ongkirInput: format(ongkir),
+                                             init() {
+                                                 this.$watch('ongkir', v => {
+                                                     this.ongkirInput = format(v);
+                                                 });
+                                             }
+                                         }">
                                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Ongkos Kirim (+)</span>
                                         <div class="relative flex items-center">
                                             <span class="absolute left-2.5 text-[10px] font-bold text-gray-400">Rp</span>
                                             <input type="text"
-                                                :value="format(ongkir)"
+                                                x-model="ongkirInput"
                                                 @input="
                                                     let raw = $event.target.value.replace(/\D/g, '');
                                                     ongkir = raw ? parseInt(raw) : 0;
-                                                    $el.value = format(ongkir);
+                                                    ongkirInput = format(ongkir);
                                                 "
                                                 class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" />
                                         </div>
                                     </div>
 
                                     {{-- Biaya Lain --}}
-                                    <div class="flex justify-between items-center">
+                                    <div class="flex justify-between items-center"
+                                         x-data="{
+                                             biayaLainInput: format(biayaLain),
+                                             init() {
+                                                 this.$watch('biayaLain', v => {
+                                                     this.biayaLainInput = format(v);
+                                                 });
+                                             }
+                                         }">
                                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Biaya Lainnya (+)</span>
                                         <div class="relative flex items-center">
                                             <span class="absolute left-2.5 text-[10px] font-bold text-gray-400">Rp</span>
                                             <input type="text"
-                                                :value="format(biayaLain)"
+                                                x-model="biayaLainInput"
                                                 @input="
                                                     let raw = $event.target.value.replace(/\D/g, '');
                                                     biayaLain = raw ? parseInt(raw) : 0;
-                                                    $el.value = format(biayaLain);
+                                                    biayaLainInput = format(biayaLain);
                                                 "
                                                 class="w-36 pl-7 pr-2.5 py-1 text-right font-black text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none" />
                                         </div>
                                     </div>
                                 </div>
-
-
 
                                 {{-- Kasir / Pembayaran Section --}}
                                 <div class="space-y-4 pt-3 border-t border-gray-100 dark:border-gray-800">
@@ -555,12 +651,12 @@
                                     </h3>
 
                                     {{-- Metode --}}
-                                    <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" wire:ignore x-data="{ active: '{{ $payment_method }}' }">
+                                    <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100/50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                                         @foreach(\App\Models\PembelianMetodePembayaran::labelMetode() as $val => $label)
                                         <button type="button"
-                                            @click="active = '{{ $val }}'; $wire.set('payment_method', '{{ $val }}', false)"
-                                            :class="active === '{{ $val }}'
-                                                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600'
+                                            @click="paymentMethod = '{{ $val }}'"
+                                            :class="paymentMethod === '{{ $val }}'
+                                                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 font-black'
                                                     : 'text-gray-500'"
                                             class="py-1.5 rounded-md text-[10px] font-bold uppercase transition-all text-center">
                                             {{ $label }}
@@ -571,24 +667,24 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div class="flex flex-col gap-1.5">
                                             <label class="text-[10px] font-black text-gray-500 uppercase tracking-wider ml-1">Tgl Bayar</label>
-                                            <input type="date" wire:model="tanggal_bayar"
+                                            <input type="date" x-model="tanggalBayar"
                                                 class="w-full p-2 text-xs font-bold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all" />
                                         </div>
                                         <div class="flex flex-col gap-1.5">
                                             <label class="text-[10px] font-black text-gray-500 uppercase tracking-wider ml-1">No. Bukti / Ref</label>
-                                            <input type="text" wire:model="payment_reference" placeholder="Opsional..."
+                                            <input type="text" x-model="paymentReference" placeholder="Opsional..."
                                                 class="w-full p-2 text-xs font-bold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all" />
                                         </div>
                                     </div>
 
                                     {{-- Nominal Bayar & Kurang/Kembali Card (Gaya POS) --}}
                                     <div class="space-y-1.5 bg-gray-50/50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
-                                        x-data="{
-                                             get diff() {
-                                                 return Math.abs(this.grandTotal - (parseInt(this.bayar) || 0));
-                                             },
-                                             get isKurang() {
-                                                 return (parseInt(this.bayar) || 0) < this.grandTotal;
+                                         x-data="{
+                                             bayarInput: format(bayar),
+                                             init() {
+                                                 this.$watch('bayar', v => {
+                                                     this.bayarInput = format(v);
+                                                 });
                                              }
                                          }">
 
@@ -600,21 +696,22 @@
                                             <span class="text-lg font-bold text-primary-600">Rp</span>
                                             <input
                                                 type="text"
-                                                :value="format(bayar)"
+                                                x-model="bayarInput"
                                                 @input="
                                                     let raw = $event.target.value.replace(/\D/g, '');
                                                     bayar = raw ? parseInt(raw) : 0;
-                                                    $el.value = format(bayar);
+                                                    bayarInput = format(bayar);
                                                 "
                                                 class="w-full bg-transparent border-none p-0 text-xl lg:text-2xl font-black focus:ring-0 tracking-tight dark:text-white"
                                                 placeholder="0" />
                                         </div>
 
-                                        <div class="pt-0.5 flex justify-between items-center">
-                                            <span class="text-[9px] font-bold text-gray-400 uppercase ml-1" x-text="isKurang ? 'Kurang' : 'Kembali'"></span>
+                                        <div class="pt-0.5 flex justify-between items-center" x-show="grandTotal > 0">
+                                            <span class="text-[9px] font-bold text-gray-400 uppercase ml-1" 
+                                                x-text="sisaBayar > 0 ? 'Kurang (Hutang)' : (sisaBayar < 0 ? 'Kembali' : 'Pas')"></span>
                                             <span class="text-base lg:text-lg font-bold"
-                                                :class="isKurang ? 'text-red-500' : 'text-green-500'"
-                                                x-text="fmt(diff)">
+                                                :class="sisaBayar > 0 ? 'text-red-500' : (sisaBayar < 0 ? 'text-green-500' : 'text-primary-600')"
+                                                x-text="fmt(Math.abs(sisaBayar))">
                                             </span>
                                         </div>
                                     </div>
@@ -622,7 +719,7 @@
                                     {{-- Catatan Kasir --}}
                                     <div class="flex flex-col gap-1.5">
                                         <label class="text-[10px] font-black text-gray-500 uppercase tracking-wider ml-1">Catatan Kasir</label>
-                                        <input type="text" wire:model="payment_catatan" placeholder="Catatan kasir opsional..."
+                                        <input type="text" x-model="paymentCatatan" placeholder="Catatan kasir opsional..."
                                             class="w-full p-2 text-xs font-semibold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg dark:text-white outline-none focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500 transition-all" />
                                     </div>
                                 </div>
@@ -662,43 +759,40 @@
                 }
             }
 
-            // 2. Automatically save the full state to localStorage on every Livewire update/render
+            // 2. Automatically save the full state to localStorage on every Livewire update/render using dynamic properties
             Livewire.hook('commit', ({ component, succeed }) => {
                 succeed(() => {
                     if (component.id === @this.id) {
                         const state = {
-                            items: @this.items,
-                            nomor_nota: @this.nomor_nota,
-                            tanggal: @this.tanggal,
-                            supplier_id: @this.supplier_id,
-                            supplier_name: @this.supplier_name,
-                            supplier_phone: @this.supplier_phone,
-                            supplier_address: @this.supplier_address,
-                            is_new_supplier: @this.is_new_supplier,
-                            catatan: @this.catatan,
-                            sub_total: @this.sub_total,
-                            total_diskon: @this.total_diskon,
-                            total_ppn: @this.total_ppn,
-                            ongkir: @this.ongkir,
-                            biaya_lain: @this.biaya_lain,
-                            payment_method: @this.payment_method,
-                            payment_amount: @this.payment_amount,
-                            tanggal_bayar: @this.tanggal_bayar,
-                            payment_reference: @this.payment_reference,
-                            payment_catatan: @this.payment_catatan
+                            items: component.$wire.items,
+                            nomor_nota: component.$wire.nomor_nota,
+                            tanggal: component.$wire.tanggal,
+                            supplier_id: component.$wire.supplier_id,
+                            supplier_name: component.$wire.supplier_name,
+                            supplier_phone: component.$wire.supplier_phone,
+                            supplier_address: component.$wire.supplier_address,
+                            is_new_supplier: component.$wire.is_new_supplier,
+                            catatan: component.$wire.catatan,
+                            sub_total: component.$wire.sub_total,
+                            total_diskon: component.$wire.total_diskon,
+                            total_ppn: component.$wire.total_ppn,
+                            ongkir: component.$wire.ongkir,
+                            biaya_lain: component.$wire.biaya_lain,
+                            payment_method: component.$wire.payment_method,
+                            payment_amount: component.$wire.payment_amount,
+                            tanggal_bayar: component.$wire.tanggal_bayar,
+                            payment_reference: component.$wire.payment_reference,
+                            payment_catatan: component.$wire.payment_catatan
                         };
                         localStorage.setItem('pembelian_state', JSON.stringify(state));
                     }
                 });
             });
 
-            // 3. Clear state on form submit to prevent loading completed transactions next time
-            const form = document.querySelector('form');
-            if (form) {
-                form.addEventListener('submit', () => {
-                    localStorage.removeItem('pembelian_state');
-                });
-            }
+            // 3. Clear state on successful transaction save
+            window.addEventListener('clearLocalStorage', () => {
+                localStorage.removeItem('pembelian_state');
+            });
         });
     </script>
 </x-filament-panels::page>

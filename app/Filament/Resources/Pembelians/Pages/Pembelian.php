@@ -414,21 +414,56 @@ class Pembelian extends Page
             $paths[] = $foto->store('pembelian', 'public');
         }
 
-        $this->validate([
-            'nomor_nota'         => 'required',
-            'tanggal'            => 'required|date',
-            'supplier_id'        => 'required_without:is_new_supplier',
-            'supplier_name'      => 'required_if:is_new_supplier,true',
-            'items'              => 'required|array|min:1',
-            'items.*.barang_id'  => 'required',
-            'items.*.qty'        => 'required|numeric|min:0.01',
-            'items.*.harga_beli' => 'required|numeric|min:0',
-        ]);
+        try {
+            $this->validate([
+                'nomor_nota'         => 'required',
+                'tanggal'            => 'required|date',
+                'supplier_id'        => 'required_unless:is_new_supplier,true',
+                'supplier_name'      => 'required_if:is_new_supplier,true',
+                'items'              => 'required|array|min:1',
+                'items.*.barang_id'  => 'required',
+                'items.*.qty'        => 'required|numeric|min:0.01',
+                'items.*.harga_beli' => 'required|numeric|min:0',
+            ], [
+                'nomor_nota.required'         => 'Nomor nota/invoice wajib diisi.',
+                'tanggal.required'            => 'Tanggal pembelian wajib diisi.',
+                'supplier_id.required_unless' => 'Silakan pilih supplier atau tambah supplier baru.',
+                'supplier_name.required_if'   => 'Nama supplier baru wajib diisi.',
+                'items.required'              => 'Keranjang pembelian minimal harus berisi 1 barang.',
+                'items.min'                   => 'Keranjang pembelian minimal harus berisi 1 barang.',
+                'items.*.qty.required'        => 'Qty barang harus diisi.',
+                'items.*.qty.min'             => 'Qty barang minimal 0.01.',
+                'items.*.harga_beli.required' => 'Harga beli harus diisi.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->validator->errors()->all();
+            Notification::make()
+                ->title('Validasi Gagal')
+                ->body(implode(' ', $errors))
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $grand   = $this->grandTotal();
+        $dibayar = $this->parseNumber($this->payment_amount);
+
+        // Validasi khusus: Metode Tunai & Transfer wajib lunas (>= grand total)
+        if (($this->payment_method === PembelianMetodePembayaran::METODE_TUNAI || $this->payment_method === PembelianMetodePembayaran::METODE_TRANSFER) && $grand > 0) {
+            if ($dibayar < $grand) {
+                Notification::make()
+                    ->title('Pembayaran Kurang')
+                    ->body('Untuk metode pembayaran ' . ($this->payment_method === PembelianMetodePembayaran::METODE_TUNAI ? 'Tunai' : 'Transfer Bank') . ', nominal pembayaran harus lunas (lebih dari atau sama dengan total Rp ' . number_format($grand, 0, ',', '.') . '). Silakan gunakan metode Cicilan atau Down Payment (DP) jika ingin membayar sebagian.')
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
 
         DB::beginTransaction();
 
         try {
-            $final_supplier_id = $this->supplier_id;
+            $final_supplier_id = !empty($this->supplier_id) ? $this->supplier_id : null;
             if ($this->is_new_supplier) {
                 $newSupplier = Supplier::create([
                     'nama'    => $this->supplier_name,
@@ -513,6 +548,8 @@ class Pembelian extends Page
                 ->body('Data pembelian dan pembayaran telah tercatat.')
                 ->success()
                 ->send();
+
+            $this->dispatch('clearLocalStorage');
 
             $this->redirect(PembeliansResource::getUrl('index'));
         } catch (\Exception $e) {
