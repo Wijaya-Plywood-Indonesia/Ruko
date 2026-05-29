@@ -871,7 +871,14 @@
                 </div>
             </div>
 
-            {{-- Header + Filter --}}
+            @php
+            $fmtTotal = function(float $n): string {
+                $f = number_format($n, 2, ',', '.');
+                return str_ends_with($f, ',00') ? substr($f, 0, -3) : $f;
+            };
+            @endphp
+
+            {{-- Header + Filter & Summary Total --}}
             <div class="flex flex-col gap-3 px-1">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -889,46 +896,89 @@
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] p-4 shadow-sm">
-                    <div class="flex flex-wrap items-end gap-3">
+                {{-- SATU BARIS KOTAK: Filter Kiri & Summary Kanan --}}
+                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] p-3 lg:p-4 shadow-sm flex flex-col xl:flex-row items-center justify-between gap-4 w-full">
+                    
+                    {{-- KIRI: Form Filter Tanggal --}}
+                    <div class="flex flex-wrap items-center gap-3">
                         <div class="flex items-center gap-2 mr-1">
                             <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span class="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter Tanggal</span>
+                            <span class="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Filter:</span>
                         </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dari</label>
-                            <input type="text" x-ref="filterDariInput" readonly placeholder="Pilih tanggal..."
-                                class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer w-40 outline-none focus:border-amber-400">
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="text" x-ref="filterDariInput" readonly placeholder="Dari Tanggal..."
+                                class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] text-xs font-bold text-gray-700 dark:text-gray-200 cursor-pointer w-32 outline-none focus:border-amber-400">
+                            
+                            <span class="text-gray-300 dark:text-gray-600 font-black">→</span>
+                            
+                            <input type="text" x-ref="filterSampaiInput" readonly placeholder="Sampai Tanggal..."
+                                class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] text-xs font-bold text-gray-700 dark:text-gray-200 cursor-pointer w-32 outline-none focus:border-amber-400">
                         </div>
-                        <div class="pb-2 text-gray-300 dark:text-gray-600 font-black text-lg">→</div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sampai</label>
-                            <input type="text" x-ref="filterSampaiInput" readonly placeholder="Pilih tanggal..."
-                                class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-[4px] text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer w-40 outline-none focus:border-amber-400">
-                        </div>
-                        <button type="button" @click="applyFilter()" :disabled="isFiltering"
-                            class="flex items-center gap-2 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-[4px] font-black text-[10px] uppercase tracking-widest transition-none shadow-sm disabled:opacity-60 disabled:cursor-wait">
-                            <span x-show="isFiltering" class="flex items-center gap-1">
-                                <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
-                            </span>
-                            <span x-show="!isFiltering" class="flex items-center gap-1.5">
+
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="applyFilter()" :disabled="isFiltering"
+                                class="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-[4px] font-black text-[10px] uppercase tracking-widest transition-none shadow-sm disabled:opacity-60 disabled:cursor-wait">
+                                <span x-show="isFiltering" class="flex items-center gap-1">
+                                    <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+                                </span>
+                                <span x-show="!isFiltering" class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    Apply
+                                </span>
+                            </button>
+                            <button type="button" @click="resetFilter()"
+                                x-show="hasActiveFilter || filterDari || filterSampai"
+                                :disabled="isFiltering"
+                                class="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-300 rounded-[4px] font-black text-[10px] uppercase tracking-widest transition-none disabled:opacity-60">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
-                                Apply
-                            </span>
-                        </button>
-                        <button type="button" @click="resetFilter()"
-                            x-show="hasActiveFilter || filterDari || filterSampai"
-                            :disabled="isFiltering"
-                            class="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-300 rounded-[4px] font-black text-[10px] uppercase tracking-widest transition-none disabled:opacity-60">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Reset
-                        </button>
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- KANAN: Summary Total & Badge --}}
+                    <div class="flex flex-wrap items-center gap-4 xl:gap-5 border-t xl:border-t-0 xl:border-l border-gray-100 dark:border-gray-800 pt-3 xl:pt-0 xl:pl-5 w-full xl:w-auto justify-between xl:justify-end">
+                        
+                        <div class="flex items-center gap-4">
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Debit</span>
+                                <span class="text-emerald-500 font-black text-sm tabular-nums">Rp {{ $fmtTotal($totalDebitDB) }}</span>
+                            </div>
+                            
+                            <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+                            
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kredit</span>
+                                <span class="text-rose-500 font-black text-sm tabular-nums">Rp {{ $fmtTotal($totalKreditDB) }}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            @if($isHistoryBalanced)
+                                <div class="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-[4px] whitespace-nowrap">
+                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span class="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.2em]">Balanced</span>
+                                </div>
+                            @else
+                                <div class="flex flex-col items-end gap-1">
+                                    <div class="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-[4px] whitespace-nowrap">
+                                        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                        <span class="text-[9px] font-black text-red-600 dark:text-red-400 uppercase tracking-[0.2em]">Unbalanced</span>
+                                    </div>
+                                    <span class="text-[9px] text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap">Selisih: Rp {{ $fmtTotal($selisihDB) }}</span>
+                                </div>
+                            @endif
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -964,7 +1014,7 @@
             {{-- Tabel History --}}
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden custom-scroll">
                 <div class="table-body-scroll" x-ref="tableScrollBody">
-                    <table class="w-full text-left text-sm border-collapse table-fixed min-w-[1400px]">
+                    <table class="w-full text-left text-sm border-collapse table-fixed min-w-[1500px]">
                         <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
                             <tr class="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-widest">
                                 <th class="px-4 py-4 w-[48px]">
@@ -978,8 +1028,8 @@
                                 <th class="px-4 py-4 w-[180px]">Keterangan</th>
                                 <th class="px-4 py-4 text-right w-[80px]">Qty</th>
                                 <th class="px-4 py-4 text-right w-[120px]">Harga</th>
-                                <th class="px-4 py-4 text-right w-[130px] text-green-400 bg-green-50/10 font-black">Debit (Rp)</th>
-                                <th class="px-4 py-4 text-right w-[130px] text-red-400 bg-red-50/10 font-black">Kredit (Rp)</th>
+                                <th class="px-4 py-4 text-right w-[160px] text-green-400 bg-green-50/10 font-black">Debit (Rp)</th>
+                                <th class="px-4 py-4 text-right w-[160px] text-red-400 bg-red-50/10 font-black">Kredit (Rp)</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1140,28 +1190,21 @@
                     @endif
                 </div>
 
-                {{-- Footer Totals --}}
+                {{-- Footer Totals (Dikembalikan Sesuai Request) --}}
                 <div class="overflow-x-auto border-t-2 border-gray-200 dark:border-gray-700">
-                    <table class="w-full text-left text-sm border-collapse table-fixed min-w-[1400px]">
+                    <table class="w-full text-left text-sm border-collapse table-fixed min-w-[1500px]">
                         <tfoot class="bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 font-black text-[10px] uppercase">
                             <tr>
                                 <td colspan="9" class="px-4 py-5 text-right text-gray-400 tracking-widest uppercase">Total Akumulasi</td>
-                                <td class="px-4 py-5 text-right text-green-400 bg-green-50/10 text-base font-black">
-                                    @php
-                                    $fmtTotal = function(float $n): string {
-                                    $f = number_format($n, 2, ',', '.');
-                                    return str_ends_with($f, ',00') ? substr($f, 0, -3) : $f;
-                                    };
-                                    @endphp
+                                <td class="px-4 py-5 text-right text-green-400 bg-green-50/10 text-base font-black pr-6">
                                     {{ $fmtTotal($totalDebitDB) }}
                                 </td>
-                                <td class="px-4 py-5 text-right text-red-400 bg-red-50/10 text-base font-black">
+                                <td class="px-4 py-5 text-right text-red-400 bg-red-50/10 text-base font-black pr-6">
                                     {{ $fmtTotal($totalKreditDB) }}
                                 </td>
-                                <td></td>
                             </tr>
                             <tr class="border-t border-gray-200 dark:border-gray-700">
-                                <td colspan="12" class="px-4 py-3">
+                                <td colspan="11" class="px-4 py-3">
                                     @if($isHistoryBalanced)
                                     <div class="flex items-center justify-end gap-2">
                                         <div class="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-[4px]">
@@ -1191,6 +1234,7 @@
                         </tfoot>
                     </table>
                 </div>
+
             </div>
         </div>
     </div>
