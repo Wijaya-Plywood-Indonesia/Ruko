@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Barang;
 use App\Models\Penjualan;
 use App\Models\ReturnPenjualan;
 use App\Models\ReturnPenjualanDetail;
@@ -201,7 +202,7 @@ class StokPenyesuaianService
             }
 
             $return = ReturnPenjualan::with('details_return')->findOrFail($id_return);
-            
+
             // Ambil toko_id dari Penjualan asli karena di tabel return tidak ada
             $penjualan = Penjualan::where('no_nota', $return->no_nota)->first();
             $tokoId = $penjualan?->toko_id;
@@ -271,7 +272,7 @@ class StokPenyesuaianService
             }
 
             $return = ReturnPenjualan::with('details_return')->findOrFail($id_return);
-            
+
             // Ambil toko_id dari Penjualan asli
             $penjualan = Penjualan::where('no_nota', $return->no_nota)->first();
             $tokoId = $penjualan?->toko_id;

@@ -79,7 +79,7 @@ class JurnalPenjualanTelurService
                 $ketJual  = $this->ket('Penjualan', $nota, $customer);
                 $barisKas = $this->resolveBarisKas($penjualan, $totalTelur);
 
-                // ── D: Kas ───────────────────────────────────────────────────
+                // Di bagian D: Kas — Bagian Telur
                 foreach ($barisKas as $kas) {
                     $hKas = $this->buatHeader([
                         'no_jurnal_pembantu' => $this->nextNomorPembantu(),
@@ -94,8 +94,22 @@ class JurnalPenjualanTelurService
                         'no_dokumen'         => $nota,
                         'dibuat_oleh'        => $userId,
                     ]);
-                    $urut = 1;
-                    foreach ($itemTelur as $d) {
+
+                    $urut           = 1;
+                    $list           = $itemTelur->values();
+                    $lastIndex      = $list->count() - 1;
+                    $sudahTersimpan = 0.0; // akumulasi jumlah (banyak × harga) yang sudah disimpan
+
+                    foreach ($list as $i => $d) {
+                        if ($i === $lastIndex) {
+                            $harga = $d->qty > 0
+                                ? round(($kas['nominal'] - $sudahTersimpan) / (float) $d->qty, 4)
+                                : 0;
+                        } else {
+                            $harga           = round((float) $d->harga_jual * $kas['proporsi'], 4);
+                            $sudahTersimpan += round((float) $d->qty * $harga, 4);
+                        }
+
                         $this->buatItem($hKas->id, [
                             'urut'         => $urut++,
                             'jenis_pihak'  => 'pelanggan',
@@ -105,7 +119,7 @@ class JurnalPenjualanTelurService
                             'no_referensi' => (string) $d->id,
                             'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
                             'banyak'       => $d->qty,
-                            'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
+                            'harga'        => $harga, // ← harga yang sudah dikoreksi
                             'created_by'   => $userId,
                             'updated_by'   => $userId,
                         ]);
@@ -310,7 +324,6 @@ class JurnalPenjualanTelurService
                     $ketLain           = $this->ket('Penjualan ' . $namaBarangPertama, $nota, $customer);
                     $akunPend          = $this->resolveAkun($kodePend);
 
-                    // D: Kas per metode bayar
                     foreach ($barisKas as $kas) {
                         $hKas = $this->buatHeader([
                             'no_jurnal_pembantu' => $this->nextNomorPembantu(),
@@ -325,8 +338,22 @@ class JurnalPenjualanTelurService
                             'no_dokumen'         => $nota,
                             'dibuat_oleh'        => $userId,
                         ]);
-                        $urut = 1;
-                        foreach ($details as $d) {
+
+                        $urut           = 1;
+                        $list           = $details->values();
+                        $lastIndex      = $list->count() - 1;
+                        $sudahTersimpan = 0.0;
+
+                        foreach ($list as $i => $d) {
+                            if ($i === $lastIndex) {
+                                $harga = $d->qty > 0
+                                    ? round(($kas['nominal'] - $sudahTersimpan) / (float) $d->qty, 4)
+                                    : 0;
+                            } else {
+                                $harga           = round((float) $d->harga_jual * $kas['proporsi'], 4);
+                                $sudahTersimpan += round((float) $d->qty * $harga, 4);
+                            }
+
                             $this->buatItem($hKas->id, [
                                 'urut'         => $urut++,
                                 'jenis_pihak'  => 'pelanggan',
@@ -336,7 +363,7 @@ class JurnalPenjualanTelurService
                                 'no_referensi' => (string) $d->id,
                                 'keterangan'   => $d->nama_barang . ' ' . $d->qty . ' ' . ($d->satuan ?? ''),
                                 'banyak'       => $d->qty,
-                                'harga'        => round($d->harga_jual * $kas['proporsi'], 2),
+                                'harga'        => $harga,
                                 'created_by'   => $userId,
                                 'updated_by'   => $userId,
                             ]);

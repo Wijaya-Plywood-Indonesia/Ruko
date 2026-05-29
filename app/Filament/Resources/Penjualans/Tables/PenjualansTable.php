@@ -88,13 +88,13 @@ class PenjualansTable
 
                     ->visible(
                         fn($record) => empty($record->validated_by)
-                        && !in_array($record->status_transaksi, ['LUNAS', 'COD', 'DIBATALKAN'])
+                            && !in_array($record->status_transaksi, ['LUNAS', 'COD', 'DIBATALKAN'])
                     )
 
                     ->disabled(
                         fn($record) =>
                         $record->user_id === filament()->auth()->id()
-                        && !filament()->auth()->user()->hasRole('super_admin')
+                            && !filament()->auth()->user()->hasRole('super_admin')
                     )
 
                     ->modalHeading('Validasi Transaksi')
@@ -176,7 +176,7 @@ class PenjualansTable
                     ->visible(
                         fn($record) =>
                         !empty($record->validated_by)
-                        && filament()->auth()->user()->hasRole('super_admin')
+                            && filament()->auth()->user()->hasRole('super_admin')
                     )
 
                     ->action(function ($record) {
@@ -227,11 +227,11 @@ class PenjualansTable
                     ->visible(
                         fn($record) =>
                         !empty($record->validated_by)
-                        && !in_array($record->status_transaksi, [
-                            'DIBATALKAN',
-                            'BELUM DIBAYAR',
-                            'PENDING',
-                        ])
+                            && !in_array($record->status_transaksi, [
+                                'DIBATALKAN',
+                                'BELUM DIBAYAR',
+                                'PENDING',
+                            ])
                     ),
 
                 Action::make('edit_keterangan')
@@ -259,8 +259,48 @@ class PenjualansTable
 
 
                 DeleteAction::make()
-                    ->visible(fn($record) => filament()->auth()->user()->hasRole("super_admin"))
+                    ->visible(function ($record) {
+                        $user = filament()->auth()->user();
+                        // Super Admin selalu bisa lihat tombol
+                        if ($user->hasRole('super_admin')) {
+                            return true;
+                        }
+                        // Staff hanya bisa lihat jika belum divalidasi
+                        return empty($record->validated_by);
+                    })
+                    ->requiresConfirmation()
+                    ->action(function ($record, DeleteAction $action) {
 
+                        // 1. Cek relasi yang ada di model Penjualan
+                        $adaDetailBarang = $record->details()->exists();
+                        $adaReturn       = $record->returns()->exists();
+
+                        // 2. Logika validasi
+                        if ($adaDetailBarang || $adaReturn) {
+                            $alasan = $adaReturn
+                                ? 'Sudah terdapat data retur yang terikat pada nota ini.'
+                                : 'Masih terdapat rincian detail barang (item) dalam nota.';
+
+                            Notification::make()
+                                ->danger()
+                                ->title('Data Gagal Dihapus!')
+                                ->body("Nota {$record->no_nota} tidak dapat dihapus karena: {$alasan} Silakan hapus data relasi terlebih dahulu.")
+                                ->persistent()
+                                ->send();
+
+                            // Menghentikan proses penghapusan
+                            $action->halt();
+                        }
+
+                        // 3. Jika lolos pemeriksaan, hapus record
+                        $record->delete();
+
+                        Notification::make()
+                            ->success()
+                            ->title('Berhasil Dihapus')
+                            ->body("Data penjualan Nota {$record->no_nota} telah berhasil dihapus dari sistem.")
+                            ->send();
+                    }),
             ])
             ->headerActions([
                 //
