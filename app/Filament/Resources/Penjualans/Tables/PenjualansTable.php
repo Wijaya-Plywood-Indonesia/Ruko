@@ -2,22 +2,16 @@
 
 namespace App\Filament\Resources\Penjualans\Tables;
 
-use App\Services\JurnalBalikService;
-use App\Services\JurnalPenjualanTelurService;
-use App\Services\StokPenyesuaianService;
 use Filament\Actions\Action;
-
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\DB;
 
 class PenjualansTable
 {
@@ -50,7 +44,10 @@ class PenjualansTable
                     ->label('Validator')
                     ->sortable()
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->placeholder('Belum Divalidasi') // Menampilkan teks jika belum ada yang validasi
+                    ->badge() // Opsional: menjadikannya badge agar lebih menonjol
+                    ->color(fn($state) => $state ? 'success' : 'gray') // Warna hijau jika ada validator, abu-abu jika belum
+                    ->toggleable(),
 
                 TextColumn::make('tanggal')->dateTime()->sortable(),
 
@@ -78,143 +75,6 @@ class PenjualansTable
             ->defaultSort('created_at', 'desc')
 
             ->recordActions([
-
-                // ✅ VALIDASI TRANSAKSI
-                Action::make('validasi_transaksi')
-                    ->label('Validasi Transaksi')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
-                    ->requiresConfirmation()
-
-                    ->visible(
-                        fn($record) => empty($record->validated_by)
-                        && !in_array($record->status_transaksi, ['LUNAS', 'COD', 'DIBATALKAN'])
-                    )
-
-                    ->disabled(
-                        fn($record) =>
-                        $record->user_id === filament()->auth()->id()
-                        && !filament()->auth()->user()->hasRole('super_admin')
-                    )
-
-                    ->modalHeading('Validasi Transaksi')
-                    ->modalSubmitActionLabel('Simpan Validasi')
-
-                    ->form([
-                        TextInput::make('validator_name')
-                            ->label('Validator')
-                            ->default(fn() => filament()->auth()->user()->name)
-                            ->disabled()
-                            ->dehydrated(false),
-
-                        Select::make('status_transaksi')
-                            ->label('Status Transaksi')
-                            ->options([
-                                'LUNAS' => 'LUNAS',
-                                'COD' => 'COD',
-                                'PENDING' => 'PENDING',
-                                'DIBATALKAN' => 'DIBATALKAN',
-                            ])
-                            ->required(),
-                    ])
-
-                    ->action(function ($record, array $data) {
-
-                        if (
-                            $record->user_id === filament()->auth()->id()
-                            && !filament()->auth()->user()->hasRole('super_admin')
-                        ) {
-                            Notification::make()
-                                ->title('Tidak boleh validasi transaksi sendiri')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
-                        if (!empty($record->validated_by)) {
-                            Notification::make()
-                                ->title('Transaksi sudah divalidasi')
-                                ->warning()
-                                ->send();
-                            return;
-                        }
-
-                        $statusBaru  = $data['status_transaksi'];
-                        $validatorId = filament()->auth()->id();
-
-                        DB::transaction(function () use ($record, $statusBaru, $validatorId) {
-
-                            if ($statusBaru === 'LUNAS') {
-                                // Penyesuaian stok
-                                app(StokPenyesuaianService::class)
-                                    ->lunas($record->id);
-
-                                // Buat jurnal pembantu otomatis
-                                app(JurnalPenjualanTelurService::class)
-                                    ->buatJurnalDariPenjualan($record, $validatorId);
-                            }
-
-                            $record->update([
-                                'validated_by'     => $validatorId,
-                                'status_transaksi' => $statusBaru,
-                            ]);
-                        });
-
-                        Notification::make()
-                            ->title('Transaksi berhasil divalidasi')
-                            ->success()
-                            ->send();
-                    }),
-
-                // ❌ BATAL VALIDASI
-                Action::make('batal_validasi')
-                    ->label('Batal Validasi')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-
-                    ->visible(
-                        fn($record) =>
-                        !empty($record->validated_by)
-                        && filament()->auth()->user()->hasRole('super_admin')
-                    )
-
-                    ->action(function ($record) {
-
-                        if (empty($record->validated_by)) {
-                            Notification::make()
-                                ->title('Transaksi belum divalidasi')
-                                ->warning()
-                                ->send();
-                            return;
-                        }
-
-                        $userId = filament()->auth()->id();
-
-                        DB::transaction(function () use ($record, $userId) {
-
-                            if ($record->status_transaksi === 'LUNAS') {
-                                // Balik stok
-                                app(StokPenyesuaianService::class)
-                                    ->batalLunas($record->id);
-
-                                // Buat jurnal balik otomatis
-                                app(JurnalBalikService::class)
-                                    ->buatJurnalBalikDariNota($record->no_nota, $userId);
-                            }
-
-                            $record->update([
-                                'validated_by'     => null,
-                                'status_transaksi' => 'BELUM DIBAYAR',
-                            ]);
-                        });
-
-                        Notification::make()
-                            ->title('Validasi dibatalkan & jurnal balik telah dibuat')
-                            ->success()
-                            ->send();
-                    }),
-
                 ViewAction::make(),
 
                 // 🖨 CETAK
@@ -227,11 +87,11 @@ class PenjualansTable
                     ->visible(
                         fn($record) =>
                         !empty($record->validated_by)
-                        && !in_array($record->status_transaksi, [
-                            'DIBATALKAN',
-                            'BELUM DIBAYAR',
-                            'PENDING',
-                        ])
+                            && !in_array($record->status_transaksi, [
+                                'DIBATALKAN',
+                                'BELUM DIBAYAR',
+                                'PENDING',
+                            ])
                     ),
 
                 Action::make('edit_keterangan')
@@ -257,10 +117,8 @@ class PenjualansTable
                             ->send();
                     }),
 
-
                 DeleteAction::make()
                     ->visible(fn($record) => filament()->auth()->user()->hasRole("super_admin"))
-
             ])
             ->headerActions([
                 //
