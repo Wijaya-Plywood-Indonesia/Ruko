@@ -562,4 +562,37 @@ class PosPenjualan extends Page
         $this->cart = $cart;
         $this->calculateTotal();
     }
+
+    #[On('restoreState')]
+    public function restoreState(array $state): void
+    {
+        $this->cart = $state['cart'] ?? [];
+        $this->is_member = (int) ($state['is_member'] ?? 0);
+        $this->pembeli_id = $state['pembeli_id'] ?? null;
+        $this->nama_customer = $state['nama_customer'] ?? '';
+        $this->alamat = $state['alamat'] ?? '';
+        $this->telepon = $state['telepon'] ?? '';
+        $this->kode_member = $state['kode_member'] ?? '';
+        $this->metode_pembayaran = $state['metode_pembayaran'] ?? 'TUNAI';
+        $this->bayar = (int) ($state['bayar'] ?? 0);
+        $this->bayar_tunai = (int) ($state['bayar_tunai'] ?? 0);
+        $this->bayar_transfer = (int) ($state['bayar_transfer'] ?? 0);
+        $this->rekening_perusahaan_id = $state['rekening_perusahaan_id'] ?? null;
+        $this->keterangan_pembayaran = $state['keterangan_pembayaran'] ?? null;
+        $this->keterangan_nota = $state['keterangan_nota'] ?? null;
+        $this->metode_pengiriman = $state['metode_pengiriman'] ?? 'DIBAWA_SENDIRI';
+        $this->kendaraan = $state['kendaraan'] ?? null;
+        $this->plat_kendaraan = $state['plat_kendaraan'] ?? null;
+        $this->nama_sopir = $state['nama_sopir'] ?? null;
+
+        // If transferring/payment split, populate company bank accounts
+        if ($this->metode_pembayaran === 'TRANSFER' || $this->metode_pembayaran === 'TUNAI & TRANSFER') {
+            $this->rekeningPerusahaan = RekeningPerusahaan::all();
+            if ($this->rekening_perusahaan_id) {
+                $this->selectedBank = RekeningPerusahaan::find($this->rekening_perusahaan_id);
+            }
+        }
+
+        $this->calculateTotal();
+    }
 }
