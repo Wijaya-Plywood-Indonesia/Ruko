@@ -56,10 +56,10 @@ class Pembelian extends Model
     public static function labelStatus(): array
     {
         return [
+            self::STATUS_LUNAS => 'Lunas',
             self::STATUS_DRAFT => 'Belum Diproses',
             self::STATUS_HUTANG => 'Belum Lunas (Hutang)',
             self::STATUS_CICILAN => 'Dibayar Sebagian (Cicilan)',
-            self::STATUS_LUNAS => 'Lunas',
             self::STATUS_BATAL => 'Dibatalkan',
         ];
     }
