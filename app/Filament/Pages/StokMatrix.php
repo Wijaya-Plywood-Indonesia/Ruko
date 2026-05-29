@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\Barang;
 use App\Models\JurnalUmum;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\DB;
 use UnitEnum;
 
 class StokMatrix extends Page
@@ -19,7 +20,7 @@ class StokMatrix extends Page
 
     public function mount(): void
     {
-        $this->barangs = Barang::with('subAnakAkun')
+        $this->barangs = Barang::with(['subAnakAkun', 'satuan', 'kategori'])
             ->whereHas('subAnakAkun', function ($query) {
                 $query->whereNotNull('kode_sub_anak_akun')
                     ->where('kode_sub_anak_akun', '!=', '');
@@ -27,20 +28,28 @@ class StokMatrix extends Page
             ->orderBy('nama_barang')
             ->get();
 
+        $kodeAkuns = $this->barangs->map(function ($barang) {
+            return $barang->subAnakAkun?->kode_sub_anak_akun;
+        })->filter()->unique()->toArray();
+
+        $transaksisGrouped = JurnalUmum::select('no_akun', 'map', DB::raw('SUM(COALESCE(banyak, 0)) as total_qty'))
+            ->whereIn('no_akun', $kodeAkuns)
+            ->groupBy('no_akun', 'map')
+            ->get()
+            ->groupBy('no_akun');
+
         $matrixTemporaryStok = [];
 
         foreach ($this->barangs as $barang) {
             $subAkun = $barang->subAnakAkun;
-            $kodeAkun = $subAkun->kode_sub_anak_akun;
+            $kodeAkun = $subAkun?->kode_sub_anak_akun;
 
-            $transaksis = JurnalUmum::where('no_akun', $kodeAkun)->get();
             $totalQty = 0.0;
+            if ($kodeAkun && isset($transaksisGrouped[$kodeAkun])) {
+                foreach ($transaksisGrouped[$kodeAkun] as $trx) {
+                    $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
+                    $qty = (float) $trx->total_qty;
 
-            foreach ($transaksis as $trx) {
-                $isDebit = in_array(strtolower($trx->map), ['d', 'debit']);
-                $qty = (float) ($trx->banyak ?? 0);
-
-                if ($qty > 0) {
                     if ($isDebit) {
                         $totalQty += $qty;
                     } else {
@@ -59,13 +68,33 @@ class StokMatrix extends Page
 
     protected function getViewData(): array
     {
+        $totalBarang = $this->barangs->count();
+        $totalStokAktifCount = 0;
+        $totalStokKosongCount = 0;
+        $totalAkumulasiStok = 0.0;
+
+        foreach ($this->barangs as $barang) {
+            $qty = $this->stok[$barang->id]->stok ?? 0.0;
+            if ($qty > 0) {
+                $totalStokAktifCount++;
+                $totalAkumulasiStok += $qty;
+            } else {
+                $totalStokKosongCount++;
+            }
+        }
+
         $chunks = $this->barangs->chunk($this->pairs);
 
         return [
-            'barangs' => $this->barangs,
-            'stok'    => $this->stok,
-            'pairs'   => $this->pairs,
-            'chunks'  => $chunks,
+            'barangs'              => $this->barangs,
+            'stok'                 => $this->stok,
+            'pairs'                => $this->pairs,
+            'chunks'               => $chunks,
+            'totalBarang'          => $totalBarang,
+            'totalStokAktifCount'  => $totalStokAktifCount,
+            'totalStokKosongCount' => $totalStokKosongCount,
+            'totalAkumulasiStok'   => $totalAkumulasiStok,
         ];
     }
 }
+
