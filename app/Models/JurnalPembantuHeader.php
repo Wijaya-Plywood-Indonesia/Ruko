@@ -60,6 +60,7 @@ class JurnalPembantuHeader extends Model
         'bm'    => 'Bukti Masuk / Pembelian',
         'bk'    => 'Bukti Keluar / Penjualan',
         'dp'    => 'Down Payment / Pelunasan',
+        'pk'    => 'Produksi Pakan / Kandang',
         'gaji'  => 'Penggajian',
         'balik' => 'Jurnal Balik',
         'lain'  => 'Lain-lain',

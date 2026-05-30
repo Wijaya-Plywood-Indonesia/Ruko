@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::table('barangs', function (Blueprint $table) {
             // Asumsi tabel akun Anda bernama sub_anak_akuns
-            $table->foreignId('akun_pendapatan_id')->nullable()->constrained('sub_anak_akuns')->onDelete('set null');
-            $table->foreignId('akun_hpp_id')->nullable()->constrained('sub_anak_akuns')->onDelete('set null');
+            if (!Schema::hasColumn('barangs', 'akun_pendapatan_id')) {
+                $table->foreignId('akun_pendapatan_id')->nullable()->constrained('sub_anak_akuns')->onDelete('set null');
+            }
+
+            if (!Schema::hasColumn('barangs', 'akun_hpp_id')) {
+                $table->foreignId('akun_hpp_id')->nullable()->constrained('sub_anak_akuns')->onDelete('set null');
+            }
         });
     }
 
