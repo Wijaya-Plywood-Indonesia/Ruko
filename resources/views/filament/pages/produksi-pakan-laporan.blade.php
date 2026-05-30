@@ -209,9 +209,74 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Pullet</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 1</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 2</th>
+
+                                {{-- Pullet --}}
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                                    @if($canEdit)
+                                    <button
+                                        wire:click="autoFillKolom('p')"
+                                        wire:loading.attr="disabled"
+                                        wire:target="autoFillKolom('p')"
+                                        title="Klik untuk isi otomatis kolom Pullet dari komposisi"
+                                        class="group inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:text-primary-500 transition-colors">
+                                        {{-- Ikon AI (sparkles) --}}
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                            class="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                                            wire:loading.class="animate-spin" wire:target="autoFillKolom('p')">
+                                            <path fill-rule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036a2.63 2.63 0 0 0 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258a2.63 2.63 0 0 0-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.63 2.63 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.63 2.63 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span wire:loading.remove wire:target="autoFillKolom('p')">Pullet</span>
+                                        <span wire:loading wire:target="autoFillKolom('p')">...</span>
+                                    </button>
+                                    @else
+                                    <span class="text-primary-600 dark:text-primary-400">Pullet</span>
+                                    @endif
+                                </th>
+
+                                {{-- Layer 1 --}}
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                                    @if($canEdit)
+                                    <button
+                                        wire:click="autoFillKolom('l1')"
+                                        wire:loading.attr="disabled"
+                                        wire:target="autoFillKolom('l1')"
+                                        title="Klik untuk isi otomatis kolom Layer 1 dari komposisi"
+                                        class="group inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:text-primary-500 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                            class="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                                            wire:loading.class="animate-spin" wire:target="autoFillKolom('l1')">
+                                            <path fill-rule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036a2.63 2.63 0 0 0 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258a2.63 2.63 0 0 0-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.63 2.63 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.63 2.63 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span wire:loading.remove wire:target="autoFillKolom('l1')">Layer 1</span>
+                                        <span wire:loading wire:target="autoFillKolom('l1')">...</span>
+                                    </button>
+                                    @else
+                                    <span class="text-primary-600 dark:text-primary-400">Layer 1</span>
+                                    @endif
+                                </th>
+
+                                {{-- Layer 2 --}}
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
+                                    @if($canEdit)
+                                    <button
+                                        wire:click="autoFillKolom('l2')"
+                                        wire:loading.attr="disabled"
+                                        wire:target="autoFillKolom('l2')"
+                                        title="Klik untuk isi otomatis kolom Layer 2 dari komposisi"
+                                        class="group inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:text-primary-500 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                            class="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                                            wire:loading.class="animate-spin" wire:target="autoFillKolom('l2')">
+                                            <path fill-rule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036a2.63 2.63 0 0 0 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258a2.63 2.63 0 0 0-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.63 2.63 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.63 2.63 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span wire:loading.remove wire:target="autoFillKolom('l2')">Layer 2</span>
+                                        <span wire:loading wire:target="autoFillKolom('l2')">...</span>
+                                    </button>
+                                    @else
+                                    <span class="text-primary-600 dark:text-primary-400">Layer 2</span>
+                                    @endif
+                                </th>
+
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Sisa Akhir</th>
                             </tr>
                         </thead>
@@ -276,9 +341,9 @@
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">Masuk</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Pulet</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 1</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 2</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar PLT</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar L1</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar L2</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Sisa Akhir</th>
                             </tr>
                         </thead>
@@ -324,97 +389,6 @@
             </div>
         </div>
 
-        {{-- ── 3c. TABEL PENGGUNAAN KARUNG (AYAM) ────────────────────────────────── --}}
-        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden mt-6">
-            <header class="fi-section-header flex items-center gap-3 overflow-hidden px-6 py-4">
-                <div class="grid flex-1 gap-1">
-                    <h3 class="text-base font-semibold leading-6 text-gray-950 dark:text-white">
-                        Penggunaan Karung
-                    </h3>
-                </div>
-            </header>
-
-            <div class="fi-section-content border-t border-gray-200 dark:border-white/10">
-                <div class="pp-table-wrapper pp-table">
-                    <table>
-                        <thead class="bg-gray-50 dark:bg-white/5">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Barang</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
-                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Pullet</th>
-                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 1</th>
-                                <th class="w-32 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Layer 2</th>
-                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Sisa Akhir</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                            @forelse($karungState as $idx => $item)
-                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
-                                <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase">
-                                    {{ $item['nama'] }}
-                                    @if(($item['konversi_sak'] ?? 1) > 1)
-                                    <span class="block text-[10px] text-gray-400 font-normal italic">Isi: {{ $item['konversi_sak'] }} Pcs/Sak</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400 font-mono">
-                                    {{ number_format((float) $item['awal']) }}
-                                </td>
-
-                                {{-- Input Pullet --}}
-                                <td class="px-2 py-1.5">
-                                    <div class="flex flex-col items-center">
-                                        @if(($item['konversi_sak'] ?? 1) > 1)
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.p_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
-                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['p'], 0) }} Pcs</span>
-                                        @else
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.p" @disabled(!$canEdit) class="cell-input" placeholder="0">
-                                        @endif
-                                    </div>
-                                </td>
-
-                                {{-- Input Layer 1 --}}
-                                <td class="px-2 py-1.5">
-                                    <div class="flex flex-col items-center">
-                                        @if(($item['konversi_sak'] ?? 1) > 1)
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l1_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
-                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['l1'], 0) }} Pcs</span>
-                                        @else
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l1" @disabled(!$canEdit) class="cell-input" placeholder="0">
-                                        @endif
-                                    </div>
-                                </td>
-
-                                {{-- Input Layer 2 --}}
-                                <td class="px-2 py-1.5">
-                                    <div class="flex flex-col items-center">
-                                        @if(($item['konversi_sak'] ?? 1) > 1)
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l2_sak" @disabled(!$canEdit) class="cell-input" placeholder="Sak">
-                                        <span class="text-[9px] font-black text-blue-500">{{ number_format((float) $item['l2'], 0) }} Pcs</span>
-                                        @else
-                                        <input type="number" wire:model.live.debounce.500ms="karungState.{{ $idx }}.l2" @disabled(!$canEdit) class="cell-input" placeholder="0">
-                                        @endif
-                                    </div>
-                                </td>
-
-                                {{-- Sisa Akhir --}}
-                                <td class="px-4 py-2.5 text-center">
-                                    <span class="inline-block rounded-md bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
-                                        {{ number_format((float) $item['akhir'], 2) }}
-                                    </span>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-                                    Tidak ada data karung (ayam).
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
         {{-- ── 3d. KETERANGAN & AUDIT ──────────────────────────────────────── --}}
         <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
