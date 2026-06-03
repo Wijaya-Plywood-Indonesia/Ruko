@@ -169,7 +169,9 @@ class ProduksiPakanLaporan extends Page
         return [
             'id'           => $item->id,
             'barang_id'    => $item->id_barang,
-            'nama'         => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
+            'nama_barang' => $item->barang?->nama_barang,
+            'satuan'      => $item->barang?->satuan?->nama_satuan ?? '-',
+            'nama'        => $item->barang?->nama_barang,
             'awal'         => (float) $item->stok_awal,
             'konversi_sak' => $konversi,
             'p_sak'        => $pSak,
@@ -189,6 +191,7 @@ class ProduksiPakanLaporan extends Page
             'id'        => $item->id,
             'barang_id' => $item->id_barang,
             'nama'      => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
+            'satuan' => $item->barang?->satuan?->nama_satuan ?? 'kg',
             'awal'      => (float) $item->stok_awal,
             'masuk'     => (float) $item->masuk,
             'p'         => (float) $item->keluar_pullet,
@@ -204,7 +207,7 @@ class ProduksiPakanLaporan extends Page
             ->whereHas('kategori', function ($query) {
                 $query->where(function ($q) {
                     $q->whereRaw('LOWER(nama_kategori) LIKE ?', ['%pakan%'])
-                        ->orWhereRaw('LOWER(nama_kategori) LIKE ?', ['%ayam%']);
+                        ->orWhereRaw('LOWER(nama_kategori) LIKE ?', ['%pakan mentah%']);
                 });
             })->get();
 
@@ -287,7 +290,9 @@ class ProduksiPakanLaporan extends Page
             $base = [
                 'id'        => null,
                 'barang_id' => $b->id,
-                'nama'      => $b->nama_barang . ' (' . ($b->satuan?->nama_satuan ?? '-') . ')',
+                'nama_barang' => $b->nama_barang,
+                'satuan'      => $b->satuan?->nama_satuan ?? '-',
+                'nama'        => $b->nama_barang,
                 'awal'      => $stokAwal,
                 'p'         => 0.0,
                 'l1'        => 0.0,
@@ -296,7 +301,10 @@ class ProduksiPakanLaporan extends Page
             ];
 
             if ($isCampuran) {
-                $this->campuranState[] = array_merge($base, ['masuk' => 0.0]);
+                $this->campuranState[] = array_merge($base, [
+                    'masuk'  => 0.0,
+                    'satuan' => $b->satuan?->nama_satuan ?? 'kg', // ← tambah ini
+                ]);
             } else {
                 $this->mentahState[] = array_merge($base, [
                     'konversi_sak' => $this->getKonversiSak($b->id),
@@ -844,5 +852,22 @@ class ProduksiPakanLaporan extends Page
                 ->info()
                 ->send();
         }
+    }
+
+    public function incrementMentah(int $idx, string $field): void
+    {
+        if (!$this->canEdit) return;
+        $step = 1; // kelipatan 1 sak
+        $this->mentahState[$idx][$field] = (float)($this->mentahState[$idx][$field] ?? 0) + $step;
+        $this->updated("mentahState.{$idx}.{$field}");
+    }
+
+    public function decrementMentah(int $idx, string $field): void
+    {
+        if (!$this->canEdit) return;
+        $step = 1;
+        $current = (float)($this->mentahState[$idx][$field] ?? 0);
+        $this->mentahState[$idx][$field] = max(0, $current - $step);
+        $this->updated("mentahState.{$idx}.{$field}");
     }
 }
