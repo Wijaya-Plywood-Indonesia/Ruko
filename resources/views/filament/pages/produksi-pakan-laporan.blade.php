@@ -87,38 +87,26 @@
             box-shadow: 0 0 0 2px rgb(var(--primary-500)), inset 0 0 0 1px rgb(var(--primary-500));
         }
 
-        /* Input yang bisa diisi — beri visual berbeda dari kolom display */
-        /* Wrapper input stepper (plus/minus) */
-        .cell-stepper {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-            min-width: 9rem;
-            /* ← lebih lebar dari sebelumnya */
-        }
-
         .cell-input {
             width: 100%;
-            min-width: 4.5rem;
-            /* ← tambahkan ini */
             height: 2.25rem;
             padding: 0 0.5rem;
             text-align: center;
             font-size: 0.875rem;
             font-weight: 600;
-            /* ← sedikit lebih tebal agar mudah dibaca */
-            background: rgb(var(--primary-50) / 0.5);
-            /* ← beri background subtle */
-            border: 1px solid rgb(var(--primary-200));
-            /* ← beri border agar jelas area input */
+            background-color: white;
+            border: 1.5px solid rgb(var(--primary-200));
             border-radius: 0.375rem;
             transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
             color: inherit;
+            /* Bayangan tipis agar terasa seperti "form field" sungguhan */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         }
 
         .dark .cell-input {
-            background: rgb(var(--primary-950) / 0.3);
-            border-color: rgb(var(--primary-800));
+            background-color: rgb(var(--primary-950) / 0.5);
+            border-color: rgb(var(--primary-700));
+            color: white;
         }
 
         .cell-input:focus {
@@ -132,10 +120,14 @@
             background-color: rgb(var(--primary-950));
         }
 
-        /* ── Kolom header lebih lebar ── */
-        .pp-table th.col-kandang {
-            min-width: 10rem;
-            /* ← tambahkan class ini di th Pullet/Layer1/Layer2 */
+        .cell-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: rgb(243 244 246);
+        }
+
+        .dark .cell-input:disabled {
+            background-color: rgb(255 255 255 / 0.03);
         }
     </style>
 
@@ -259,7 +251,6 @@
                         <thead class="bg-gray-50 dark:bg-white/5">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
-                                <th class="w-20 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Satuan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
 
                                 {{-- Pullet --}}
@@ -336,71 +327,19 @@
                             @forelse($mentahState as $idx => $item)
                             <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                                 <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    {{ $item['nama_barang'] }}
-                                </td>
-                                <td class="px-4 py-2.5 text-center text-sm font-semibold text-gray-400 dark:text-gray-500">
-                                    {{ $item['satuan'] }}
+                                    {{ $item['nama'] }}
                                 </td>
                                 <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400">
                                     {{ number_format($item['awal']) }}
                                 </td>
-                                {{-- Sesudah — dengan tombol plus/minus --}}
                                 <td class="px-2 py-1.5">
-                                    <div class="cell-stepper">
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="decrementMentah({{ $idx }}, 'p_sak')">−</button>
-
-                                        <input type="number"
-                                            wire:model.lazy="mentahState.{{ $idx }}.p_sak"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            class="cell-input cell-input--editable"
-                                            min="0" step="any" placeholder="0" />
-
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="incrementMentah({{ $idx }}, 'p_sak')">+</button>
-                                    </div>
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.p_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <div class="cell-stepper">
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="decrementMentah({{ $idx }}, 'l1_sak')">−</button>
-
-                                        <input type="number"
-                                            wire:model.lazy="mentahState.{{ $idx }}.l1_sak"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            class="cell-input cell-input--editable"
-                                            min="0" step="any" placeholder="0" />
-
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="incrementMentah({{ $idx }}, 'l1_sak')">+</button>
-                                    </div>
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l1_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-2 py-1.5">
-                                    <div class="cell-stepper">
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="decrementMentah({{ $idx }}, 'l2_sak')">−</button>
-
-                                        <input type="number"
-                                            wire:model.lazy="mentahState.{{ $idx }}.l2_sak"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            class="cell-input cell-input--editable"
-                                            min="0" step="any" placeholder="0" />
-
-                                        <button type="button"
-                                            class="cell-stepper__btn"
-                                            {{ !$canEdit ? 'disabled' : '' }}
-                                            wire:click="incrementMentah({{ $idx }}, 'l2_sak')">+</button>
-                                    </div>
+                                    <input type="number" wire:model.lazy="mentahState.{{ $idx }}.l2_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
                                 </td>
                                 <td class="px-4 py-2.5 text-center">
                                     <span class="inline-block rounded-md bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
@@ -445,6 +384,10 @@
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">Masuk</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar PLT</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar L1</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar L2</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Sisa Akhir</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -459,13 +402,26 @@
                                 <td class="px-4 py-2.5 text-center">
                                     <span class="inline-block rounded-md bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700 dark:bg-green-400/10 dark:text-green-400">
                                         {{ number_format($item['masuk']) }}
-                                        <span class="text-sm font-semibold opacity-70">{{ $item['satuan'] ?? 'kg' }}</span>
+                                    </span>
+                                </td>
+                                <td class="px-2 py-1.5">
+                                    <input type="number" wire:model.lazy="campuranState.{{ $idx }}.p" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                </td>
+                                <td class="px-2 py-1.5">
+                                    <input type="number" wire:model.lazy="campuranState.{{ $idx }}.l1" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                </td>
+                                <td class="px-2 py-1.5">
+                                    <input type="number" wire:model.lazy="campuranState.{{ $idx }}.l2" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
+                                </td>
+                                <td class="px-4 py-2.5 text-center">
+                                    <span class="inline-block rounded-md bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+                                        {{ number_format($item['akhir']) }}
                                     </span>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="3" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                                     Tidak ada data pakan campuran.
                                 </td>
                             </tr>

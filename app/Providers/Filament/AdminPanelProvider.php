@@ -65,20 +65,20 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
             ])
             ->navigationGroups([
+                NavigationGroup::make(label: 'Produksi & Kandang')
+                    ->icon('heroicon-o-calculator')
+                    ->collapsed(),
                 NavigationGroup::make(label: 'Transaksi')
                     ->icon('heroicon-o-adjustments-horizontal')
+                    ->collapsed(),
+                NavigationGroup::make(label: 'Akuntansi')
+                    ->icon('heroicon-o-calculator')
                     ->collapsed(),
                 NavigationGroup::make(label: 'Master Data')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->collapsed(),
                 NavigationGroup::make(label: 'Stock Barang')
                     ->icon('heroicon-o-archive-box-arrow-down')
-                    ->collapsed(),
-                NavigationGroup::make(label: 'Akuntansi')
-                    ->icon('heroicon-o-calculator')
-                    ->collapsed(),
-                NavigationGroup::make(label: 'Kandang')
-                    ->icon('heroicon-o-calculator')
                     ->collapsed(),
             ])
             ->authMiddleware([

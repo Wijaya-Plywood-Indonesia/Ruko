@@ -29,7 +29,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
     use InteractsWithForms;
 
     protected string $view = 'filament.pages.jurnal-umum';
-    protected static UnitEnum|string|null $navigationGroup = 'Akuntansi Telur';
+    protected static UnitEnum|string|null $navigationGroup = 'Akuntansi';
     protected static ?string $title = 'Jurnal Umum';
 
     public $tgl, $jurnal, $no_akun, $nama_akun, $nama, $keterangan;
@@ -349,7 +349,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
                         'no_akun'   => $item['no_akun'],
                         'nama_akun' => $item['nama_akun'],
                         'nama'      => $item['nama'],
-                        'keterangan'=> $item['keterangan'],
+                        'keterangan' => $item['keterangan'],
                         'banyak'    => $item['banyak'],
                         'harga'     => $item['harga'],
                         'map'       => $item['map'],
@@ -399,7 +399,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
                         'nama'       => $item['nama'],
                         'keterangan' => $item['keterangan'],
                         'banyak'     => isset($item['banyak']) && $item['banyak'] !== null && $item['banyak'] !== ''
-                                            ? $item['banyak'] : null,
+                            ? $item['banyak'] : null,
                         'harga'      => $item['harga'],
                         'map'        => $item['map'],
                     ]);
@@ -411,8 +411,13 @@ class JurnalUmum extends Page implements HasActions, HasForms
         }
 
         session()->forget([
-            'jurnal_draft_items', 'jurnal_draft_kode', 'jurnal_draft_tgl',
-            'jurnal_draft_map', 'jurnal_draft_harga', 'jurnal_draft_banyak', 'jurnal_draft_nama',
+            'jurnal_draft_items',
+            'jurnal_draft_kode',
+            'jurnal_draft_tgl',
+            'jurnal_draft_map',
+            'jurnal_draft_harga',
+            'jurnal_draft_banyak',
+            'jurnal_draft_nama',
         ]);
 
         $this->items        = [];

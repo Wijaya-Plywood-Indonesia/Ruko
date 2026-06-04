@@ -16,7 +16,7 @@ class LabaRugiTelur extends Page
 {
     use HasPageShield;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi Telur';
+    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
     protected static ?string $title = 'Laba Rugi Telur';
     protected static ?string $navigationLabel = 'Laba Rugi Telur';
     protected string $view = 'filament.pages.laba-rugi-telur';
@@ -40,8 +40,14 @@ class LabaRugiTelur extends Page
         $this->generateLaporan();
     }
 
-    public function updatedPeriodeAwal(): void  { $this->generateLaporan(); }
-    public function updatedPeriodeAkhir(): void { $this->generateLaporan(); }
+    public function updatedPeriodeAwal(): void
+    {
+        $this->generateLaporan();
+    }
+    public function updatedPeriodeAkhir(): void
+    {
+        $this->generateLaporan();
+    }
     public function updatedTampilkanSaldoNol(): void {}
 
     // ── FUNGSI RESET FILTER SAAT TOMBOL DIKLIK ──
@@ -49,7 +55,7 @@ class LabaRugiTelur extends Page
     {
         $this->jenisFilter = $jenis;
         $now = now();
-        
+
         if ($jenis === 'hari') {
             $this->periodeAwal  = $now->startOfMonth()->format('Y-m-d');
             $this->periodeAkhir = $now->format('Y-m-d');
@@ -57,7 +63,7 @@ class LabaRugiTelur extends Page
             $this->periodeAwal  = $now->format('Y-m');
             $this->periodeAkhir = $now->format('Y-m');
         }
-        
+
         // Render ulang laporan setiap ganti filter
         $this->generateLaporan();
     }
@@ -70,7 +76,7 @@ class LabaRugiTelur extends Page
             if ($this->jenisFilter === 'hari') {
                 $awal  = Carbon::createFromFormat('Y-m-d', $this->periodeAwal)->startOfDay();
                 $akhir = Carbon::createFromFormat('Y-m-d', $this->periodeAkhir)->startOfDay();
-                
+
                 if ($awal->gt($akhir)) return [];
 
                 // Maksimal 31 hari
@@ -90,7 +96,6 @@ class LabaRugiTelur extends Page
                     ];
                     $current->addDay();
                 }
-
             } else {
                 $awal  = Carbon::createFromFormat('Y-m', $this->periodeAwal)->startOfMonth();
                 $akhir = Carbon::createFromFormat('Y-m', $this->periodeAkhir)->startOfMonth();
@@ -158,8 +163,8 @@ class LabaRugiTelur extends Page
 
         return Excel::download(
             new LabaRugiExport(
-                laporanData:       $this->laporanData,
-                bulanList:         $this->bulanList,
+                laporanData: $this->laporanData,
+                bulanList: $this->bulanList,
                 ringkasanPerBulan: $this->ringkasanPerBulan,
                 tampilkanSaldoNol: $this->tampilkanSaldoNol,
             ),

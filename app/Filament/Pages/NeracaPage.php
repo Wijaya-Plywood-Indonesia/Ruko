@@ -19,7 +19,7 @@ class NeracaPage extends Page implements HasForms
     use InteractsWithForms;
 
     protected static ?string $navigationLabel = 'Neraca Telur';
-    protected static UnitEnum|string|null $navigationGroup = 'Akuntansi Telur';
+    protected static UnitEnum|string|null $navigationGroup = 'Akuntansi';
     protected static ?string $title = 'Neraca Telur';
     protected string $view = 'filament.pages.neraca-page';
 
@@ -67,7 +67,7 @@ class NeracaPage extends Page implements HasForms
             if ($this->jenisFilter === 'hari') {
                 $awal  = Carbon::createFromFormat('Y-m-d', $this->periodeAwal)->startOfDay();
                 $akhir = Carbon::createFromFormat('Y-m-d', $this->periodeAkhir)->startOfDay();
-                
+
                 if ($awal->gt($akhir)) return [];
 
                 // Batasi maksimal penarikan harian 31 hari
@@ -123,11 +123,11 @@ class NeracaPage extends Page implements HasForms
     {
         $this->jenisFilter = $jenis;
         $now = now();
-        
+
         if ($jenis === 'hari') {
             // Jika pindah ke harian, set ke tgl 1 s.d hari ini
             $this->periodeAwal  = $now->startOfMonth()->format('Y-m-d');
-            $this->periodeAkhir = $now->format('Y-m-d'); 
+            $this->periodeAkhir = $now->format('Y-m-d');
         } else {
             // Jika pindah ke bulanan, set ke bulan ini
             $this->periodeAwal  = $now->format('Y-m');
