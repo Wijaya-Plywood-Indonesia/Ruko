@@ -18,9 +18,9 @@ return new class extends Migration
             $table->decimal('jumlah_telur_kilo', 8, 2)->default(0);
             $table->integer('jumlah_telur_tray')->default(0);
             $table->boolean('is_validated')->default(false);
-            $table->foreignId('validated_by')->nullable();
+            $table->string('validated_by')->nullable();
             $table->timestamp('validated_at')->nullable();
-            $table->foreignId('created_by');
+            $table->string('created_by')->nullable();
             $table->timestamps();
         });
     }

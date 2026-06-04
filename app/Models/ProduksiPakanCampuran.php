@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProduksiPakan;
 
 class ProduksiPakanCampuran extends Model
 {
@@ -30,7 +31,7 @@ class ProduksiPakanCampuran extends Model
     // Relation Manager 
     public function produksiPakan()
     {
-        return $this->belongsTo(ProduksiPakan::class);
+        return $this->belongsTo(ProduksiPakan::class, 'id_produksi_pakan');
     }
 
     public function barang()

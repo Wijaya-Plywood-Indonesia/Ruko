@@ -14,6 +14,7 @@ class ProduksiTelur extends Model
         'jumlah_telur_pecah',
         'hen_day_production',
         'created_by',
+        'is_validated',
         'validated_by',
         'validated_at',
         'keterangan',
