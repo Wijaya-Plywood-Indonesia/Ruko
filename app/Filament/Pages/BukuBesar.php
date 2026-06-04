@@ -15,7 +15,7 @@ class BukuBesar extends Page
 {
     use HasPageShield;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi Telur';
+    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
     protected string $view = 'filament.pages.buku-besar';
     protected static ?string $navigationLabel = 'Buku Besar';
     protected static ?string $title = 'Buku Besar';
@@ -141,7 +141,7 @@ class BukuBesar extends Page
     public function getSaldoBulan(string $kode): float
     {
         return (float) ($this->saldoMap[$kode]['d'] ?? 0)
-             - (float) ($this->saldoMap[$kode]['k'] ?? 0);
+            - (float) ($this->saldoMap[$kode]['k'] ?? 0);
     }
 
     // ── Transaksi bulan terpilih untuk satu kode akun ───────────────────────
