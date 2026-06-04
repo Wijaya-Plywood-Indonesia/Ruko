@@ -6,6 +6,7 @@ use App\Filament\Resources\Kandangs\Pages\CreateKandang;
 use App\Filament\Resources\Kandangs\Pages\EditKandang;
 use App\Filament\Resources\Kandangs\Pages\ListKandangs;
 use App\Filament\Resources\Kandangs\Pages\ViewKandang;
+use App\Filament\Resources\Kandangs\RelationManagers\AyamRelationManager;
 use App\Filament\Resources\Kandangs\Schemas\KandangForm;
 use App\Filament\Resources\Kandangs\Schemas\KandangInfolist;
 use App\Filament\Resources\Kandangs\Tables\KandangsTable;
@@ -42,7 +43,7 @@ class KandangResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            AyamRelationManager::class,
         ];
     }
 

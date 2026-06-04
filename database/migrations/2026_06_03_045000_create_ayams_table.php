@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('id_kandang')
                 ->constrained('kandangs')
                 ->cascadeOnDelete();
-            $table->string('nama_batch')->nullable();  // opsional, info tambahan saja
+            $table->string('nama_batch')->nullable();
             $table->date('tanggal_masuk');
             $table->unsignedInteger('jumlah_awal');
             $table->unsignedInteger('usia')->default(1);

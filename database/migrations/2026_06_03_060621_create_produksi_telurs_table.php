@@ -13,21 +13,15 @@ return new class extends Migration
     {
         Schema::create('produksi_telurs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('id_kandang')
-                ->constrained('kandangs');
-            $table->date('tanggal');
-            $table->unsignedInteger('jumlah_telur_butir');
-            $table->unsignedInteger('jumlah_telur_retak')->default(0);
-            $table->unsignedInteger('jumlah_telur_pecah')->default(0);
-            $table->unsignedInteger('jumlah_ayam_mati')->default(0); // input bersamaan
-            $table->decimal('hen_day_production', 5, 2)->nullable();
-            $table->string('created_by')->nullable();
-            $table->string('validated_by')->nullable();
+            $table->date('tanggal')->unique();
+            $table->integer('jumlah_telur_butir')->default(0);
+            $table->decimal('jumlah_telur_kilo', 8, 2)->default(0);
+            $table->integer('jumlah_telur_tray')->default(0);
+            $table->boolean('is_validated')->default(false);
+            $table->foreignId('validated_by')->nullable();
             $table->timestamp('validated_at')->nullable();
-            $table->text('keterangan')->nullable();
+            $table->foreignId('created_by');
             $table->timestamps();
-
-            $table->unique(['id_kandang', 'tanggal']);
         });
     }
 

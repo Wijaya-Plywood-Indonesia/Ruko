@@ -21,20 +21,6 @@ class KandangsTable
                     ->searchable(),
                 IconColumn::make('is_aktif')
                     ->boolean(),
-                // Virtual column — nilai dihitung dari Model, bukan dari DB langsung
-                TextColumn::make('populasi_saat_ini')
-                    ->label('Banyak Ayam Saat Ini')
-                    ->state(fn(Kandang $record) => $record->populasiEfektif())
-                    ->suffix(' ekor')
-                    ->sortable(false),
-
-                // Virtual column — hitung jumlah batch di kandang ini
-                TextColumn::make('jumlah_batch')
-                    ->label('Batch Aktif')
-                    ->state(fn(Kandang $record) => $record->ayams()->count())
-                    ->suffix(' batch')
-                    ->sortable(false),
-
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

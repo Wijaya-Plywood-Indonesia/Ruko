@@ -45,15 +45,18 @@ class Ayam extends Model
     {
         $hari = $this->umur_hari;
 
-        if ($hari < 30) {
+        // Jika belum genap 1 minggu (0 - 6 hari)
+        if ($hari < 7) {
             return "{$hari} hari";
         }
 
-        $bulan = intdiv($hari, 30);
-        $sisa  = $hari % 30;
+        // Hitung jumlah minggu dan sisa harinya
+        $minggu = intdiv($hari, 7);
+        $sisa   = $hari % 7;
 
+        // Jika sisa hari adalah 0, tampilkan minggunya saja
         return $sisa === 0
-            ? "{$bulan} bulan"
-            : "{$bulan} bulan {$sisa} hari";
+            ? "{$minggu} minggu"
+            : "{$minggu} minggu {$sisa} hari";
     }
 }
