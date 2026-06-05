@@ -86,6 +86,49 @@
         .dark .pp-date-input:focus {
             box-shadow: 0 0 0 2px rgb(var(--primary-500)), inset 0 0 0 1px rgb(var(--primary-500));
         }
+
+        .cell-input {
+            width: 100%;
+            height: 2.25rem;
+            padding: 0 0.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background-color: white;
+            border: 1.5px solid rgb(var(--primary-200));
+            border-radius: 0.375rem;
+            transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+            color: inherit;
+            /* Bayangan tipis agar terasa seperti "form field" sungguhan */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+
+        .dark .cell-input {
+            background-color: rgb(var(--primary-950) / 0.5);
+            border-color: rgb(var(--primary-700));
+            color: white;
+        }
+
+        .cell-input:focus {
+            outline: none;
+            border-color: rgb(var(--primary-500));
+            background-color: rgb(var(--primary-50));
+            box-shadow: 0 0 0 3px rgb(var(--primary-500) / 0.15);
+        }
+
+        .dark .cell-input:focus {
+            background-color: rgb(var(--primary-950));
+        }
+
+        .cell-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: rgb(243 244 246);
+        }
+
+        .dark .cell-input:disabled {
+            background-color: rgb(255 255 255 / 0.03);
+        }
     </style>
 
     <div class="flex flex-col gap-6">
