@@ -512,27 +512,51 @@ class JurnalPenjualanTelurService
     {
         $bayarTunai    = (float) ($penjualan->bayar_tunai    ?? 0);
         $bayarTransfer = (float) ($penjualan->bayar_transfer ?? 0);
-        $total         = $bayarTunai + $bayarTransfer;
 
-        if ($total <= 0) {
-            $metode        = strtolower($penjualan->metode_pembayaran ?? 'tunai');
-            $bayarTunai    = $metode !== 'transfer' ? $totalNilai : 0;
-            $bayarTransfer = $metode === 'transfer'  ? $totalNilai : 0;
-            $total         = $totalNilai;
+        // 1. Hitung total belanja riil (subtotal seluruh item)
+        $totalBelanja = (float) $penjualan->details->sum('subtotal');
+        if ($totalBelanja == 0) {
+            $totalBelanja = $totalNilai;
+        }
+
+        // 2. Potong kembalian dari bayar_tunai 
+        // Jika uang yang diserahkan lebih besar dari total belanja, selisihnya adalah kembalian
+        $totalBayarAwal = $bayarTunai + $bayarTransfer;
+        if ($totalBayarAwal > $totalBelanja) {
+            $kembalian = $totalBayarAwal - $totalBelanja;
+            $bayarTunai -= $kembalian; // Uang yang benar-benar masuk sebagai pendapatan kas
+            
+            // Mencegah nilai kas menjadi negatif
+            if ($bayarTunai < 0) $bayarTunai = 0; 
+        }
+
+        // 3. Tentukan total bayar aktual untuk menghitung proporsi
+        $totalBayarAkhir = $bayarTunai + $bayarTransfer;
+
+        // Fallback jika form pembayaran kosong / belum terisi
+        if ($totalBayarAkhir <= 0) {
+            $metode          = strtolower($penjualan->metode_pembayaran ?? 'tunai');
+            $bayarTunai      = $metode !== 'transfer' ? $totalNilai : 0;
+            $bayarTransfer   = $metode === 'transfer' ? $totalNilai : 0;
+            $totalBayarAkhir = $totalNilai;
         }
 
         $baris = [];
 
+        // Penampungan untuk Kas Tunai
         if ($bayarTunai > 0) {
-            $akun    = $this->resolveAkun(self::KODE_KAS);
-            $baris[] = [
+            $akun     = $this->resolveAkun(self::KODE_KAS);
+            $proporsi = $bayarTunai / $totalBayarAkhir;
+            $baris[]  = [
                 'kode'     => $akun['kode'],
                 'nama'     => $akun['nama'],
-                'proporsi' => $bayarTunai / $total,
-                'nominal'  => $bayarTunai,
+                'proporsi' => $proporsi,
+                // Nominal mutlak harus dikalikan proporsinya terhadap $totalNilai
+                'nominal'  => round($totalNilai * $proporsi, 4), 
             ];
         }
 
+        // Penampungan untuk Transfer Bank
         if ($bayarTransfer > 0) {
             $kodeBank = $penjualan->rekeningPerusahaan?->subAnakAkun?->kode_sub_anak_akun;
 
@@ -541,12 +565,14 @@ class JurnalPenjualanTelurService
                 $kodeBank = self::KODE_KAS;
             }
 
-            $akun    = $this->resolveAkun($kodeBank);
-            $baris[] = [
+            $akun     = $this->resolveAkun($kodeBank);
+            $proporsi = $bayarTransfer / $totalBayarAkhir;
+            $baris[]  = [
                 'kode'     => $akun['kode'],
                 'nama'     => $akun['nama'],
-                'proporsi' => $bayarTransfer / $total,
-                'nominal'  => $bayarTransfer,
+                'proporsi' => $proporsi,
+                // Nominal mutlak harus dikalikan proporsinya terhadap $totalNilai
+                'nominal'  => round($totalNilai * $proporsi, 4), 
             ];
         }
 

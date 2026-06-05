@@ -16,6 +16,10 @@ class ProduksiPakanService
     // ── Akun Hardcoded ──────────────────────────────────────────────────────
     const KODE_HUTANG_GAJI        = '2210-01';
     const KODE_HUTANG_LISTRIK     = '2210-02';
+    
+    // Akun Penyesuaian Selisih Produksi
+    const KODE_PENDAPATAN_KELEBIHAN_PAKAN = '4400-01';
+    const KODE_PENDAPATAN_KELEBIHAN_TELUR = '4400-02'; 
 
     // Akun Debet Telur (Proses 2) — hardcoded
     const AKUN_TELUR = [
@@ -75,12 +79,6 @@ class ProduksiPakanService
 
     /* ═══════════════════════════════════════════════════════════════════════
     |  PROSES 1 — Bahan Mentah → Pakan Campuran
-    |  Per kandang:
-    |    D: Pakan Campuran (L1/L2/Pullet)
-    |    K: Bahan Mentah A (qty kandang ini)
-    |    K: Bahan Mentah B (qty kandang ini)
-    |    K: Hutang Gaji Pegawai
-    |    K: Hutang Listrik
     ═══════════════════════════════════════════════════════════════════════ */
 
     private function buatJurnalProses1(ProduksiPakan $produksi, int $userId): void
@@ -106,6 +104,10 @@ class ProduksiPakanService
         foreach ($kandangs as $kandangKey => $kandang) {
             $field = $kandang['field'];
             $label = $kandang['label'];
+
+            // Variabel Penampung Debit Kredit
+            $totalDebit  = 0;
+            $totalKredit = 0;
 
             // Cari pakan campuran yang sesuai kandang ini
             $campuranKandang = $produksi->pakanCampurans->first(function ($item) use ($kandangKey) {
@@ -160,6 +162,8 @@ class ProduksiPakanService
                 'created_by'  => $userId,
                 'updated_by'  => $userId,
             ]);
+            
+            $totalDebit += $nilaiCampuran; // Tambahkan ke penampung debit
 
             // ── K: Bahan Mentah per bahan per kandang ────────────────────
             $urut = 1;
@@ -204,6 +208,8 @@ class ProduksiPakanService
                     'created_by'  => $userId,
                     'updated_by'  => $userId,
                 ]);
+                
+                $totalKredit += $nilaiMentah; // Tambahkan ke penampung kredit
             }
 
             // ── K: Hutang Gaji Pegawai ───────────────────────────────────
@@ -232,6 +238,8 @@ class ProduksiPakanService
                 'created_by'  => $userId,
                 'updated_by'  => $userId,
             ]);
+            
+            $totalKredit += self::NILAI_HUTANG_GAJI;
 
             // ── K: Hutang Listrik ────────────────────────────────────────
             $hListrik = $this->buatHeader([
@@ -259,6 +267,43 @@ class ProduksiPakanService
                 'created_by'  => $userId,
                 'updated_by'  => $userId,
             ]);
+            
+            $totalKredit += self::NILAI_HUTANG_LISTRIK;
+
+            // ── MENGHITUNG & MEMBUAT JURNAL SELISIH (BALANCING) ──────────
+            $selisih = $totalDebit - $totalKredit;
+            
+            if (abs($selisih) > 0.001) { // Menghindari isu angka desimal super kecil (floating point error)
+                $mapSelisih   = $selisih > 0 ? 'k' : 'd'; // Jika debit lebih besar, pasang di kredit
+                $nilaiSelisih = abs($selisih);
+                $namaSelisih  = $this->getNamaAkun(self::KODE_PENDAPATAN_KELEBIHAN_PAKAN) ?: 'Pendapatan kelebihan produksi pakan';
+
+                $hSelisih = $this->buatHeader([
+                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                    'tgl_transaksi'      => $tgl,
+                    'jenis_transaksi'    => 'pk',
+                    'modul_asal'         => 'produksi_pakan',
+                    'jurnal'             => $noJurnal,
+                    'no_akun'            => self::KODE_PENDAPATAN_KELEBIHAN_PAKAN,
+                    'nama_akun'          => $namaSelisih,
+                    'map'                => $mapSelisih,
+                    'keterangan'         => "Penyesuaian Selisih Produksi Pakan | {$ketKandang}",
+                    'no_dokumen'         => $nota,
+                    'total_nilai'        => $nilaiSelisih,
+                    'dibuat_oleh'        => $userId,
+                ]);
+
+                $this->buatItem($hSelisih->id, [
+                    'urut'        => 1,
+                    'no_dokumen'  => $nota,
+                    'keterangan'  => "Balancing Jurnal Produksi — {$label}",
+                    'banyak'      => 1,
+                    'harga'       => $nilaiSelisih,
+                    'jumlah'      => $nilaiSelisih,
+                    'created_by'  => $userId,
+                    'updated_by'  => $userId,
+                ]);
+            }
         }
 
         Log::info("[ProduksiPakan] Proses 1 selesai. Produksi ID: {$produksi->id}");
@@ -266,12 +311,6 @@ class ProduksiPakanService
 
     /* ═══════════════════════════════════════════════════════════════════════
     |  PROSES 2 — Pakan Campuran Keluar → Kandang
-    |  Per kandang yang ada nilai keluar:
-    |    D: Telur Petian  (hardcoded)
-    |    D: Telur Kiloan  (hardcoded)
-    |    D: Telur Bentes  (hardcoded)
-    |    K: Pakan Campuran (L1/L2/Pullet)
-    |    K: Hutang Gaji Karyawan
     ═══════════════════════════════════════════════════════════════════════ */
 
     private function buatJurnalProses2(ProduksiPakan $produksi, int $userId): void
@@ -293,16 +332,20 @@ class ProduksiPakanService
                 str_contains($nama, 'PULLET') || str_contains($nama, 'PULET') => 'pullet',
                 str_contains($nama, 'LAYER 1') || str_contains($nama, 'L1')   => 'l1',
                 str_contains($nama, 'LAYER 2') || str_contains($nama, 'L2')   => 'l2',
-                default                                                        => null,
+                default                                                       => null,
             };
 
             if (!$kandangKey) continue;
 
-            $field         = $kandangs[$kandangKey]['field'];
-            $label         = $kandangs[$kandangKey]['label'];
-            $jumlahKeluar  = (float)$campuran->$field;
+            $field        = $kandangs[$kandangKey]['field'];
+            $label        = $kandangs[$kandangKey]['label'];
+            $jumlahKeluar = (float)$campuran->$field;
 
             if ($jumlahKeluar <= 0) continue;
+
+            // Penampung Nilai
+            $totalDebit  = 0;
+            $totalKredit = 0;
 
             $barangCampuran   = $campuran->barang;
             $kodeAkunCampuran = $barangCampuran?->subAnakAkun?->kode_sub_anak_akun ?? '1500-00';
@@ -342,6 +385,8 @@ class ProduksiPakanService
                     'created_by'  => $userId,
                     'updated_by'  => $userId,
                 ]);
+                
+                $totalDebit += $telur['nilai']; // Tambah ke penampung debit
             }
 
             // ── K: Pakan Campuran keluar ─────────────────────────────────
@@ -371,6 +416,8 @@ class ProduksiPakanService
                 'created_by'  => $userId,
                 'updated_by'  => $userId,
             ]);
+            
+            $totalKredit += $nilaiCampuran;
 
             // ── K: Hutang Gaji Karyawan ──────────────────────────────────
             $hGaji = $this->buatHeader([
@@ -398,6 +445,44 @@ class ProduksiPakanService
                 'created_by'  => $userId,
                 'updated_by'  => $userId,
             ]);
+            
+            $totalKredit += self::NILAI_HUTANG_GAJI;
+
+            // ── MENGHITUNG & MEMBUAT JURNAL SELISIH (BALANCING) ──────────
+            $selisih = $totalDebit - $totalKredit;
+            
+            if (abs($selisih) > 0.001) { 
+                $mapSelisih   = $selisih > 0 ? 'k' : 'd';
+                $nilaiSelisih = abs($selisih);
+                $namaSelisih  = $this->getNamaAkun(self::KODE_PENDAPATAN_KELEBIHAN_TELUR) ?: 'Pendapatan kelebihan produksi telur';
+
+                $hSelisih = $this->buatHeader([
+                    'no_jurnal_pembantu' => $this->nextNomorPembantu(),
+                    'tgl_transaksi'      => $tgl,
+                    'jenis_transaksi'    => 'pk',
+                    'modul_asal'         => 'produksi_pakan',
+                    'jurnal'             => $noJurnal,
+                    // Karena ini di Proses 2 (keluar telur), saya pasang 4400-02 sesuai foto list akun
+                    'no_akun'            => self::KODE_PENDAPATAN_KELEBIHAN_TELUR, 
+                    'nama_akun'          => $namaSelisih,
+                    'map'                => $mapSelisih,
+                    'keterangan'         => "Penyesuaian Selisih Produksi Telur | {$ketKandang}",
+                    'no_dokumen'         => $nota,
+                    'total_nilai'        => $nilaiSelisih,
+                    'dibuat_oleh'        => $userId,
+                ]);
+
+                $this->buatItem($hSelisih->id, [
+                    'urut'        => 1,
+                    'no_dokumen'  => $nota,
+                    'keterangan'  => "Balancing Jurnal Produksi — {$label}",
+                    'banyak'      => 1,
+                    'harga'       => $nilaiSelisih,
+                    'jumlah'      => $nilaiSelisih,
+                    'created_by'  => $userId,
+                    'updated_by'  => $userId,
+                ]);
+            }
         }
 
         Log::info("[ProduksiPakan] Proses 2 selesai. Produksi ID: {$produksi->id}");
