@@ -147,6 +147,11 @@ class ProduksiTelurPage extends Page
             ->join('produksi_pakans', 'produksi_pakan_campurans.id_produksi_pakan', '=', 'produksi_pakans.id')
             ->join('barangs', 'produksi_pakan_campurans.id_barang', '=', 'barangs.id')
             ->whereDate('produksi_pakans.tanggal_produksi', $this->tanggal)
+            ->where(function ($query) {
+                $query->where('produksi_pakan_campurans.keluar_pullet', '>', 0)
+                    ->orWhere('produksi_pakan_campurans.keluar_l1', '>', 0)
+                    ->orWhere('produksi_pakan_campurans.keluar_l2', '>', 0);
+            })
             ->orderBy('produksi_pakan_campurans.id')
             ->get([
                 'produksi_pakan_campurans.id',
@@ -499,15 +504,31 @@ class ProduksiTelurPage extends Page
 
         $produksi = ProduksiTelur::findOrFail($this->produksiTelurId);
 
-        if (method_exists($produksi, 'validate')) {
-            $produksi->validate();
-        } else {
-            $this->validate(['tanggal' => 'required|date']);
-            $produksi->update([
-                'is_validated' => true,
-                'validated_by' => Auth::user()->name,
-                'validated_at' => now(),
-            ]);
+        try {
+            DB::transaction(function () use ($produksi) {
+                if (method_exists($produksi, 'validate')) {
+                    $produksi->validate();
+                } else {
+                    $this->validate(['tanggal' => 'required|date']);
+                    $produksi->update([
+                        'is_validated' => true,
+                        'validated_by' => Auth::user()->name,
+                        'validated_at' => now(),
+                    ]);
+                }
+
+                // Buat jurnal pembantu secara harian
+                app(\App\Services\ProduksiTelurService::class)
+                    ->buatJurnalDariProduksi($produksi, Auth::id());
+            });
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Gagal Memvalidasi Data')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+            return;
         }
 
         $this->is_validated = true;
