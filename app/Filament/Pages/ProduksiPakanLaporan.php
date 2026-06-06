@@ -175,6 +175,7 @@ class ProduksiPakanLaporan extends Page
             'satuan'      => $item->barang?->satuan?->nama_satuan ?? '-',
             'nama'        => $item->barang?->nama_barang,
             'awal'         => (float) $item->stok_awal,
+            'masuk'        => (float) $item->masuk,
             'konversi_sak' => $konversi,
             'p_sak'        => $pSak,
             'l1_sak'       => $l1Sak,
@@ -192,7 +193,7 @@ class ProduksiPakanLaporan extends Page
         return [
             'id'        => $item->id,
             'barang_id' => $item->id_barang,
-            'nama'      => $item->barang?->nama_barang . ' (' . ($item->barang?->satuan?->nama_satuan ?? '-') . ')',
+            'nama' => $item->barang?->nama_barang,
             'satuan' => $item->barang?->satuan?->nama_satuan ?? 'kg',
             'awal'      => (float) $item->stok_awal,
             'masuk'     => (float) $item->masuk,
@@ -309,6 +310,7 @@ class ProduksiPakanLaporan extends Page
                 ]);
             } else {
                 $this->mentahState[] = array_merge($base, [
+                    'masuk'        => 0.0,
                     'konversi_sak' => $this->getKonversiSak($b->id),
                     'p_sak'        => 0,
                     'l1_sak'       => 0,
@@ -347,45 +349,50 @@ class ProduksiPakanLaporan extends Page
 
         // ── Mentah: input sak → konversi ke kg ──
         if (preg_match('/^mentahState\.(\d+)\.(p|l1|l2)_sak$/', $propertyName, $m)) {
-            $idx    = (int) $m[1];
-            $field  = $m[2];
-            $faktor = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
+            $idx     = (int) $m[1];
+            $field   = $m[2];
+            $faktor  = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
             $nilaiKg = (float) ($this->mentahState[$idx][$field . '_sak'] ?? 0) * $faktor;
 
-            // ── Cek stok sebelum diterima ──
-            $stokAwal      = (float) ($this->mentahState[$idx]['awal'] ?? 0);
+            $stokAwal    = (float) ($this->mentahState[$idx]['awal']  ?? 0);
+            $masukMentah = (float) ($this->mentahState[$idx]['masuk'] ?? 0);
+
+            // ✅ masuk (kg) → sak agar satuan konsisten dengan stokAwal (sak)
+            $masukSak = $faktor > 1 ? $masukMentah / $faktor : $masukMentah;
+
             $sudahTerpakai = 0.0;
             foreach (['p', 'l1', 'l2'] as $k) {
                 if ($k !== $field) {
                     $sudahTerpakai += (float) ($this->mentahState[$idx][$k] ?? 0);
                 }
             }
-            $stokTersedia = $stokAwal - $sudahTerpakai;
 
-            if ($nilaiKg > $stokTersedia) {
-                // Koreksi otomatis ke maksimal stok tersedia
-                $nilaiKgFinal  = max(0, $stokTersedia);
+            // sudahTerpakai dalam kg, konversi ke sak
+            $sudahTerpakaiSak = $faktor > 1 ? $sudahTerpakai / $faktor : $sudahTerpakai;
+            $stokTersedia     = $stokAwal + $masukSak - $sudahTerpakaiSak;
+
+            if ($nilaiKg > $stokTersedia * $faktor) {
+                // batas dalam kg = stokTersedia (sak) × faktor
+                $nilaiKgFinal  = max(0, $stokTersedia * $faktor);
                 $nilaiSakFinal = $faktor > 1
                     ? round($nilaiKgFinal / $faktor, 4)
                     : $nilaiKgFinal;
 
-                $this->mentahState[$idx][$field]            = $nilaiKgFinal;
-                $this->mentahState[$idx][$field . '_sak']   = $nilaiSakFinal;
-
-                $namaBahan = $this->mentahState[$idx]['nama'] ?? 'Bahan';
+                $this->mentahState[$idx][$field]          = $nilaiKgFinal;
+                $this->mentahState[$idx][$field . '_sak'] = $nilaiSakFinal;
 
                 Notification::make()
                     ->title('Stok Tidak Mencukupi')
                     ->body(
-                        "{$namaBahan}: nilai dikoreksi ke " .
-                            number_format($faktor > 1 ? $nilaiSakFinal : $nilaiKgFinal, 2) .
-                            " (maks stok tersedia). Silakan cek stok."
+                        ($this->mentahState[$idx]['nama'] ?? 'Bahan') .
+                            ": nilai dikoreksi ke " .
+                            number_format($nilaiSakFinal, 2) .
+                            " sak (maks stok tersedia). Silakan cek stok."
                     )
                     ->warning()
                     ->persistent()
                     ->send();
             } else {
-                // Stok cukup — terima nilai normal
                 $this->mentahState[$idx][$field] = $nilaiKg;
             }
         }
@@ -397,27 +404,29 @@ class ProduksiPakanLaporan extends Page
             $faktor = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
 
             if ($faktor <= 1) {
-                $nilaiKg       = (float) ($this->mentahState[$idx][$field] ?? 0);
-                $stokAwal      = (float) ($this->mentahState[$idx]['awal'] ?? 0);
+                $nilaiKg     = (float) ($this->mentahState[$idx][$field] ?? 0);
+                $stokAwal    = (float) ($this->mentahState[$idx]['awal']  ?? 0);
+                $masukMentah = (float) ($this->mentahState[$idx]['masuk'] ?? 0);
+                // faktor = 1, jadi masukSak = masukMentah (tidak perlu konversi)
+
                 $sudahTerpakai = 0.0;
                 foreach (['p', 'l1', 'l2'] as $k) {
                     if ($k !== $field) {
                         $sudahTerpakai += (float) ($this->mentahState[$idx][$k] ?? 0);
                     }
                 }
-                $stokTersedia = $stokAwal - $sudahTerpakai;
+                $stokTersedia = $stokAwal + $masukMentah - $sudahTerpakai;
 
                 if ($nilaiKg > $stokTersedia) {
                     $nilaiKgFinal = max(0, $stokTersedia);
                     $this->mentahState[$idx][$field]          = $nilaiKgFinal;
                     $this->mentahState[$idx][$field . '_sak'] = $nilaiKgFinal;
 
-                    $namaBahan = $this->mentahState[$idx]['nama'] ?? 'Bahan';
-
                     Notification::make()
                         ->title('Stok Tidak Mencukupi')
                         ->body(
-                            "{$namaBahan}: nilai dikoreksi ke " .
+                            ($this->mentahState[$idx]['nama'] ?? 'Bahan') .
+                                ": nilai dikoreksi ke " .
                                 number_format($nilaiKgFinal, 2) .
                                 " (maks stok tersedia). Silakan cek stok."
                         )
@@ -451,19 +460,21 @@ class ProduksiPakanLaporan extends Page
         $totalL2 = 0.0;
 
         foreach ($this->mentahState as $idx => $item) {
-            $p  = (float) ($item['p']  ?? 0);
-            $l1 = (float) ($item['l1'] ?? 0);
-            $l2 = (float) ($item['l2'] ?? 0);
+            $p     = (float) ($item['p']     ?? 0);
+            $l1    = (float) ($item['l1']    ?? 0);
+            $l2    = (float) ($item['l2']    ?? 0);
+            $masuk = (float) ($item['masuk'] ?? 0);
 
-            // ✅ Konversi balik kg → sak sebelum mengurangi stok awal
             $konversi = (float) ($item['konversi_sak'] ?? 1);
 
             $pSak  = $konversi > 1 ? $p  / $konversi : $p;
             $l1Sak = $konversi > 1 ? $l1 / $konversi : $l1;
             $l2Sak = $konversi > 1 ? $l2 / $konversi : $l2;
 
-            // stok_awal (sak) - keluar (sak) = sisa_akhir (sak)
-            $this->mentahState[$idx]['akhir'] = max(0, (float) $item['awal'] - ($pSak + $l1Sak + $l2Sak));
+            // ✅ masuk (kg) dikonversi ke sak agar satuan konsisten dengan awal (sak)
+            $masukSak = $konversi > 1 ? $masuk / $konversi : $masuk;
+
+            $this->mentahState[$idx]['akhir'] = max(0, (float) $item['awal'] + $masukSak - ($pSak + $l1Sak + $l2Sak));
 
             // totalP/L1/L2 tetap dalam kg — dipakai untuk mengisi masuk di campuran
             $totalP  += $p;
@@ -526,6 +537,7 @@ class ProduksiPakanLaporan extends Page
                 $this->mentahState[$idx]['p_sak']  = (float) ($saved['p_sak']  ?? 0);
                 $this->mentahState[$idx]['l1_sak'] = (float) ($saved['l1_sak'] ?? 0);
                 $this->mentahState[$idx]['l2_sak'] = (float) ($saved['l2_sak'] ?? 0);
+                $this->mentahState[$idx]['masuk']  = (float) ($saved['masuk']  ?? 0);
             }
         }
 
@@ -592,6 +604,7 @@ class ProduksiPakanLaporan extends Page
                         ],
                         [
                             'stok_awal'     => (float) ($data['awal']  ?? 0),
+                            'masuk'         => (float) ($data['masuk']  ?? 0),  // ← tambah
                             'keluar_pullet' => (float) ($data['p']     ?? 0),
                             'keluar_l1'     => (float) ($data['l1']    ?? 0),
                             'keluar_l2'     => (float) ($data['l2']    ?? 0),
@@ -767,33 +780,31 @@ class ProduksiPakanLaporan extends Page
             ->toArray();
 
         $adaYangDiisi    = false;
-        $stokKurangItems = []; // ← kumpulkan nama barang yang stoknya kurang
+        $stokKurangItems = [];
 
         foreach ($this->mentahState as $idx => $item) {
             $kuantitasSak = (float) ($kuantitasMap[$item['barang_id']] ?? 0);
             if ($kuantitasSak <= 0) continue;
 
-            // Skip jika sudah diisi manual — cek dari _sak bukan dari p/l1/l2 (kg)
             if ((float) ($this->mentahState[$idx][$jenis . '_sak'] ?? 0) !== 0.0) continue;
 
-            $konversi = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
-            $stokAwal = (float) ($this->mentahState[$idx]['awal'] ?? 0); // dalam sak
+            $konversi    = (float) ($this->mentahState[$idx]['konversi_sak'] ?? 1);
+            $stokAwal    = (float) ($this->mentahState[$idx]['awal']         ?? 0);
+            $masukMentah = (float) ($this->mentahState[$idx]['masuk']        ?? 0); // ← tambah
 
-            // ── Hitung sudah terpakai dalam SAK ──
             $sudahTerpakaiSak = 0.0;
             foreach (['p', 'l1', 'l2'] as $k) {
                 if ($k !== $jenis) {
                     $nilaiKgLain = (float) ($this->mentahState[$idx][$k] ?? 0);
-                    // konversi balik kg → sak
                     $sudahTerpakaiSak += $konversi > 1 ? $nilaiKgLain / $konversi : $nilaiKgLain;
                 }
             }
 
-            // Semua dalam SAK sekarang
-            $stokTersediaSak = $stokAwal - $sudahTerpakaiSak;
+            // masuk juga dalam satuan sak (unit dasar mentah), ikut menambah stok tersedia
+            $masukSak        = $konversi > 1 ? $masukMentah / $konversi : $masukMentah;
+            $stokTersediaSak = $stokAwal + $masukSak - $sudahTerpakaiSak; // ← masuk ikut
 
             if ($kuantitasSak > $stokTersediaSak) {
-                // Stok kurang — isi dengan sisa sak yang ada
                 $nilaiSakFinal = max(0, $stokTersediaSak);
                 $nilaiKgFinal  = $konversi > 1 ? $nilaiSakFinal * $konversi : $nilaiSakFinal;
 
@@ -804,14 +815,12 @@ class ProduksiPakanLaporan extends Page
                     number_format($stokTersediaSak, 2)
                 );
             } else {
-                // Stok cukup — isi normal
                 $nilaiSakFinal = $kuantitasSak;
                 $nilaiKgFinal  = $konversi > 1 ? $kuantitasSak * $konversi : $kuantitasSak;
             }
 
-            // Isi nilai ke state
-            $this->mentahState[$idx][$jenis]           = $nilaiKgFinal;  // kg → untuk kalkulasi jurnal
-            $this->mentahState[$idx][$jenis . '_sak']  = $nilaiSakFinal; // sak → untuk tampilan input
+            $this->mentahState[$idx][$jenis]          = $nilaiKgFinal;
+            $this->mentahState[$idx][$jenis . '_sak'] = $nilaiSakFinal;
 
             $adaYangDiisi = true;
         }
@@ -825,7 +834,6 @@ class ProduksiPakanLaporan extends Page
             'l2' => 'Layer 2',
         };
 
-        // ── Notifikasi stok kurang (prioritas utama) ──
         if (!empty($stokKurangItems)) {
             Notification::make()
                 ->title("⚠ Stok Tidak Mencukupi — {$labelJenis}")
@@ -835,11 +843,10 @@ class ProduksiPakanLaporan extends Page
                         "\n\nSilakan cek dan tambah stok terlebih dahulu."
                 )
                 ->warning()
-                ->persistent() // tidak auto-hilang karena perlu perhatian
+                ->persistent()
                 ->send();
         }
 
-        // ── Notifikasi hasil pengisian ──
         if ($adaYangDiisi) {
             Notification::make()
                 ->title("Kolom {$labelJenis} Berhasil Diisi")

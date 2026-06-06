@@ -251,7 +251,9 @@
                         <thead class="bg-gray-50 dark:bg-white/5">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
+                                <th class="w-20 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Satuan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
+                                <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">Masuk</th>
 
                                 {{-- Pullet --}}
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">
@@ -329,8 +331,21 @@
                                 <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
                                     {{ $item['nama'] }}
                                 </td>
+                                <td class="px-4 py-2.5 text-center text-xs text-gray-400 dark:text-gray-500">
+                                    {{ $item['satuan'] ?? '-' }}
+                                </td>
                                 <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400">
                                     {{ number_format($item['awal']) }}
+                                </td>
+                                <td class="px-2 py-1.5 text-center">
+                                    <input
+                                        type="number"
+                                        wire:model.lazy="mentahState.{{ $idx }}.masuk"
+                                        {{ !$canEdit ? 'disabled' : '' }}
+                                        min="0"
+                                        step="any"
+                                        placeholder="0"
+                                        class="inline-block w-24 rounded-md bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700 text-center border-0 focus:ring-2 focus:ring-green-500 focus:bg-green-100 dark:bg-green-400/10 dark:text-green-400 dark:focus:ring-green-400 dark:focus:bg-green-400/20 disabled:opacity-50 disabled:cursor-not-allowed" />
                                 </td>
                                 <td class="px-2 py-1.5">
                                     <input type="number" wire:model.lazy="mentahState.{{ $idx }}.p_sak" {{ !$canEdit ? 'disabled' : '' }} class="cell-input" min="0" step="any" placeholder="0" />
@@ -349,7 +364,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                                <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                                     Tidak ada data bahan baku.
                                 </td>
                             </tr>
@@ -382,6 +397,7 @@
                         <thead class="bg-gray-50 dark:bg-white/5">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Nama Bahan</th>
+                                <th class="w-20 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Satuan</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stok Awal</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">Masuk</th>
                                 <th class="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Keluar PLT</th>
@@ -395,6 +411,9 @@
                             <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                                 <td class="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
                                     {{ $item['nama'] }}
+                                </td>
+                                <td class="px-4 py-2.5 text-center text-xs text-gray-400 dark:text-gray-500">
+                                    {{ $item['satuan'] ?? '-' }}
                                 </td>
                                 <td class="px-4 py-2.5 text-center text-sm text-gray-500 dark:text-gray-400">
                                     {{ number_format($item['awal']) }}
@@ -421,7 +440,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                                <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                                     Tidak ada data pakan campuran.
                                 </td>
                             </tr>
