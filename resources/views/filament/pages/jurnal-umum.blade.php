@@ -623,133 +623,159 @@
         {{-- ══════════════════════════════════════════════════════════════ --}}
         {{-- TABLE DRAFT                                                    --}}
         {{-- ══════════════════════════════════════════════════════════════ --}}
-        <div x-show="items.length > 0" x-cloak class="space-y-4 mb-10">
-            <div class="flex items-center justify-between px-1">
-                <div :class="isBalanced
-                    ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
-                    : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400'"
-                    class="px-4 py-2 rounded-[4px] border flex items-center gap-2.5 font-black text-[11px] uppercase tracking-[.2em] shadow-sm">
-                    <div :class="isBalanced ? 'bg-green-500' : 'bg-red-500 animate-pulse'"
-                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"></div>
-                    <span x-text="isBalanced ? 'Jurnal Balanced' : 'Jurnal Unbalanced'"></span>
-                </div>
-                <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                    <span x-text="items.length"></span> item dalam draft
-                </div>
-            </div>
+        {{-- ══════════════════════════════════════════════════════════════ --}}
+        {{-- TABLE DRAFT (HEADER & TABEL MENYATU)                           --}}
+        {{-- ══════════════════════════════════════════════════════════════ --}}
+        <div x-show="items.length > 0" x-cloak class="mb-10">
+            
+            {{-- WRAPPER UTAMA: Kotak bergaris yang membungkus semuanya --}}
+            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden w-full">
+                
+                {{-- 1. BAGIAN ATAS: Header & Summary Total Draft --}}
+                <div class="p-3 lg:p-4 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4 w-full bg-gray-50/50 dark:bg-gray-800/40">
+                    
+                    {{-- KIRI: Info Item --}}
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Draft Jurnal</span>
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200"><span x-text="items.length"></span> Item</span>
+                        </div>
+                    </div>
 
-            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[4px] shadow-sm overflow-hidden">
-                <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Akun & Keterangan</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Harga</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipe</div>
-                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Debit / Kredit</div>
-                </div>
-
-                <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                    <template x-for="(row, i) in items" :key="i">
-                        <template x-if="row && row.no_akun && row.nama_akun">
-                            <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
-                                <div class="min-w-0 pr-4">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
-                                            x-text="'#' + row.jurnal"></span>
-                                        <span class="font-mono font-black text-amber-600 dark:text-amber-500 text-sm"
-                                            x-text="row.no_akun"></span>
-                                        <span class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate"
-                                            x-text="row.nama_akun"></span>
-                                    </div>
-                                    <div class="mt-1 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-                                        <span x-show="row.nama" x-text="row.nama"
-                                            class="font-medium text-gray-500 dark:text-gray-400 shrink-0"></span>
-                                        <span x-show="row.nama && row.keterangan"
-                                            class="text-gray-300 dark:text-gray-600">·</span>
-                                        <span x-show="row.keterangan" x-text="row.keterangan"
-                                            class="truncate text-gray-400 dark:text-gray-500"></span>
-                                    </div>
-                                </div>
-
-                                <div class="text-right shrink-0 whitespace-nowrap">
-                                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                        x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? formatTotal(row.banyak) : '-'"></span>
-                                </div>
-
-                                {{-- Kolom Harga: tampilkan desimal jika ada --}}
-                                <div class="text-right pr-4 shrink-0 whitespace-nowrap">
-                                    <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
-                                        x-text="formatTotal(row.harga)"></span>
-                                </div>
-
-                                <div class="flex justify-center shrink-0">
-                                    <span :class="row.map.toLowerCase() === 'd'
-                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                        : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
-                                        class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
-                                        x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
-                                    </span>
-                                </div>
-
-                                <div class="flex items-center justify-end gap-3 shrink-0 whitespace-nowrap">
-                                    <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
-                                        class="font-black text-sm tabular-nums whitespace-nowrap"
-                                        x-text="'Rp ' + formatTotal(row.total)">
-                                    </div>
-                                    <button type="button" @click="$wire.mountAction('editDraft', { index: i })"
-                                        class="p-1.5 text-amber-600/80 hover:text-amber-600 dark:text-amber-500/80 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-[3px] transition-none shrink-0"
-                                        title="Edit Item">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                    </button>
-                                    <button type="button" @click="$wire.removeItem(i)"
-                                        class="p-1.5 text-rose-600/80 hover:text-rose-600 dark:text-rose-500/80 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-[3px] transition-none shrink-0"
-                                        title="Hapus Item">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
+                    {{-- KANAN: Summary Total & Badge --}}
+                    <div class="flex flex-wrap items-center gap-4 xl:gap-5 border-t sm:border-t-0 sm:border-l border-gray-100 dark:border-gray-800 pt-3 sm:pt-0 sm:pl-5 w-full sm:w-auto justify-between sm:justify-end">
+                        <div class="flex items-center gap-4">
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Debit</span>
+                                <span class="text-emerald-500 font-black text-sm tabular-nums" x-text="'Rp ' + formatTotal(totalDebit)"></span>
                             </div>
-                        </template>
-                    </template>
-                </div>
-
-                <div class="border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
-                    <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700">
-                        <div class="px-6 py-3 text-right">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Debit</div>
-                            <div class="font-black text-emerald-500 text-base tabular-nums"
-                                x-text="'Rp ' + formatTotal(totalDebit)"></div>
+                            
+                            <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+                            
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kredit</span>
+                                <span class="text-rose-500 font-black text-sm tabular-nums" x-text="'Rp ' + formatTotal(totalKredit)"></span>
+                            </div>
                         </div>
-                        <div class="px-6 py-3 text-right">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kredit</div>
-                            <div class="font-black text-rose-500 text-base tabular-nums"
-                                x-text="'Rp ' + formatTotal(totalKredit)"></div>
+
+                        <div>
+                            <template x-if="isBalanced">
+                                <div class="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-[4px] whitespace-nowrap">
+                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span class="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.2em]">Balanced</span>
+                                </div>
+                            </template>
+                            <template x-if="!isBalanced">
+                                <div class="flex flex-col items-end gap-1">
+                                    <div class="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-[4px] whitespace-nowrap">
+                                        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                        <span class="text-[9px] font-black text-red-600 dark:text-red-400 uppercase tracking-[0.2em]">Unbalanced</span>
+                                    </div>
+                                    <span class="text-[9px] text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap" x-text="'Selisih: Rp ' + formatTotal(Math.abs(totalDebit - totalKredit))"></span>
+                                </div>
+                            </template>
                         </div>
                     </div>
+                </div>
 
-                    <div x-show="!isBalanced"
-                        class="px-6 py-2 border-t border-dashed border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 flex items-center justify-end gap-2">
-                        <svg class="w-3 h-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span class="text-[11px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Selisih</span>
-                        <span class="text-[11px] font-black text-amber-700 dark:text-amber-300 tabular-nums"
-                            x-text="'Rp ' + formatTotal(Math.abs(totalDebit - totalKredit))">
-                        </span>
+                {{-- 2. BAGIAN TENGAH: Tabel Draft --}}
+                <div class="overflow-x-auto w-full">
+                    <div class="min-w-[800px]">
+                        <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 px-4 py-2">
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Akun & Keterangan</div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Qty</div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right pr-4">Harga</div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipe</div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Debit / Kredit</div>
+                        </div>
+
+                        <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                            <template x-for="(row, i) in items" :key="i">
+                                <template x-if="row && row.no_akun && row.nama_akun">
+                                    <div class="grid grid-cols-[1fr_80px_140px_60px_200px] gap-0 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 items-center group">
+                                        <div class="min-w-0 pr-4">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] bg-gray-100 dark:bg-gray-700 text-[10px] font-black text-gray-400 tracking-wider shrink-0"
+                                                    x-text="'#' + row.jurnal"></span>
+                                                <span class="font-mono font-black text-amber-600 dark:text-amber-500 text-sm"
+                                                    x-text="row.no_akun"></span>
+                                                <span class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate"
+                                                    x-text="row.nama_akun"></span>
+                                            </div>
+                                            <div class="mt-1 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+                                                <span x-show="row.nama" x-text="row.nama"
+                                                    class="font-medium text-gray-500 dark:text-gray-400 shrink-0"></span>
+                                                <span x-show="row.nama && row.keterangan"
+                                                    class="text-gray-300 dark:text-gray-600">·</span>
+                                                <span x-show="row.keterangan" x-text="row.keterangan"
+                                                    class="truncate text-gray-400 dark:text-gray-500"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="text-right shrink-0 whitespace-nowrap">
+                                            <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                                x-text="(row.banyak !== null && row.banyak !== undefined && row.banyak !== '') ? formatTotal(row.banyak) : '-'"></span>
+                                        </div>
+
+                                        <div class="text-right pr-4 shrink-0 whitespace-nowrap">
+                                            <span class="text-sm font-bold text-gray-500 dark:text-gray-400 tabular-nums"
+                                                x-text="formatTotal(row.harga)"></span>
+                                        </div>
+
+                                        <div class="flex justify-center shrink-0">
+                                            <span :class="row.map.toLowerCase() === 'd'
+                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                : 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded-[3px] text-[11px] font-black uppercase"
+                                                x-text="row.map.toLowerCase() === 'd' ? 'D' : 'K'">
+                                            </span>
+                                        </div>
+
+                                        <div class="flex items-center justify-end gap-3 shrink-0 whitespace-nowrap">
+                                            <div :class="row.map.toLowerCase() === 'd' ? 'text-emerald-500' : 'text-rose-500'"
+                                                class="font-black text-sm tabular-nums whitespace-nowrap"
+                                                x-text="'Rp ' + formatTotal(row.total)">
+                                            </div>
+                                            <button type="button" @click="$wire.mountAction('editDraft', { index: i })"
+                                                class="p-1.5 text-amber-600/80 hover:text-amber-600 dark:text-amber-500/80 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-[3px] transition-none shrink-0"
+                                                title="Edit Item">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                            </button>
+                                            <button type="button" @click="$wire.removeItem(i)"
+                                                class="p-1.5 text-rose-600/80 hover:text-rose-600 dark:text-rose-500/80 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-[3px] transition-none shrink-0"
+                                                title="Hapus Item">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
-                <div class="p-4 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-100 dark:border-gray-800 flex justify-end">
+                {{-- 3. BAGIAN BAWAH: Tombol Posting --}}
+                <div class="p-4 bg-gray-50/50 dark:bg-gray-800/40 border-t border-gray-200 dark:border-gray-800 flex justify-end">
                     <button type="button" wire:click="saveJurnal" :disabled="!isBalanced"
                         :class="isBalanced
-                            ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-md cursor-pointer'
+                            ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-sm cursor-pointer'
                             : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-transparent shadow-none'"
-                        class="px-12 py-3 rounded-[4px] font-black text-[10px] uppercase tracking-[.2em] transition-none">
+                        class="px-8 py-2.5 rounded-[4px] font-black text-[10px] uppercase tracking-[.2em] transition-none">
                         Posting Jurnal
                     </button>
                 </div>
+
             </div>
         </div>
 
