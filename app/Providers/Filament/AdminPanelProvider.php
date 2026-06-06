@@ -66,19 +66,23 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make(label: 'Produksi & Kandang')
-                    ->icon('heroicon-o-calculator')
+                    ->icon('heroicon-o-building-office-2')
                     ->collapsed(),
+
                 NavigationGroup::make(label: 'Transaksi')
-                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->icon('heroicon-o-arrows-right-left')
                     ->collapsed(),
+
                 NavigationGroup::make(label: 'Akuntansi')
-                    ->icon('heroicon-o-calculator')
+                    ->icon('heroicon-o-banknotes')
                     ->collapsed(),
+
                 NavigationGroup::make(label: 'Master Data')
-                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->icon('heroicon-o-clipboard-document-list')
                     ->collapsed(),
+
                 NavigationGroup::make(label: 'Stock Barang')
-                    ->icon('heroicon-o-archive-box-arrow-down')
+                    ->icon('heroicon-o-archive-box')
                     ->collapsed(),
             ])
             ->authMiddleware([

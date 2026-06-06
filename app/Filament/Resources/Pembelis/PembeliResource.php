@@ -27,6 +27,7 @@ class PembeliResource extends Resource
     protected static ?string $pluralModelLabel = 'Data Pembeli';
     protected static ?string $modelLabel = 'Data Pembeli';
     protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $recordTitleAttribute = 'nama';
 
@@ -48,7 +49,7 @@ class PembeliResource extends Resource
     public static function getRelations(): array
     {
         return [
-                //
+            //
             RekeningPembeliRelationManager::class,
 
         ];

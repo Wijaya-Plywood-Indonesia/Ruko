@@ -28,6 +28,7 @@ class RekeningPerusahaanResource extends Resource
     protected static ?string $pluralModelLabel = 'Rekening Perusahaan';
     protected static ?string $modelLabel = 'Rekening Perusahaan';
     protected static ?string $recordTitleAttribute = 'nama_pemilik';
+    protected static ?int $navigationSort = 11;
 
 
     public static function form(Schema $schema): Schema

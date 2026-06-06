@@ -25,7 +25,8 @@ class AkunGroupResource extends Resource
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'nama';
 
@@ -47,7 +48,7 @@ class AkunGroupResource extends Resource
     public static function getRelations(): array
     {
         return [
-                //
+            //
             // AnakAkunsRelationManager::class,
             SubAnakAkunsRelationManager::class,
         ];

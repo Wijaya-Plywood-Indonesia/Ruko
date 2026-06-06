@@ -20,6 +20,7 @@ class LabaRugiTelur extends Page
     protected static ?string $title = 'Laba Rugi Telur';
     protected static ?string $navigationLabel = 'Laba Rugi Telur';
     protected string $view = 'filament.pages.laba-rugi-telur';
+    protected static ?int $navigationSort = 7;
 
     // ── PROPERTI FILTER DINAMIS ──
     public string $jenisFilter = 'bulan'; // Default bulanan

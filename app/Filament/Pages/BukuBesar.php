@@ -19,6 +19,7 @@ class BukuBesar extends Page
     protected string $view = 'filament.pages.buku-besar';
     protected static ?string $navigationLabel = 'Buku Besar';
     protected static ?string $title = 'Buku Besar';
+    protected static ?int $navigationSort = 6;
 
     public $indukAkuns = [];
     public $filterBulan;

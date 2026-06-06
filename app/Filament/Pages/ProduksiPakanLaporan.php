@@ -26,11 +26,12 @@ class ProduksiPakanLaporan extends Page
     use HasPageShield;
 
     // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-check';
-    protected static string|UnitEnum|null $navigationGroup = 'Kandang';
+    protected static string|UnitEnum|null $navigationGroup = 'Produksi & Kandang';
     protected static ?string $navigationLabel  = 'Produksi Pakan';
     protected static ?string $title            = 'Laporan Produksi Pakan';
     protected static ?string $slug             = 'produksi-pakan-laporan';
     protected string $view                     = 'filament.pages.produksi-pakan-laporan';
+    protected static ?int $navigationSort = 3;
 
     /* ─── State ─────────────────────────────────────────────────────────── */
     public ?string        $selectedDate  = null;

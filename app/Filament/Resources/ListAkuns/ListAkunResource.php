@@ -25,6 +25,7 @@ class ListAkunResource extends Resource
     protected static ?string $pluralModelLabel = 'List Akun';
     protected static ?string $modelLabel = 'List Aku';
     protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static ?int $navigationSort = 12;
 
     public static function form(Schema $schema): Schema
     {

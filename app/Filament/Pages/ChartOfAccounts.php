@@ -12,7 +12,7 @@ class ChartOfAccounts extends Page
     protected static ?string $navigationLabel = 'Chart of Accounts';
     protected static ?string $title = 'Chart of Accounts';
     protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 4;
 
     public function getView(): string
     {

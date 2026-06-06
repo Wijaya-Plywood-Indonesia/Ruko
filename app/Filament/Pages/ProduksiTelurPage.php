@@ -17,7 +17,8 @@ class ProduksiTelurPage extends Page
 {
     protected static ?string $navigationLabel = 'Produksi Telur';
     protected static ?string $title = 'Produksi Telur';
-    protected static UnitEnum|string|null $navigationGroup = 'Produksi';
+    protected static UnitEnum|string|null $navigationGroup = 'Produksi & Kandang';
+    protected static ?int $navigationSort = 4;
 
     public function getView(): string
     {

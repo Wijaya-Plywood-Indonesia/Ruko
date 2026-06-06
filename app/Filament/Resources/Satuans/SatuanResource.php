@@ -25,6 +25,7 @@ class SatuanResource extends Resource
     protected static ?string $navigationLabel = 'Satuan Barang';
     protected static ?string $pluralModelLabel = 'Satuan Barang';
     protected static ?string $modelLabel = 'Satuan Barang';
+    protected static ?int $navigationSort = 6;
 
     public static function form(Schema $schema): Schema
     {

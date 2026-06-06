@@ -31,6 +31,7 @@ class JurnalUmum extends Page implements HasActions, HasForms
     protected string $view = 'filament.pages.jurnal-umum';
     protected static UnitEnum|string|null $navigationGroup = 'Akuntansi';
     protected static ?string $title = 'Jurnal Umum';
+    protected static ?int $navigationSort = 5;
 
     public $tgl, $jurnal, $no_akun, $nama_akun, $nama, $keterangan;
     public $harga = '';

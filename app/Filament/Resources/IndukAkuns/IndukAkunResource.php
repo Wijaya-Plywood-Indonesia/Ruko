@@ -21,7 +21,8 @@ class IndukAkunResource extends Resource
 {
     protected static ?string $model = IndukAkun::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Akuntansi';
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'kode_induk_akun';
 

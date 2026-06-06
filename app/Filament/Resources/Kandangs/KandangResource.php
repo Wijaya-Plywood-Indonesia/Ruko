@@ -12,6 +12,7 @@ use App\Filament\Resources\Kandangs\Schemas\KandangInfolist;
 use App\Filament\Resources\Kandangs\Tables\KandangsTable;
 use App\Models\Kandang;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -21,9 +22,11 @@ class KandangResource extends Resource
 {
     protected static ?string $model = Kandang::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|UnitEnum|null $navigationGroup = 'Produksi & Kandang';
 
     protected static ?string $recordTitleAttribute = 'Kandang';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

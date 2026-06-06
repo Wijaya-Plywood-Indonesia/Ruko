@@ -26,6 +26,7 @@ class PegawaiResource extends Resource
     protected static ?string $navigationLabel = 'Data Pegawai';
     protected static ?string $pluralModelLabel = 'Data Pegawai';
     protected static ?string $modelLabel = 'Data Pegawai';
+    protected static ?int $navigationSort = 8;
 
     protected static ?string $recordTitleAttribute = 'nama_lengkap';
 

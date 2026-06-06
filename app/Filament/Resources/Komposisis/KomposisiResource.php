@@ -23,9 +23,11 @@ class KomposisiResource extends Resource
     protected static ?string $model = Komposisi::class;
 
 
-    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Produksi & Kandang';
 
     protected static ?string $recordTitleAttribute = 'Komposisi';
+
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

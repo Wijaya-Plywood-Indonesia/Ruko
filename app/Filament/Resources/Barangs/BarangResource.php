@@ -26,6 +26,7 @@ class BarangResource extends Resource
     protected static ?string $pluralModelLabel = 'Barang';
     protected static ?string $modelLabel = 'Barang';
     protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {

@@ -22,6 +22,7 @@ class NeracaPage extends Page implements HasForms
     protected static UnitEnum|string|null $navigationGroup = 'Akuntansi';
     protected static ?string $title = 'Neraca Telur';
     protected string $view = 'filament.pages.neraca-page';
+    protected static ?int $navigationSort = 6;
 
     // Properti filter dinamis
     public string $jenisFilter = 'bulan'; // Default 'bulan', opsi lain 'hari'
