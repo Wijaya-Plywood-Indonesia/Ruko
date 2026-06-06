@@ -52,12 +52,18 @@ class AyamRelationManager extends RelationManager
                     ->required()
                     ->numeric(),
 
-                TextInput::make('usia')
+                TextInput::make('usia_minggu')
                     ->label('Usia Ayam')
                     ->numeric()
                     ->default(1)
-                    ->suffix('hari')
-                    ->required(),
+                    ->suffix('minggu')
+                    ->required()
+                    ->dehydrated(false)
+                    ->afterStateHydrated(function ($component, $record) {
+                        if ($record) {
+                            $component->state(round($record->usia / 7, 2));
+                        }
+                    }),
 
                 Textarea::make('keterangan')
                     ->columnSpanFull(),
@@ -85,9 +91,9 @@ class AyamRelationManager extends RelationManager
 
                 TextColumn::make('usia')
                     ->label('Usia Masuk')
-                    ->numeric()
+                    ->state(fn($record) => round($record->usia / 7, 2))
+                    ->suffix(' minggu')
                     ->sortable()
-                    ->suffix(' hari')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('umur_format')
@@ -110,11 +116,23 @@ class AyamRelationManager extends RelationManager
                 // Tambahkan filter di sini jika diperlukan nanti
             ])
             ->headerActions([
-                CreateAction::make(),
+                CreateAction::make()
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['usia'] = isset($data['usia_minggu'])
+                            ? (int) round((float) $data['usia_minggu'] * 7)
+                            : 7;
+                        return $data;
+                    }),
             ])
             ->actions([
                 EditAction::make()
-                    ->modalHeading('Ubah Data Ayam'),
+                    ->modalHeading('Ubah Data Ayam')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['usia'] = isset($data['usia_minggu'])
+                            ? (int) round((float) $data['usia_minggu'] * 7)
+                            : 7;
+                        return $data;
+                    }),
                 DeleteAction::make(),
             ])
             ->bulkActions([

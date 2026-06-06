@@ -59,4 +59,16 @@ class Ayam extends Model
             ? "{$minggu} minggu"
             : "{$minggu} minggu {$sisa} hari";
     }
+
+    // Konversi minggu → hari untuk disimpan
+    public static function mingguKeHari(float $minggu): int
+    {
+        return (int) round($minggu * 7);
+    }
+
+    // Konversi hari → minggu untuk ditampilkan di form
+    public function getUsiaMingguAttribute(): float
+    {
+        return round($this->usia / 7, 2);
+    }
 }
