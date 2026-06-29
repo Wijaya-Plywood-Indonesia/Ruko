@@ -3,7 +3,6 @@
 
     <div class="pos-pro-dashboard min-h-screen -m-8 p-8 bg-gray-100 dark:bg-gray-950 flex flex-col gap-4 lg:gap-6" x-data="{ search: @entangle('search') }">
         
-
         {{-- MAIN INFO BAR --}}
         <div class="flex flex-wrap items-center justify-between bg-white dark:bg-gray-900 px-4 py-4 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm gap-x-6 gap-y-2">
             <div class="flex flex-wrap items-center gap-6 w-full lg:w-auto">
@@ -170,7 +169,7 @@
                                                             let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                                             return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
                                                         }
-                                                        let clean = str.replace(/[^0-9,]/g, '');
+                                                        let clean = str.replace(/[^0-9,.]/g, '').replace('.', ','); // <-- PERBAIKAN REGEX TITIK
                                                         let parts = clean.split(',');
                                                         let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                                         return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
@@ -182,7 +181,7 @@
                                                             :value="format(qty)"
                                                             @input="
                                                                 let inputVal = $event.target.value;
-                                                                let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                                let clean = inputVal.replace(/[^0-9,.]/g, ''); // <-- PERBAIKAN REGEX TITIK
                                                                 let raw = clean.replace(',', '.');
                                                                 qty = raw ? parseFloat(raw) : 0;
                                                                 $el.value = format(clean);
@@ -268,7 +267,7 @@
                                                         let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                                         return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
                                                     }
-                                                    let clean = str.replace(/[^0-9,]/g, '');
+                                                    let clean = str.replace(/[^0-9,.]/g, '').replace('.', ','); // <-- PERBAIKAN REGEX TITIK
                                                     let parts = clean.split(',');
                                                     let integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                                     return parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
@@ -279,7 +278,7 @@
                                                     :value="format(qty)"
                                                     @input="
                                                         let inputVal = $event.target.value;
-                                                        let clean = inputVal.replace(/[^0-9,]/g, '');
+                                                        let clean = inputVal.replace(/[^0-9,.]/g, ''); // <-- PERBAIKAN REGEX TITIK
                                                         let raw = clean.replace(',', '.');
                                                         qty = raw ? parseFloat(raw) : 0;
                                                         $el.value = format(clean);
