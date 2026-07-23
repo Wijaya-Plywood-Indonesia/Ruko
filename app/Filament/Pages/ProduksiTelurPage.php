@@ -6,6 +6,9 @@ use App\Models\DetailProduksiTelur;
 use App\Models\Kandang;
 use App\Models\ProduksiPakanCampuran;
 use App\Models\ProduksiTelur;
+use App\Models\User;
+use App\Services\ProduksiTelurService;
+use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
@@ -16,8 +19,11 @@ use UnitEnum;
 class ProduksiTelurPage extends Page
 {
     protected static ?string $navigationLabel = 'Produksi Telur';
+
     protected static ?string $title = 'Produksi Telur';
+
     protected static UnitEnum|string|null $navigationGroup = 'Produksi & Kandang';
+
     protected static ?int $navigationSort = 4;
 
     public function getView(): string
@@ -28,15 +34,22 @@ class ProduksiTelurPage extends Page
     // ─── State Utama (Matriks Excel) ─────────────────────────
 
     public string $tanggal = '';
+
     protected string $tanggalSebelumnya = '';
+
     public bool $is_validated = false;
+
     public bool $isEditable = true;
+
     public ?int $produksiTelurId = null;
 
-    public string $namaUserLogin    = '';  // nama user yang sedang login
-    public string $namaPenyimpan    = '';  // nama user yang menyimpan data ini
-    public string $namaValidator    = '';  // nama user yang memvalidasi
-    public string $waktuValidasi    = '';  // waktu validasi dalam format human-readable
+    public string $namaUserLogin = '';
+
+    public string $namaPenyimpan = '';
+
+    public string $namaValidator = '';
+
+    public string $waktuValidasi = '';
 
     /**
      * Grid data 10 baris input per kandang:
@@ -61,21 +74,56 @@ class ProduksiTelurPage extends Page
      */
     public array $grandTotal = ['butir' => 0, 'kilo' => 0.00, 'tray' => 0];
 
-    // ─── Status & Izin Pengeditan Sesuai Produksi Pakan ───
+    // ─── Input Hasil Kandang ─────────────────────────────────
+
+    /**
+     * Data input hasil kandang (Peti, Kiloan, Sisa, Bentes)
+     */
+    public array $hasilKandang = [
+        'peti' => ['hasil' => 0, 'satuan' => 'P'],
+        'kiloan' => ['hasil' => 0, 'satuan' => 'kg'],
+        'sisa' => ['hasil' => 0, 'satuan' => 'kg'],
+        'bentes' => ['hasil' => 0, 'satuan' => 'kg'],
+    ];
+
+    /**
+     * Konversi: 1 Peti = berapa kg.
+     * Sesuaikan dengan standar operasional Anda.
+     */
+    public float $petiToKg = 10.0;
+
+    /** Total kg dari hasil kandang (Peti*petiToKg + Kiloan + Sisa + Bentes) */
+    public float $hasilKandangTotal = 0;
+
+    /** Total kilo dari grid input atas (otomatis dari grandTotal['kilo']) */
+    public float $hasilKandangDariKandang = 0;
+
+    /** Selisih = Dari Kandang - Total Hasil Kandang */
+    public float $hasilKandangSelisih = 0;
+
+    // ─── Status & Izin Pengeditan ───────────────────────────
 
     public bool $isSuperAdmin = false;
+
     public bool $isCreator = false;
+
     public bool $isDraftSaved = false;
+
     public bool $isLocked = false;
+
     public bool $canEdit = true;
+
     public bool $showSaveButton = true;
+
     public bool $showValidateButton = false;
 
     // ─── Supporting Data ─────────────────────────────────────
 
     public array $kandangs = [];
+
     public array $allPakan = [];
-    public int $maxRows = 10; // 10 baris input harian kaku sesuai template Excel Anda
+
+    public int $maxRows = 10;
 
     // ─── Lifecycle Hooks ─────────────────────────────────────
 
@@ -91,47 +139,50 @@ class ProduksiTelurPage extends Page
 
     private function sessionKey(): string
     {
-        // Selalu gunakan $this->tanggal (tanggal aktif saat ini)
-        // Method ini dipakai untuk READ dan WRITE session tanggal aktif
-        return 'pt_draft_' . Auth::id() . '_' . ($this->tanggal ?? 'nodate');
+        return 'pt_draft_'.Auth::id().'_'.($this->tanggal ?? 'nodate');
     }
 
     private function saveToSession(): void
     {
-        // Kita simpan gridData dan kandangPakan ke session
-        // agar saat refresh, data tidak hilang
         Session::put($this->sessionKey(), [
-            'gridData'    => $this->gridData,
+            'gridData' => $this->gridData,
             'kandangPakan' => $this->kandangPakan,
+            'hasilKandang' => $this->hasilKandang,
         ]);
     }
 
     private function restoreFromSession(): void
     {
         $draft = Session::get($this->sessionKey());
-        if (!$draft) return;
+        if (! $draft) {
+            return;
+        }
 
-        // Loop kandang yang ada, restore nilai dari session
-        // Hanya restore jika kandang tersebut memang ada di session
         foreach ($this->kandangs as $kandang) {
             $id = $kandang['id'];
 
-            // Restore grid data per baris per kandang
             if (isset($draft['gridData'][$id])) {
                 foreach ($draft['gridData'][$id] as $rowIdx => $row) {
-                    // Jaga struktur: pastikan key id tetap null (belum di-DB)
                     $this->gridData[$id][$rowIdx] = [
-                        'id'    => null,
-                        'butir' => (int)   ($row['butir'] ?? 0),
-                        'kilo'  => (float) ($row['kilo']  ?? 0),
-                        'tray'  => (float) ($row['tray']  ?? 0),
+                        'id' => null,
+                        'butir' => (int) ($row['butir'] ?? 0),
+                        'kilo' => (float) ($row['kilo'] ?? 0),
+                        'tray' => (float) ($row['tray'] ?? 0),
                     ];
                 }
             }
 
-            // Restore pilihan pakan per kandang
             if (isset($draft['kandangPakan'][$id])) {
                 $this->kandangPakan[$id] = $draft['kandangPakan'][$id];
+            }
+        }
+
+        // Restore hasil kandang dari session
+        if (isset($draft['hasilKandang'])) {
+            foreach (['peti', 'kiloan', 'sisa', 'bentes'] as $key) {
+                if (isset($draft['hasilKandang'][$key])) {
+                    $this->hasilKandang[$key]['hasil'] = (float) ($draft['hasilKandang'][$key]['hasil'] ?? 0);
+                }
             }
         }
     }
@@ -163,39 +214,30 @@ class ProduksiTelurPage extends Page
 
     public function loadExistingDataByTanggal(): void
     {
-        // 1. Dapatkan record produksi induk tanpa menggunakan eager loading relasi 'details' yang bermasalah
         $produksi = ProduksiTelur::whereDate('tanggal', $this->tanggal)->first();
 
         if (! $produksi) {
             $this->resetMatrix();
-
-            // ✅ TAMBAHAN: Jika DB kosong, coba restore dari session
-            // Ini yang membuat data tidak hilang saat refresh
             $this->restoreFromSession();
-
             $this->recalculate();
+
             return;
         }
 
         $this->produksiTelurId = $produksi->id;
-        $this->is_validated    = (bool) $produksi->is_validated;
+        $this->is_validated = (bool) $produksi->is_validated;
 
-        // Evaluasi perizinan dan peran
         $this->computePermissions($produksi);
 
-        // 2. Ambil detail harian langsung memanfaatkan model DetailProduksiTelur secara mandiri
         $details = DetailProduksiTelur::where('id_produksi_telur', $produksi->id)->get();
 
-        // 3. Bangun ulang data matriks 10 baris per kandang
         foreach ($this->kandangs as $kandang) {
             $idKandang = $kandang['id'];
             $this->gridData[$idKandang] = [];
             $this->kandangPakan[$idKandang] = null;
 
-            // Ambil detail yang relevan dengan kandang saat ini
             $kandangDetails = $details->where('id_kandang', $idKandang)->values();
 
-            // Setel dropdown pakan aktif kandang berdasarkan entri pakan pertama yang terdeteksi
             if ($kandangDetails->count() > 0) {
                 $this->kandangPakan[$idKandang] = $kandangDetails->first()->id_produksi_pakan_campuran;
             }
@@ -210,14 +252,18 @@ class ProduksiTelurPage extends Page
                     ];
                 } else {
                     $this->gridData[$idKandang][$i] = [
-                        'id' => null,
-                        'butir' => 0,
-                        'kilo' => 0,
-                        'tray' => 0,
+                        'id' => null, 'butir' => 0, 'kilo' => 0, 'tray' => 0,
                     ];
                 }
             }
         }
+
+        // ─── Load Hasil Kandang dari DB ───────────────────────
+        // Kolom asli di tabel produksi_telurs: hasil_peti, hasil_kiloan, hasil_sisa, hasil_bentes
+        $this->hasilKandang['peti']['hasil'] = (float) ($produksi->hasil_peti ?? 0);
+        $this->hasilKandang['kiloan']['hasil'] = (float) ($produksi->hasil_kiloan ?? 0);
+        $this->hasilKandang['sisa']['hasil'] = (float) ($produksi->hasil_sisa ?? 0);
+        $this->hasilKandang['bentes']['hasil'] = (float) ($produksi->hasil_bentes ?? 0);
 
         $this->recalculate();
     }
@@ -229,20 +275,29 @@ class ProduksiTelurPage extends Page
             $this->gridData[$id] = [];
             for ($i = 0; $i < $this->maxRows; $i++) {
                 $this->gridData[$id][$i] = [
-                    'id' => null,
-                    'butir' => 0,
-                    'kilo' => 0,
-                    'tray' => 0,
+                    'id' => null, 'butir' => 0, 'kilo' => 0, 'tray' => 0,
                 ];
             }
             $this->kandangPakan[$id] = null;
         }
 
+        // Reset hasil kandang
+        $this->hasilKandang = [
+            'peti' => ['hasil' => 0, 'satuan' => 'P'],
+            'kiloan' => ['hasil' => 0, 'satuan' => 'kg'],
+            'sisa' => ['hasil' => 0, 'satuan' => 'kg'],
+            'bentes' => ['hasil' => 0, 'satuan' => 'kg'],
+        ];
+
         $this->produksiTelurId = null;
-        $this->is_validated    = false;
-        $this->isEditable      = true;
-        $this->kandangTotals   = [];
-        $this->grandTotal      = ['butir' => 0, 'kilo' => 0.00, 'tray' => 0];
+        $this->is_validated = false;
+        $this->isEditable = true;
+        $this->kandangTotals = [];
+        $this->grandTotal = ['butir' => 0, 'kilo' => 0.00, 'tray' => 0];
+
+        $this->hasilKandangTotal = 0;
+        $this->hasilKandangDariKandang = 0;
+        $this->hasilKandangSelisih = 0;
 
         $this->computePermissions(null);
     }
@@ -251,11 +306,9 @@ class ProduksiTelurPage extends Page
 
     public function updatedTanggal(): void
     {
-        $keyLama = 'pt_draft_' . Auth::id() . '_' . $this->tanggalSebelumnya;
+        $keyLama = 'pt_draft_'.Auth::id().'_'.$this->tanggalSebelumnya;
         Session::forget($keyLama);
 
-        // Langkah 2: Update tanggalSebelumnya ke tanggal yang baru aktif
-        // agar siap dipakai jika user ganti tanggal lagi
         $this->tanggalSebelumnya = $this->tanggal;
 
         $this->loadKandangs();
@@ -265,12 +318,13 @@ class ProduksiTelurPage extends Page
 
     public function updated($propertyName): void
     {
-        if (str_starts_with($propertyName, 'gridData') || str_starts_with($propertyName, 'kandangPakan')) {
+        if (
+            str_starts_with($propertyName, 'gridData') ||
+            str_starts_with($propertyName, 'kandangPakan') ||
+            str_starts_with($propertyName, 'hasilKandang')
+        ) {
             $this->recalculate();
 
-            // ✅ TAMBAHAN: Simpan ke session setiap ada perubahan input
-            // Sama persis seperti ProduksiPakan yang saveToSession() di updated()
-            // Hanya simpan jika data belum ada di DB (belum di-save)
             if (! $this->produksiTelurId) {
                 $this->saveToSession();
             }
@@ -279,6 +333,7 @@ class ProduksiTelurPage extends Page
 
     public function recalculate(): void
     {
+        // ─── Recalculate grid totals ─────────────────────────
         $this->kandangTotals = [];
         $this->grandTotal = ['butir' => 0, 'kilo' => 0.00, 'tray' => 0];
 
@@ -289,105 +344,113 @@ class ProduksiTelurPage extends Page
             if (isset($this->gridData[$idKandang])) {
                 foreach ($this->gridData[$idKandang] as $row) {
                     $butir = (int) ($row['butir'] ?? 0);
-                    $kilo  = (float) ($row['kilo'] ?? 0);
-                    $tray  = (float) ($row['tray'] ?? 0);
+                    $kilo = (float) ($row['kilo'] ?? 0);
+                    $tray = (float) ($row['tray'] ?? 0);
 
                     $this->kandangTotals[$idKandang]['butir'] += $butir;
-                    $this->kandangTotals[$idKandang]['kilo']  += $kilo;
-                    $this->kandangTotals[$idKandang]['tray']  += $tray;
+                    $this->kandangTotals[$idKandang]['kilo'] += $kilo;
+                    $this->kandangTotals[$idKandang]['tray'] += $tray;
 
                     $this->grandTotal['butir'] += $butir;
-                    $this->grandTotal['kilo']  += $kilo;
-                    $this->grandTotal['tray']  += $tray;
+                    $this->grandTotal['kilo'] += $kilo;
+                    $this->grandTotal['tray'] += $tray;
                 }
             }
         }
+
+        // ─── Recalculate Hasil Kandang ────────────────────────
+        $peti = (float) ($this->hasilKandang['peti']['hasil'] ?? 0);
+        $kiloan = (float) ($this->hasilKandang['kiloan']['hasil'] ?? 0);
+        $sisa = (float) ($this->hasilKandang['sisa']['hasil'] ?? 0);
+        $bentes = (float) ($this->hasilKandang['bentes']['hasil'] ?? 0);
+
+        // Total: Peti dikonversi ke kg, sisanya sudah kg
+        $this->hasilKandangTotal = ($peti * $this->petiToKg) + $kiloan + $sisa + $bentes;
+
+        // Dari Kandang = total kilo dari grid input atas
+        $this->hasilKandangDariKandang = $this->grandTotal['kilo'];
+
+        // Selisih = Dari Kandang - Total Hasil Kandang
+        $this->hasilKandangSelisih = $this->hasilKandangDariKandang - $this->hasilKandangTotal;
     }
 
     // ─── Evaluasi Izin Pengeditan & Validasi ─────────────────
 
     protected function computePermissions($produksi = null): void
     {
-        $this->isSuperAdmin   = Auth::user()->hasRole('super_admin');
+        $this->isSuperAdmin = Auth::user()->hasRole('super_admin');
+        $this->namaUserLogin = Auth::user()->name;
 
-        // ✅ Selalu isi nama user yang sedang login
-        $this->namaUserLogin  = Auth::user()->name;
-
-        if (!$produksi) {
-            $this->isLocked           = false;
-            $this->isDraftSaved       = false;
-            $this->isCreator          = false;
-            $this->canEdit            = true;
-            $this->showSaveButton     = true;
+        if (! $produksi) {
+            $this->isLocked = false;
+            $this->isDraftSaved = false;
+            $this->isCreator = false;
+            $this->canEdit = true;
+            $this->showSaveButton = true;
             $this->showValidateButton = false;
-            $this->isEditable         = true;
+            $this->isEditable = true;
+            $this->namaPenyimpan = '';
+            $this->namaValidator = '';
+            $this->waktuValidasi = '';
 
-            // Reset info penyimpan karena belum ada data
-            $this->namaPenyimpan  = '';
-            $this->namaValidator  = '';
-            $this->waktuValidasi  = '';
             return;
         }
 
         $this->isDraftSaved = true;
-        $this->isLocked     = (bool) $produksi->is_validated;
+        $this->isLocked = (bool) $produksi->is_validated;
         $this->isCreator = ($produksi->created_by == (string) Auth::id());
 
-        // ✅ Ambil nama penyimpan dari kolom created_by di tabel produksi_telurs
-        // Kamu perlu cek apakah created_by menyimpan ID atau nama
-        // Jika menyimpan ID → ambil nama dari tabel users
-        // Jika menyimpan nama langsung → pakai langsung
-        $this->namaPenyimpan = \App\Models\User::find($produksi->created_by)?->name
-            ?? $produksi->created_by   // fallback jika tidak ketemu di tabel users
+        $this->namaPenyimpan = User::find($produksi->created_by)?->name
+            ?? $produksi->created_by
             ?? 'Tidak diketahui';
 
-        // ✅ Ambil nama validator dan waktu validasi
         $this->namaValidator = $produksi->validated_by ?? '';
         $this->waktuValidasi = $produksi->validated_at
-            ? \Carbon\Carbon::parse($produksi->validated_at)->format('d M Y H:i')
+            ? Carbon::parse($produksi->validated_at)->format('d M Y H:i')
             : '';
 
-        // ... sisa logika permission yang sudah ada tidak berubah ...
         if ($this->isSuperAdmin) {
-            $this->canEdit            = true;
-            $this->showSaveButton     = true;
-            $this->showValidateButton = !$this->isLocked;
-            $this->isEditable         = true;
+            $this->canEdit = true;
+            $this->showSaveButton = true;
+            $this->showValidateButton = ! $this->isLocked;
+            $this->isEditable = true;
+
             return;
         }
 
         if ($this->isLocked) {
-            $this->canEdit            = false;
-            $this->showSaveButton     = false;
+            $this->canEdit = false;
+            $this->showSaveButton = false;
             $this->showValidateButton = false;
-            $this->isEditable         = false;
+            $this->isEditable = false;
+
             return;
         }
 
         if ($this->isDraftSaved) {
             if ($this->isCreator) {
-                $this->canEdit            = false;
-                $this->showSaveButton     = false;
+                $this->canEdit = false;
+                $this->showSaveButton = false;
                 $this->showValidateButton = false;
-                $this->isEditable         = false;
+                $this->isEditable = false;
             } else {
-                $this->canEdit            = true;
-                $this->showSaveButton     = true;
+                $this->canEdit = true;
+                $this->showSaveButton = true;
                 $this->showValidateButton = true;
-                $this->isEditable         = true;
+                $this->isEditable = true;
             }
+
             return;
         }
 
-        $this->canEdit            = true;
-        $this->showSaveButton     = true;
+        $this->canEdit = true;
+        $this->showSaveButton = true;
         $this->showValidateButton = false;
-        $this->isEditable         = true;
+        $this->isEditable = true;
     }
 
     public function save(): void
     {
-        // ── Validasi 1: Tanggal wajib diisi ──
         $this->validate(['tanggal' => 'required|date']);
 
         if (! $this->isEditable) {
@@ -396,36 +459,28 @@ class ProduksiTelurPage extends Page
                 ->body('Data sudah divalidasi.')
                 ->danger()
                 ->send();
+
             return;
         }
 
-        // ── Validasi 2: Cek apakah minimal ada 1 baris yang diisi ──
-        // Logika: loop semua gridData, jika tidak ada satupun baris
-        // yang memiliki nilai > 0, maka tolak penyimpanan
         $adaData = false;
-
         foreach ($this->gridData as $idKandang => $rows) {
             foreach ($rows as $row) {
-                $butir = (int) ($row['butir'] ?? 0);
-                $kilo  = (float) ($row['kilo'] ?? 0);
-                $tray  = (float) ($row['tray'] ?? 0);
-
-                // Jika salah satu kolom ada isinya, tandai ada data
-                if ($butir > 0 || $kilo > 0 || $tray > 0) {
+                if ((int) ($row['butir'] ?? 0) > 0 || (float) ($row['kilo'] ?? 0) > 0 || (float) ($row['tray'] ?? 0) > 0) {
                     $adaData = true;
-                    break 2; // Keluar dari kedua loop sekaligus
+                    break 2;
                 }
             }
         }
 
-        // Jika tidak ada data sama sekali, hentikan dan beri tahu user
         if (! $adaData) {
             Notification::make()
                 ->title('Data Kosong')
                 ->body('Harap isi minimal satu baris data produksi telur sebelum menyimpan.')
                 ->warning()
                 ->send();
-            return; // ← Berhenti di sini, tidak lanjut ke DB
+
+            return;
         }
 
         $userId = Auth::id();
@@ -441,12 +496,20 @@ class ProduksiTelurPage extends Page
                     ->body('Data untuk tanggal ini sudah diinput oleh pengguna lain.')
                     ->danger()
                     ->send();
+
                 return;
             }
 
+            // ─── Simpan Hasil Kandang ke kolom asli (hasil_peti, hasil_kiloan, hasil_sisa, hasil_bentes) ───
             $produksi = ProduksiTelur::updateOrCreate(
                 ['tanggal' => $this->tanggal],
-                ['created_by' => $userId]
+                [
+                    'created_by' => $userId,
+                    'hasil_peti' => (float) ($this->hasilKandang['peti']['hasil'] ?? 0),
+                    'hasil_kiloan' => (float) ($this->hasilKandang['kiloan']['hasil'] ?? 0),
+                    'hasil_sisa' => (float) ($this->hasilKandang['sisa']['hasil'] ?? 0),
+                    'hasil_bentes' => (float) ($this->hasilKandang['bentes']['hasil'] ?? 0),
+                ]
             );
 
             $this->produksiTelurId = $produksi->id;
@@ -458,18 +521,20 @@ class ProduksiTelurPage extends Page
 
                 foreach ($rows as $row) {
                     $butir = (int) ($row['butir'] ?? 0);
-                    $kilo  = (float) ($row['kilo'] ?? 0);
-                    $tray  = (float) ($row['tray'] ?? 0);
+                    $kilo = (float) ($row['kilo'] ?? 0);
+                    $tray = (float) ($row['tray'] ?? 0);
 
-                    if ($butir === 0 && $kilo == 0 && $tray === 0) continue;
+                    if ($butir === 0 && $kilo == 0 && $tray === 0) {
+                        continue;
+                    }
 
                     DetailProduksiTelur::create([
-                        'id_produksi_telur'          => $produksi->id,
-                        'id_kandang'                 => $idKandang,
+                        'id_produksi_telur' => $produksi->id,
+                        'id_kandang' => $idKandang,
                         'id_produksi_pakan_campuran' => $idPakanSelected,
-                        'jumlah_telur_butir'         => $butir,
-                        'jumlah_telur_kilo'          => $kilo,
-                        'jumlah_telur_tray'          => $tray,
+                        'jumlah_telur_butir' => $butir,
+                        'jumlah_telur_kilo' => $kilo,
+                        'jumlah_telur_tray' => $tray,
                     ]);
                 }
             }
@@ -479,7 +544,6 @@ class ProduksiTelurPage extends Page
             }
         });
 
-        // ✅ Perbaikan: Tampilkan NAMA user, bukan ID angka
         $namaUser = Auth::user()->name;
         Notification::make()
             ->title('Data Berhasil Disimpan')
@@ -500,6 +564,7 @@ class ProduksiTelurPage extends Page
                 ->title('Simpan data terlebih dahulu sebelum memvalidasi.')
                 ->warning()
                 ->send();
+
             return;
         }
 
@@ -518,8 +583,7 @@ class ProduksiTelurPage extends Page
                     ]);
                 }
 
-                // Buat jurnal pembantu secara harian
-                app(\App\Services\ProduksiTelurService::class)
+                app(ProduksiTelurService::class)
                     ->buatJurnalDariProduksi($produksi, Auth::id());
             });
         } catch (\Exception $e) {
@@ -529,6 +593,7 @@ class ProduksiTelurPage extends Page
                 ->danger()
                 ->persistent()
                 ->send();
+
             return;
         }
 
